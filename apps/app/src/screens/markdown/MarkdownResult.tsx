@@ -5,7 +5,7 @@ import type { BlockStatus, MdBlock, MdDiff } from '@specdiff/core/markdown';
 import { diffText } from '@specdiff/core/text';
 import { SegmentedControl, Tooltip, useToast } from '@specdiff/ui';
 import * as icons from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState, type Ref } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type FocusEvent, type KeyboardEvent, type MouseEvent, type Ref } from 'react';
 import { VirtualList, type RowSlot, type VirtualListApi } from '../../lib/VirtualList';
 import { useCommand } from '../../shell/commands';
 import { changeLink, focusChange, readChangeHash, useNav } from '../../shell/nav';
@@ -33,6 +33,8 @@ const blockId = (i: number) => `md-block-${i}`;
  */
 export function withChangeCues(html: string): string {
   return html
+    // A deletion straight before an insertion ("cents" → "the smallest…") reads as two words, not "centsthe".
+    .replace(/<\/del><ins>/g, '</del> <ins>')
     .replace(/<ins>/g, '<ins><span class="sd-visually-hidden">inserted: </span>')
     .replace(/<del>/g, '<del><span class="sd-visually-hidden">deleted: </span>');
 }
@@ -49,6 +51,21 @@ function Html({ html, className }: { html: string; className?: string | undefine
 }
 
 const changeIdOf = (i: number) => `m-${i}`;
+/** Links as the designs show them: no scheme ("docs.example.com/v1"). */
+export const shortUrl = (u: string) => u.replace(/^[a-z][a-z0-9+.-]*:\/\//i, '');
+
+/**
+ * MD-03: a section's status for the outline: its heading's own status when the heading was added, removed or
+ * renamed, else edited when any block up to the next heading changed.
+ */
+export function sectionStatuses(blocks: MdBlock[]): BlockStatus[] {
+  const out: BlockStatus[] = [];
+  blocks.forEach((b) => {
+    if (b.heading) out.push(b.status);
+    else if (b.status !== 'same' && out.length && out[out.length - 1] === 'same') out[out.length - 1] = 'edited';
+  });
+  return out;
+}
 
 export default function MarkdownResult() {
   const { result, before, after, viewed, toggleViewed } = useApp();
@@ -141,6 +158,13 @@ export default function MarkdownResult() {
   const links = md.blocks.flatMap((b) => b.links ?? []);
   const codes = md.blocks.filter((b) => b.code && b.status === 'edited').length;
   const headingBlocks = md.blocks.flatMap((b, i) => (b.heading ? [i] : []));
+  const sectionStatus = sectionStatuses(md.blocks);
+  // The outline item of the section that holds the current change (AMarkdown: highlighted).
+  const currentSection = at === undefined ? -1 : headingBlocks.filter((h) => h <= at).length - 1;
+  const goToLine = (line: number) => {
+    const k = md.blocks.findIndex((b) => b.lines.after && line >= b.lines.after[0] && line <= b.lines.after[1]);
+    if (k >= 0) jump(k);
+  };
 
   return (
     <div className={css.page} data-view={view}>
@@ -153,22 +177,22 @@ export default function MarkdownResult() {
             {md.outline.map((h, k) => {
               // core builds the outline from the heading blocks, in order.
               const i = headingBlocks[k] ?? 0;
+              const st = sectionStatus[k] ?? h.status;
               return (
                 <li key={`${h.slug}-${k}`}>
                   <button
                     type="button"
                     className={css.outlineItem}
-                    data-status={h.status}
+                    data-status={st}
+                    aria-current={k === currentSection ? 'location' : undefined}
                     style={{ paddingLeft: `calc(${h.depth - 1} * 14px + 10px)` }}
                     onClick={() => jump(i)}
                   >
-                    <span className={css.dot} data-status={h.status} aria-hidden="true">
-                      {STATUS_SYM[h.status]}
+                    <span className={css.dot} data-status={st} aria-hidden="true">
+                      {STATUS_SYM[st]}
                     </span>
-                    <span className={h.status === 'removed' ? css.struck : undefined}>{h.text}</span>
-                    {h.status !== 'same' && (
-                      <span className="sd-visually-hidden"> ({STATUS_WORD[h.status]})</span>
-                    )}
+                    <span className={st === 'removed' ? css.struck : undefined}>{h.text}</span>
+                    {st !== 'same' && <span className="sd-visually-hidden"> ({STATUS_WORD[st]})</span>}
                   </button>
                 </li>
               );
@@ -267,20 +291,24 @@ export default function MarkdownResult() {
             <div key={k} className={css.check} data-tone="breaking">
               <icons.TriangleAlert size={14} aria-hidden="true" />
               <div>
-                <p className={css.checkTitle}>Broken anchor</p>
+                {k === 0 && (
+                  <p className={css.checkTitle}>
+                    {md.brokenAnchors.length} broken anchor{md.brokenAnchors.length === 1 ? '' : 's'}
+                  </p>
+                )}
                 <p>
                   <code>#{a.anchor}</code> is linked from line {a.line}, but{' '}
                   {a.renamedTo ? (
-                    <>
-                      that heading was renamed from <code>#{a.renamedFrom ?? a.anchor}</code> to{' '}
-                      <code>#{a.renamedTo}</code>.
-                    </>
+                    <>that heading was renamed to {headingText(md, a.renamedTo)}.</>
                   ) : a.renamedFrom ? (
                     'that heading was removed.'
                   ) : (
                     'no heading has that anchor.'
                   )}
                 </p>
+                <button type="button" className={css.checkLink} onClick={() => goToLine(a.line)}>
+                  Go to the link
+                </button>
               </div>
             </div>
           ))}
@@ -294,8 +322,8 @@ export default function MarkdownResult() {
                 <ul className={css.linkList}>
                   {links.map((l, k) => (
                     <li key={k}>
-                      {l.text && <span>{l.text}: </span>}
-                      <code>{l.before || '(none)'}</code> → <code>{l.after}</code>
+                      {l.text && <span className="sd-visually-hidden">{l.text}: </span>}
+                      <code>{l.before ? shortUrl(l.before) : '(none)'}</code> → <code>{shortUrl(l.after)}</code>
                     </li>
                   ))}
                 </ul>
@@ -309,7 +337,7 @@ export default function MarkdownResult() {
                 <p className={css.checkTitle}>
                   {codes} code block{codes === 1 ? '' : 's'} changed
                 </p>
-                <p>Shown as a line diff in Rendered view.</p>
+                <p>Shown as a line diff in Rendered and Source view.</p>
               </div>
             </div>
           )}
@@ -322,7 +350,50 @@ export default function MarkdownResult() {
   );
 }
 
+const headingText = (md: MdDiff, slug: string) => md.outline.find((h) => h.slug === slug)?.text ?? `#${slug}`;
+
+/**
+ * MD-04: a changed link is marked in the text (wavy underline) and shows "Link changed · before → after" in a
+ * tooltip on hover or focus (Escape hides it, WCAG 1.4.13). Links the rendered HTML has no <a> for (images)
+ * keep a chip with the same tooltip.
+ */
+function useLinkTips(b: MdBlock, i: number) {
+  const root = useRef<HTMLDivElement | null>(null);
+  const [inline, setInline] = useState<number[]>([]);
+  const [open, setOpen] = useState<{ k: number; left: number; top: number } | null>(null);
+  useLayoutEffect(() => {
+    const el = root.current;
+    if (!el || !b.links?.length) return;
+    const anchors = [...el.querySelectorAll<HTMLAnchorElement>('a[href]')];
+    const found: number[] = [];
+    b.links.forEach((l, k) => {
+      const a = anchors.find((x) => x.getAttribute('href') === l.after && (x.dataset.linkChanged ?? String(k)) === String(k));
+      if (!a) return;
+      a.dataset.linkChanged = String(k);
+      a.setAttribute('aria-describedby', `${blockId(i)}-link-${k}`);
+      found.push(k);
+    });
+    setInline(found);
+  }, [b, i]);
+  const show = (t: EventTarget) => {
+    const a = t instanceof Element ? t.closest<HTMLElement>('[data-link-changed]') : null;
+    const box = root.current?.parentElement;
+    if (!a || !box) return;
+    const r = a.getBoundingClientRect(), o = box.getBoundingClientRect();
+    setOpen({ k: Number(a.dataset.linkChanged), left: Math.max(0, r.left - o.left), top: r.bottom - o.top + 6 });
+  };
+  const handlers = {
+    onMouseOver: (e: MouseEvent) => show(e.target),
+    onMouseOut: (e: MouseEvent) => { if (e.target instanceof Element && e.target.closest('[data-link-changed]')) setOpen(null); },
+    onFocus: (e: FocusEvent) => show(e.target),
+    onBlur: () => setOpen(null),
+    onKeyDown: (e: KeyboardEvent) => { if (e.key === 'Escape' && open) { e.stopPropagation(); setOpen(null); } },
+  };
+  return { root, inline, open, handlers };
+}
+
 function Block({ b, i, slot, viewed, onViewed }: { b: MdBlock; i: number; slot?: RowSlot | undefined; viewed: boolean; onViewed: () => void }) {
+  const { root: tipRoot, inline: tipInline, open: tipOpen, handlers: tipHandlers } = useLinkTips(b, i);
   return (
     // tabIndex -1: outline and J/K move focus here.
     <div
@@ -330,6 +401,7 @@ function Block({ b, i, slot, viewed, onViewed }: { b: MdBlock; i: number; slot?:
       className={css.block}
       data-status={b.status}
       tabIndex={-1}
+      {...tipHandlers}
       {...(slot ? { ref: slot.measure, 'data-index': slot['data-index'], style: slot.style } : {})}
     >
       {b.status !== 'same' && (
@@ -347,8 +419,34 @@ function Block({ b, i, slot, viewed, onViewed }: { b: MdBlock; i: number; slot?:
           {viewed ? <icons.CheckSquare size={14} aria-hidden="true" /> : <icons.Square size={14} aria-hidden="true" />} Viewed
         </button>
       )}
-      {b.code && b.status === 'edited' ? <CodeDiff code={b.code} /> : <Html html={b.html} className={css.md} />}
-      {b.links?.map((l, k) => (
+      {b.code && b.status === 'edited' ? (
+        <CodeDiff code={b.code} />
+      ) : (
+        <div ref={tipRoot}>
+          <Html html={b.html} className={css.md} />
+        </div>
+      )}
+      {b.links?.map((l, k) =>
+        tipInline.includes(k) ? (
+          <span key={k}>
+            {/* The link's description: plain words, always in the DOM (aria-describedby). */}
+            <span id={`${blockId(i)}-link-${k}`} hidden>
+              Link changed from {l.before ? shortUrl(l.before) : 'none'} to {shortUrl(l.after)}
+            </span>
+            <span
+              role="tooltip"
+              className={css.linkTip}
+              hidden={tipOpen?.k !== k}
+              style={tipOpen?.k === k ? { left: tipOpen.left, top: tipOpen.top } : undefined}
+            >
+              <span className={css.linkTipTitle}>Link changed</span>
+              <span className={css.tip}>
+                <span className={css.tipBefore}>{l.before ? shortUrl(l.before) : '(none)'}</span> →{' '}
+                <span className={css.tipAfter}>{shortUrl(l.after)}</span>
+              </span>
+            </span>
+          </span>
+        ) : (
         <Tooltip
           key={k}
           content={
@@ -367,7 +465,8 @@ function Block({ b, i, slot, viewed, onViewed }: { b: MdBlock; i: number; slot?:
             </span>
           </button>
         </Tooltip>
-      ))}
+        ),
+      )}
     </div>
   );
 }

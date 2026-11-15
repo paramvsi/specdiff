@@ -476,6 +476,8 @@ export function TextResult() {
             tabIndex={0}
             aria-label={`Differences between ${before?.name} and ${after?.name}`}
             data-lang={hl ? lang : undefined}
+            // A-03: the card hugs a short diff and scrolls a long one.
+            style={{ height: `min(70vh, 720px, ${Math.max(v.getTotalSize(), 22) + 2}px)` }}
           >
             <div style={{ height: v.getTotalSize(), position: 'relative' }}>
               {v.getVirtualItems().map((it) => {

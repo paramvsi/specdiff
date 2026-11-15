@@ -22,15 +22,15 @@ const sample = samples().find((s) => s.id === 'code')!;
 const text = (v: CodeRow) => (v.kind === 'moved' ? v.segs.map((s) => s.text).join('') : v.kind === 'row' ? (v.row.right ?? v.row.left)!.segs.map((s) => s.text).join('') : v.reason);
 
 describe('structuralRows on the A-09 sample', () => {
-  it('renders validateCurrency as five moved rows at lines 13–17, from line 33', () => {
+  it('renders validateCurrency as moved rows at lines 12–17 (with the blank line before it), noted on line 13, from line 33', () => {
     const v = rowsFor(sample.before.content, sample.after.content, 'java');
     const moved = v.filter((x) => x.kind === 'moved');
-    expect(moved.map((m) => [m.n, m.from, m.first])).toEqual([[13, 33, true], [14, 34, false], [15, 35, false], [16, 36, false], [17, 37, false]]);
+    expect(moved.map((m) => [m.n, m.from, m.first])).toEqual([[12, 32, false], [13, 33, true], [14, 34, false], [15, 35, false], [16, 36, false], [17, 37, false]]);
     expect(v.some((x) => x.kind === 'row' && x.row.type !== 'same' && text(x).includes('validateCurrency(String'))).toBe(false);
   });
   it('folds the renamed lines (old and new) while "Hide renames" is on, shows both when off', () => {
     const on = rowsFor(sample.before.content, sample.after.content, 'java');
-    expect(on.filter((x) => x.kind === 'fold').map((x) => text(x))).toEqual(['3 lines with renamed names, no logic change', '1 line with renamed names, no logic change', '12 lines reformatted, no logic change']);
+    expect(on.filter((x) => x.kind === 'fold' && !/unchanged/.test(x.reason)).map((x) => text(x))).toEqual(['3 lines with renamed names, no logic change', '1 line with renamed names, no logic change', '12 lines reformatted, no logic change']);
     expect(on.some((x) => x.kind === 'row' && /\bamt\b/.test(text(x)))).toBe(false);
     const off = rowsFor(sample.before.content, sample.after.content, 'java', { hideRenames: false, hideComments: false });
     const change = off.filter((x) => x.kind === 'row' && x.row.type === 'change');
@@ -40,6 +40,21 @@ describe('structuralRows on the A-09 sample', () => {
     const v = rowsFor(sample.before.content, sample.after.content, 'java', { hideRenames: false, hideComments: false });
     const after = v.flatMap((x) => (x.kind === 'moved' ? [x.n] : x.kind === 'row' ? (x.row.right ? [x.row.right.n] : []) : x.rows.flatMap((r) => (r.right ? [r.right.n] : []))));
     expect(after).toEqual(Array.from({ length: 49 }, (_, k) => k + 1));
+  });
+});
+
+describe('round 4 (A-09): unchanged context folds, the left gutter does not jump', () => {
+  it('unchanged runs fold to "N unchanged lines", keeping 3 lines next to each change', () => {
+    const v = rowsFor(sample.before.content, sample.after.content, 'java');
+    const first = v[0]!;
+    expect(first.kind === 'fold' && [first.reason, first.rows.map((r) => r.right!.n)]).toEqual(['8 unchanged lines', [1, 2, 3, 4, 5, 6, 7, 8]]);
+    expect(v.slice(1, 4).map((x) => x.kind === 'row' && x.row.right!.n)).toEqual([9, 10, 11]);
+    expect(v.filter((x) => x.kind === 'fold' && /unchanged/.test(x.reason)).length).toBeGreaterThan(1);
+  });
+  it('line numbers on the left only go up (the blank line before a moved method moves with it)', () => {
+    const v = rowsFor(sample.before.content, sample.after.content, 'java', { hideRenames: false, hideComments: false });
+    const left = v.flatMap((x) => (x.kind === 'row' ? (x.row.left ? [x.row.left.n] : []) : x.kind === 'fold' ? x.rows.flatMap((r) => (r.left ? [r.left.n] : [])) : []));
+    expect(left).toEqual([...left].sort((a, b) => a - b));
   });
 });
 

@@ -54,6 +54,8 @@ export function PatchPanel({ initial, onClose }: { initial: string; onClose: () 
             id="sd-patch"
             className={css.patch}
             spellCheck={false}
+            // A03-Patch: the card hugs the pasted patch (23 px lines + padding), up to 560 px, then scrolls.
+            style={{ height: `${Math.min(560, Math.max(180, patch.split('\n').length * 23 + 34))}px` }}
             value={patch}
             placeholder={'Paste the output of git diff, or any unified diff'}
             onChange={(e) => {

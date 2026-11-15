@@ -40,11 +40,41 @@ export function looksLikePatch(text: string): boolean {
 
 const strip = (n: string | undefined) => (n ?? '').replace(/^[ab]\//, '').replace(/\t.*$/, '');
 
+const HUNK_HEAD = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@(.*)$/;
+
+/**
+ * A hunk header that claims more lines than its body holds (a paste trimmed by hand, as in A03-Patch) gets the
+ * counts of the lines that are there. Bodies with a line that isn't ` `, `-`, `+` or `\` are left alone, so a
+ * malformed hunk still fails.
+ */
+function recountHunks(text: string): string {
+  const lines = text.split('\n');
+  const fileHead = (j: number) => lines[j]!.startsWith('--- ') && (lines[j + 1] ?? '').startsWith('+++ ');
+  for (let i = 0; i < lines.length; i++) {
+    const m = HUNK_HEAD.exec(lines[i]!);
+    if (!m) continue;
+    const claimOld = m[2] === undefined ? 1 : Number(m[2]);
+    const claimNew = m[4] === undefined ? 1 : Number(m[4]);
+    let o = 0, n = 0, ok = true;
+    for (let j = i + 1; j < lines.length && (o < claimOld || n < claimNew); j++) {
+      const l = lines[j]!;
+      if (HUNK_HEAD.test(l) || l.startsWith('diff ') || fileHead(j) || (l === '' && j === lines.length - 1)) break;
+      const t = l[0];
+      if (t === ' ' || l === '') { o++; n++; }
+      else if (t === '-') o++;
+      else if (t === '+') n++;
+      else if (t !== '\\') { ok = false; break; }
+    }
+    if (ok && (o < claimOld || n < claimNew)) lines[i] = `@@ -${m[1]},${o} +${m[3]},${n} @@${m[5]}`;
+  }
+  return lines.join('\n');
+}
+
 /** Parse every file in a patch. Throws a readable Error when a hunk is malformed. */
 export function parseUnifiedPatch(text: string): PatchFile[] {
   let parsed;
   try {
-    parsed = parsePatch(text.replace(/\r\n/g, '\n'));
+    parsed = parsePatch(recountHunks(text.replace(/\r\n/g, '\n')));
   } catch (e) {
     throw new Error(`This patch can't be read: ${e instanceof Error ? e.message : String(e)}.`, { cause: e });
   }

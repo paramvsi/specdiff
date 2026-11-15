@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { beforeAll, describe, expect, it } from 'vitest';
 import type { Language } from 'web-tree-sitter';
-import { diffCode, initRuntime, loadLanguage, type CodeDiff, type CodeLang } from './diff';
+import { describeChange, diffCode, initRuntime, loadLanguage, type CodeDiff, type CodeLang } from './diff';
 
 const req = createRequire(import.meta.url);
 const wasm = (pkg: string, file: string) => new Uint8Array(readFileSync(req.resolve(`${pkg}/${file}`)));
@@ -57,5 +57,24 @@ describe('diffCode', () => {
   });
   it('falls back on parse errors with the line', () => {
     expect(diffCode('function a() {}', 'function a( {\n}\n', 'typescript', langs.typescript)).toMatchObject({ fallback: 'parse-error', side: 'after' });
+  });
+});
+
+describe('A-09: a logic change says what changed', () => {
+  it('a removed default value ("currency no longer defaults to USD")', () => {
+    const d = run(
+      'class S {\n  Payment create(Req req) {\n    var currency = req.currency() != null ? req.currency() : "USD";\n    return charge(currency);\n  }\n}\n',
+      'class S {\n  Payment create(Req req) {\n    var currency = Objects.requireNonNull(req.currency());\n    return charge(currency);\n  }\n}\n',
+      'java',
+    );
+    expect(d.items.find((i) => i.name === 'S.create')).toMatchObject({ status: 'changed', summary: 'currency no longer defaults to USD' });
+  });
+  it('?? / || / or defaults, added or changed', () => {
+    expect(describeChange('const n = opts.n ?? 10;', 'const n = opts.n;')).toBe('n no longer defaults to 10');
+    expect(describeChange('x = a', 'x = a or "eu"')).toBe('x now defaults to eu');
+    expect(describeChange("let r = q || 'eu';", "let r = q || 'us';")).toBe('r default changed from eu to us');
+  });
+  it('anything else has no summary (the screen says the declaration changed)', () => {
+    expect(describeChange('return a + b;', 'return a - b;')).toBeUndefined();
   });
 });

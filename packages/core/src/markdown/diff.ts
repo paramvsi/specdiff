@@ -173,6 +173,12 @@ function markWords<T extends Nodes>(before: Nodes, after: T): T {
   return clone;
 }
 
+/** A heading renamed to an unrelated title: the old title struck whole, then the new one, never word-merged. */
+function renamedWhole(before: RootContent, after: RootContent): RootContent | undefined {
+  if (before.type !== 'heading' || after.type !== 'heading' || bigramSimilarity(plain(before), plain(after)) >= 0.4) return undefined;
+  return { ...structuredClone(after), children: [{ type: 'del', children: structuredClone(before.children) } as never, { type: 'ins', children: structuredClone(after.children) } as never] };
+}
+
 /**
  * GFM tables cell by cell: rows are matched by their first cell (or by position when that cell was edited),
  * each matched cell gets its own word marks, and new or dropped rows are whole <ins>/<del> rows.
@@ -218,10 +224,14 @@ function markTable(before: Table, after: Table): Table {
 function pairHunk(removed: RootContent[], added: RootContent[]): Array<[number, number]> {
   const heads = new Map<number, number>();
   let t0 = 0;
+  // A heading that ends the hunk on both sides, at the same depth, is a rename however different the titles
+  // are ("Environment variables" → "Configuration"): the section body after it is unchanged.
+  const lastR = removed.length - 1, lastA = added.length - 1;
   removed.forEach((x, r) => {
     if (x.type !== 'heading') return;
     for (let t = t0; t < added.length; t++) {
-      if (added[t]!.type === 'heading' && similar(x, added[t]!)) { heads.set(r, t); t0 = t + 1; return; }
+      const y = added[t]!;
+      if (y.type === 'heading' && (similar(x, y) || (r === lastR && t === lastA && y.depth === x.depth))) { heads.set(r, t); t0 = t + 1; return; }
     }
   });
   const pairedAdded = new Set(heads.values());
@@ -264,7 +274,9 @@ function similar(a: RootContent, b: RootContent): boolean {
   if (a.type === 'code' || a.type === 'table' || a.type === 'list') return true;
   const parts = diffWordsWithSpace(plain(a), plain(b));
   const same = parts.filter((p) => !p.added && !p.removed).reduce((n, p) => n + p.value.length, 0);
-  return same >= Math.max(plain(a).length, plain(b).length) * 0.4;
+  const la = plain(a).length, lb = plain(b).length;
+  // Mostly shared, or a short block kept almost whole inside a longer one (a sentence appended to it).
+  return same >= Math.max(la, lb) * 0.4 || (Math.min(la, lb) >= 12 && same >= Math.min(la, lb) * 0.9);
 }
 
 export function diffMarkdown(before: string, after: string): MdDiff {
@@ -316,7 +328,7 @@ export function diffMarkdown(before: string, after: string): MdDiff {
       if (hb && h && hb.slug !== h.slug) renamed.set(hb.slug, h.slug);
       const la = links(x), lb = links(y);
       const changedLinks = lb.map((l, idx) => ({ text: l.text, before: la[idx]?.url ?? '', after: l.url })).filter((l) => l.before !== l.after);
-      const marked = x.type === 'code' ? y : x.type === 'table' && y.type === 'table' ? markTable(x, y) : markWords(x, y);
+      const marked = x.type === 'code' ? y : x.type === 'table' && y.type === 'table' ? markTable(x, y) : renamedWhole(x, y) ?? markWords(x, y);
       blocks.push({
         status: 'edited', type: y.type,
         html: render([marked]),

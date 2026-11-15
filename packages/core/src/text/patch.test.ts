@@ -71,6 +71,16 @@ describe('parseUnifiedPatch', () => {
     expect(f!.afterSide.lines).toEqual([1, 2]);
   });
 
+  it('A03-Patch: a hunk whose header counts more lines than it holds (a trimmed paste) is read as it is', () => {
+    const text = 'diff --git a/openapi.yaml b/openapi.yaml\nindex 3f1c2ab..9e04d71 100644\n--- a/openapi.yaml\n+++ b/openapi.yaml\n@@ -127,3 +127,3 @@\n-            required: [amount]\n+            required: [amount, currency]\n';
+    const [f, ...rest] = parseUnifiedPatch(text);
+    expect(rest).toEqual([]);
+    expect(f).toMatchObject({ name: 'openapi.yaml', hunks: 1, added: 1, removed: 1, before: '            required: [amount]\n', after: '            required: [amount, currency]\n' });
+    expect(f!.beforeSide.lines).toEqual([127]);
+    // A second file after a short hunk is still its own file.
+    const two = parseUnifiedPatch(text + '--- a/b.txt\n+++ b/b.txt\n@@ -1,2 +1,2 @@\n-x\n+y\n');
+    expect(two.map((x) => [x.name, x.added, x.removed])).toEqual([['openapi.yaml', 1, 1], ['b.txt', 1, 1]]);
+  });
   it('throws a readable error on a malformed hunk', () => {
     expect(() => parseUnifiedPatch('--- a\n+++ b\n@@ -1,1 +1,1 @@\n-a\n+b\n@@ -9,2 +9,2 @@\nnope\n')).toThrow(/can't be read/);
   });

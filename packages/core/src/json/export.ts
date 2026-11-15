@@ -141,9 +141,12 @@ const show = (v: unknown) => '`' + (JSON.stringify(v) ?? 'undefined').slice(0, 1
 export function jsonMarkdown(d: JsonDiff, names: { before: string; after: string }): string {
   const s = d.stats;
   const lines = [`# ${names.before} → ${names.after}`, '', `${d.changes.length} changes: ${s.added} added, ${s.removed} removed, ${s.changed} changed, ${s.typeChanged} type changed, ${s.moved} moved.`, ''];
+  // A07-JsonExport: "A table of every change". Pipes in cells are escaped so a value can't add a column.
+  const cell = (t: string) => t.replace(/\|/g, '\\|').replace(/\r?\n/g, ' ');
+  if (d.changes.length) lines.push('| | Path | Change |', '| --- | --- | --- |');
   for (const c of d.changes) {
-    const detail = c.kind === 'changed' || c.kind === 'typeChanged' ? `${show(c.before)} → ${show(c.after)}` : c.kind === 'added' ? show(c.after) : c.kind === 'removed' ? show(c.before) : `from ${c.from}`;
-    lines.push(`- ${SYM[c.kind]} **${humanPath(c.jsonPath)}**${c.kind === 'typeChanged' ? ' (type changed)' : ''}: ${detail}`);
+    const detail = c.kind === 'changed' || c.kind === 'typeChanged' ? `${show(c.before)} → ${show(c.after)}` : c.kind === 'added' ? `added ${show(c.after)}` : c.kind === 'removed' ? `removed ${show(c.before)}` : `moved from ${c.from}`;
+    lines.push(`| ${SYM[c.kind]} | ${cell(humanPath(c.jsonPath))} | ${cell(detail)}${c.kind === 'typeChanged' ? ' (type changed)' : ''} |`);
   }
   return lines.join('\n') + '\n';
 }

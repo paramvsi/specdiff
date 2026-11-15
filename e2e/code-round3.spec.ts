@@ -40,9 +40,10 @@ test.describe('A-09 structural view', () => {
     await openSample(page);
     const moved = code(page).locator('[data-kind="moved"]');
     await expect(moved.first()).toBeVisible();
-    await expect(moved).toHaveCount(5);
-    await expect(moved.first()).toContainText('↕');
-    await expect(moved.first()).toContainText('void validateCurrency(String currency) {');
+    // The blank line before the method moves with it (round 4), so the left line numbers never jump back.
+    await expect(moved).toHaveCount(6);
+    await expect(moved.nth(1)).toContainText('↕');
+    await expect(moved.nth(1)).toContainText('void validateCurrency(String currency) {');
     await expect(code(page).getByText('moved from line 33')).toBeVisible();
     // The old place is not shown as a removed block.
     await expect(code(page).locator('[data-kind="del"]', { hasText: 'validateCurrency(String currency)' })).toHaveCount(0);

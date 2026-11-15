@@ -38,15 +38,24 @@ describe('diffMarkdown', () => {
 });
 
 describe('MD-03 heading pairing', () => {
-  it('a removed section and an unrelated added one are removed + added, not one garbled heading', () => {
+  it('an unrelated title over an unchanged body is a rename: one edited heading, old and new title whole, not garbled', () => {
     const x = diffMarkdown('# API\n\n## Rate limits\n\nTen per second.\n', '# API\n\n## Migrating to v2\n\nTen per second.\n');
     expect(x.blocks.map((b) => [b.status, b.heading?.text ?? b.type])).toEqual([
       ['same', 'API'],
-      ['removed', 'Rate limits'],
-      ['added', 'Migrating to v2'],
+      ['edited', 'Migrating to v2'],
       ['same', 'paragraph'],
     ]);
-    expect(x.blocks.map((b) => b.html).join('')).not.toMatch(/<ins>|<del>/);
+    expect(x.blocks[1]!.html).toBe('<h2><del>Rate limits</del><ins>Migrating to v2</ins></h2>');
+  });
+  it('a removed section and an unrelated added one (bodies differ) are removed + added', () => {
+    const x = diffMarkdown('# API\n\n## Rate limits\n\nTen per second.\n', '# API\n\n## Migrating to v2\n\nSend currency on every call.\n');
+    expect(x.blocks.map((b) => [b.status, b.heading?.text ?? b.type])).toEqual([
+      ['same', 'API'],
+      ['removed', 'Rate limits'],
+      ['removed', 'paragraph'],
+      ['added', 'Migrating to v2'],
+      ['added', 'paragraph'],
+    ]);
   });
   it('a renamed heading with a similar title still pairs as edited', () => {
     const x = diffMarkdown('## Errors\n', '## Error codes\n');

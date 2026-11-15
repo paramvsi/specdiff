@@ -75,7 +75,11 @@
 }
 .dot[data-status='edited'] {
   background: var(--sd-changed-bg);
-  color: var(--sd-ink);
+  color: var(--sd-changed);
+}
+/* AMarkdown: the section holding the current change. */
+.outlineItem[aria-current] {
+  background: var(--sd-brand-tint);
 }
 .struck {
   text-decoration: line-through;
@@ -239,6 +243,56 @@
 .tip {
   font-family: var(--sd-font-mono);
   font-size: 12px;
+}
+/* MD-04: a changed link in the text, and its tooltip (AMarkdown). */
+.md :global(a[data-link-changed]) {
+  color: var(--sd-changed);
+  text-decoration: underline wavy var(--sd-changed);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+}
+.linkTip {
+  position: absolute;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-width: min(420px, 100%);
+  padding: var(--sd-space-2) var(--sd-space-3);
+  border-radius: var(--sd-radius-sm);
+  background: var(--sd-inverse);
+  color: var(--sd-on-inverse);
+  box-shadow: var(--sd-shadow-popover);
+  pointer-events: none;
+  overflow-wrap: anywhere;
+}
+.linkTip[hidden] {
+  display: none;
+}
+.linkTipTitle {
+  font-family: var(--sd-font-mono);
+  font-size: 12px;
+}
+.linkTip .tipBefore {
+  color: var(--sd-removed-word);
+}
+.linkTip .tipAfter {
+  color: var(--sd-added-word);
+}
+.checkLink {
+  margin-top: var(--sd-space-1);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.checkLink:focus-visible {
+  outline: none;
+  box-shadow: var(--sd-shadow-focus);
 }
 .tipBefore {
   text-decoration: line-through;
@@ -427,7 +481,8 @@
 @media (max-width: 1023px) {
   .outlineItem,
   .viewedBtn,
-  .linkChip {
+  .linkChip,
+  .checkLink {
     min-height: 44px;
   }
 }

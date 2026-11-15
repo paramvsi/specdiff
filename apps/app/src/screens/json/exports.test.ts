@@ -65,3 +65,12 @@ it('A07-JsonExport: the sample patch follows the keyed diff, with a move, one op
   expect(f.content.split('\n').filter((l) => l.includes('"op"'))).toHaveLength(ops.length);
   expect(applyJsonPatch(before, ops as never)).toEqual(after);
 });
+
+it('A07-JsonExport: the preview shortens a long value ("{ "key": "fraud_rules_v3", … }"); the file stays whole', () => {
+  const item = { key: 'fraud_rules_v3', enabled: false, owner: 'payments', percent: 20, description: 'fraud rules v3 rollout', since: '2026-07-01' };
+  const f = jsonExport('patch', data({ flags: [] }, { flags: [item] }), names);
+  expect(f.preview).toBe('[\n  { "op": "add", "path": "/flags/-", "value": { "key": "fraud_rules_v3", … } }\n]\n');
+  expect(JSON.parse(f.content)).toEqual([{ op: 'add', path: '/flags/-', value: item }]);
+  // Short values are shown as they are.
+  expect(jsonExport('patch', data({ a: 1 }, { a: 2 }), names).preview).toBe(jsonExport('patch', data({ a: 1 }, { a: 2 }), names).content);
+});

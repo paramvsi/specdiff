@@ -16,12 +16,12 @@ describe('diffText', () => {
 
   it('identical when only whitespace differs and ignoreWhitespace is on', () => {
     expect(diffText('a  b\n', 'a b\n', opts({ ignoreWhitespace: true })).identical).toBe(true);
-    expect(diffText('a  b\n', 'a b\n', opts()).identical).toBe(false);
+    expect(diffText('a  b\n', 'a b\n', opts({ ignoreWhitespace: false })).identical).toBe(false);
   });
 
   it('ignores case and line endings', () => {
     expect(diffText('Hello\r\n', 'hello\n', opts({ ignoreCase: true })).identical).toBe(true);
-    expect(diffText('x\r\n', 'x\n', opts({ ignoreLineEndings: false })).identical).toBe(false);
+    expect(diffText('x\r\n', 'x\n', opts({ ignoreLineEndings: false, ignoreWhitespace: false })).identical).toBe(false);
   });
 
   it('masks filter matches on both sides and counts hits', () => {
@@ -121,4 +121,8 @@ describe('large, mostly different inputs (X-02)', () => {
   it('small inputs stay exact', () => {
     expect(diffText('a\nb\n', 'a\nc\n', opts()).approximate).toBeUndefined();
   });
+});
+
+it('B-52: whitespace is ignored by default (ACompare)', () => {
+  expect(Config.parse({}).text.ignoreWhitespace).toBe(true);
 });

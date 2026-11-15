@@ -105,7 +105,7 @@ export async function openSample(id: string) {
   if (sm.id === 'text')
     s.updateConfig((c) => ({
       ...c,
-      text: { ...c.text, filters: SAMPLE_FILTERS, ignoreWhitespace: true },
+      text: { ...c.text, filters: SAMPLE_FILTERS, ignoreWhitespace: true, precision: 'word' },
     }));
   if (sm.id === 'json')
     s.updateConfig((c) => ({ ...c, json: { ...c.json, ignoreKeys: SAMPLE_JSON_IGNORE_KEYS } }));

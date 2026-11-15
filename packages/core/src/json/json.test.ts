@@ -92,7 +92,15 @@ describe('exports', () => {
   it('JSONPath list and Markdown', () => {
     const d = diffJson({ a: 1, b: 2 }, { a: 2, c: 3 }, o());
     expect(jsonPathList(d)).toBe('removed\t$.b\nadded\t$.c\nchanged\t$.a\n'.split('\n').filter(Boolean).sort((x, y) => x.slice(-1).localeCompare(y.slice(-1))).join('\n') + '\n');
-    expect(jsonMarkdown(d, { before: 'a.json', after: 'b.json' })).toContain('~ **a**: `1` → `2`');
+    const md = jsonMarkdown(d, { before: 'a.json', after: 'b.json' });
+    // A07-JsonExport: "A table of every change".
+    expect(md).toContain('| | Path | Change |\n| --- | --- | --- |\n');
+    expect(md).toContain('| ~ | a | `1` → `2` |');
+    expect(md.split('\n').filter((l) => l.startsWith('| ') && !l.startsWith('| |') && !l.startsWith('| ---'))).toHaveLength(3);
+  });
+  it('Markdown table cells escape pipes', () => {
+    const d = diffJson({ a: 'x|y' }, { a: 'z' }, o());
+    expect(jsonMarkdown(d, { before: 'a.json', after: 'b.json' })).toContain('| ~ | a | `"x\\|y"` → `"z"` |');
   });
 });
 

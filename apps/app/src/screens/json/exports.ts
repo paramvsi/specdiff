@@ -19,6 +19,8 @@ export interface ExportFile {
   type: string;
   /** e.g. "7 operations". */
   meta: string;
+  /** What the preview shows when it differs from the file (long patch values shortened). */
+  preview?: string;
   /** Round-trip result for patches; undefined for lists. */
   verified?: boolean;
   /** Merge Patch can't express a null value (null deletes). */
@@ -82,14 +84,34 @@ function applyOne(root: unknown, op: Exclude<PatchOp, { op: 'move' }>): unknown 
   return root;
 }
 
-/** One operation per line (A07-JsonExport), still valid JSON. */
-export function formatPatch(ops: PatchOp[]): string {
+/** Longest operation line the preview shows whole (A07-JsonExport). */
+const PREVIEW_LINE = 100;
+
+/** A value cut to its first entry: `{ "key": "fraud_rules_v3", … }`, `[ 1, … ]`. */
+function shortValue(v: unknown): string {
+  if (Array.isArray(v)) return v.length ? `[ ${JSON.stringify(v[0])}, … ]` : '[]';
+  if (v && typeof v === 'object') {
+    const first = Object.entries(v)[0];
+    return first ? `{ ${JSON.stringify(first[0])}: ${JSON.stringify(first[1])}, … }` : '{}';
+  }
+  return JSON.stringify(v);
+}
+
+/**
+ * One operation per line (A07-JsonExport), still valid JSON. With `short`, an object or array value on a line
+ * longer than the card is cut to its first entry and `…` (preview only, not valid JSON).
+ */
+export function formatPatch(ops: PatchOp[], short = false): string {
   if (!ops.length) return '[]\n';
-  const one = (op: PatchOp) =>
+  const one = (op: PatchOp, cut: boolean) =>
     `{ ${Object.entries(op)
-      .map(([k, v]) => `${JSON.stringify(k)}: ${JSON.stringify(v)}`)
+      .map(([k, v]) => `${JSON.stringify(k)}: ${cut && k === 'value' ? shortValue(v) : JSON.stringify(v)}`)
       .join(', ')} }`;
-  return `[\n${ops.map((op) => `  ${one(op)}`).join(',\n')}\n]\n`;
+  const line = (op: PatchOp) => {
+    const full = one(op, false);
+    return short && full.length > PREVIEW_LINE && 'value' in op && op.value !== null && typeof op.value === 'object' ? one(op, true) : full;
+  };
+  return `[\n${ops.map((op) => `  ${line(op)}`).join(',\n')}\n]\n`;
 }
 
 export function jsonExport(
@@ -105,6 +127,7 @@ export function jsonExport(
     return {
       name: `${stem}.patch.json`,
       content: formatPatch(ops),
+      preview: formatPatch(ops, true),
       type: 'application/json-patch+json',
       meta: `${ops.length} operation${ops.length === 1 ? '' : 's'}`,
       verified: stable(applyJsonPatch(data.before, ops)) === stable(data.after),

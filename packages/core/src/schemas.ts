@@ -109,7 +109,7 @@ export const Config = z.object({
     numberTolerance: z.number().default(0),
   }).prefault({}),
   text: z.object({
-    ignoreWhitespace: z.boolean().default(false),
+    ignoreWhitespace: z.boolean().default(true),
     ignoreCase: z.boolean().default(false),
     ignoreLineEndings: z.boolean().default(true),
     precision: z.enum(['smart', 'word', 'char']).default('smart'),

@@ -21,7 +21,8 @@ export default function CodeResult() {
   if (!result || !('code' in result)) return null;
   const outcome = result.code;
   if ('fallback' in outcome) {
-    const name = realName(after?.name) ?? realName(before?.name);
+    // A09-Fallback names the file ("main.go"), not the after side's note ("main.go (PR)").
+    const name = realName(before?.name) ?? realName(after?.name);
     // The worker names the language from the extension or the content ("Go"); never the file name.
     const language = 'language' in result && result.language ? result.language : undefined;
     return (
@@ -40,7 +41,7 @@ export default function CodeResult() {
             <Button variant="secondary" onClick={() => setDismissed(true)}>Dismiss</Button>
           </div>
         )}
-        <TextResult />
+        <FallbackDiff name={name ?? 'Text'} rows={result.text.rows} />
       </div>
     );
   }
@@ -86,6 +87,25 @@ function title(d: CodeDiff): string {
 }
 
 const itemId = (i: CodeItem) => `k-${i.name}`;
+/** A-09 names declarations without their class ("validateCurrency", not "PaymentService.validateCurrency"). */
+const short = (name: string) => name.slice(name.lastIndexOf('.') + 1);
+
+/** The "What changed" text: A-09 says what a logic change does when core can tell ("currency no longer defaults to USD"). */
+function describeItem(i: CodeItem) {
+  const where = <span className="sd-visually-hidden"> in {i.name}</span>;
+  switch (i.status) {
+    case 'renamedLocals':
+      return <>{i.renames!.map((r, k) => <span key={r.from}>{k ? ', ' : ''}<code>{r.from}</code> → <code>{r.to}</code>, {r.uses} use{r.uses === 1 ? '' : 's'}</span>)}{where}</>;
+    case 'renamed':
+      return <><code>{short(i.from ?? '')}</code> → <code>{short(i.name)}</code></>;
+    case 'moved':
+      return <><code>{short(i.name)}</code>, line {i.lines.before?.[0]} → {i.lines.after?.[0]}</>;
+    case 'changed':
+      return i.summary ? <>{i.summary}{where}</> : <><code>{short(i.name)}</code> changed</>;
+    default:
+      return <><code>{short(i.name)}</code> {i.status === 'added' ? 'added' : i.status === 'removed' ? 'removed' : 'comments changed'}</>;
+  }
+}
 
 function Structural({ diff }: { diff: CodeDiff }) {
   const { before, after, viewed, toggleViewed } = useApp();
@@ -148,7 +168,7 @@ function Structural({ diff }: { diff: CodeDiff }) {
       <div className={css.layout}>
         <section className={css.pane} aria-label="Code diff">
           <header className={css.paneHead}>
-            <span className={css.file}>{after?.name}</span>
+            <span className={css.file}>{before?.name ?? after?.name}</span>
  <SegmentedControl className={css.viewSwitch} label="View" size="sm" value={view} onValueChange={setView} options={[{ value: 'structural', label: 'Structural' }, { value: 'text', label: 'Text' }]} />
           </header>
           {view === 'text' ? <TextResult /> : (
@@ -160,13 +180,14 @@ function Structural({ diff }: { diff: CodeDiff }) {
               threshold={0}
               label="Code"
               className={css.code}
-              height="min(70vh, 720px)"
+              // The card hugs a short diff (A-09) and scrolls a long one.
+              height={`min(70vh, 720px, ${items.reduce((h, v) => h + (v.kind === 'fold' ? 32 : v.kind === 'row' && v.row.type === 'change' ? 44 : 22), 18)}px)`}
               render={(i, slot) => {
                 const v = items[i]!;
                 const body =
                   v.kind === 'row' ? <Line row={v.row} /> : v.kind === 'moved' ? <MovedLine n={v.n} from={v.from} segs={v.segs} first={v.first} /> : (
                     <div className={css.fold}>
-                      <icons.Check size={14} aria-hidden="true" className={css.ok} /> {v.reason}
+                      {/unchanged/.test(v.reason) ? <icons.UnfoldVertical size={14} aria-hidden="true" /> : <icons.Check size={14} aria-hidden="true" className={css.ok} />} {v.reason}
                       <button type="button" className={css.show} onClick={() => setOpen(new Set(open).add(v.id))}>Show</button>
                     </div>
                   );
@@ -181,7 +202,7 @@ function Structural({ diff }: { diff: CodeDiff }) {
             {listed.map((i) => (
               <li key={`${i.status}-${i.name}`} id={itemId(i)} tabIndex={-1} className={css.item} data-current={listed[cur] === i || undefined}>
                 <span className={css.badge} data-status={i.status}>{BADGE[i.status]}</span>
-                <span className={css.desc}>{i.status === 'renamedLocals' ? <>{i.renames!.map((r, k) => <span key={r.from}>{k ? ', ' : ''}<code>{r.from}</code> → <code>{r.to}</code>, {r.uses} use{r.uses === 1 ? '' : 's'}</span>)} <span className={css.muted2}>in {i.name}</span></> : i.status === 'renamed' ? <><code>{i.from}</code> → <code>{i.name}</code></> : i.status === 'moved' ? <><code>{i.name}</code>, line {i.lines.before?.[0]} → {i.lines.after?.[0]}</> : <><code>{i.name}</code> {i.status === 'added' ? 'added' : i.status === 'removed' ? 'removed' : i.status === 'comments' ? 'comments changed' : 'changed'}</>}</span>
+                <span className={css.desc}>{describeItem(i)}</span>
                 <button type="button" className={css.viewed} aria-pressed={!!viewed[itemId(i)]} aria-label={`Mark ${i.name} as viewed`} onClick={() => toggleViewed(itemId(i))}>
                   {viewed[itemId(i)] ? <icons.CheckSquare size={14} aria-hidden="true" /> : <icons.Square size={14} aria-hidden="true" />}
                 </button>
@@ -196,6 +217,29 @@ function Structural({ diff }: { diff: CodeDiff }) {
         </aside>
       </div>
     </div>
+  );
+}
+
+/** A09-Fallback: one card, the file name and a unified line diff (no text-mode toolbar). */
+function FallbackDiff({ name, rows }: { name: string; rows: Row[] }) {
+  return (
+    <section className={css.pane} aria-label={`Text diff of ${name}`}>
+      <header className={css.paneHead}>
+        <span className={css.file}>{name}</span>
+      </header>
+      <VirtualList
+        count={rows.length}
+        estimate={22}
+        threshold={0}
+        label="Code"
+        className={css.code}
+        height={`min(70vh, 720px, ${rows.reduce((h, r) => h + (r.type === 'change' ? 44 : 22), 18)}px)`}
+        render={(i, slot) => {
+          const body = <Line row={rows[i]!} />;
+          return slot ? <div key={i} data-index={slot['data-index']} style={slot.style} ref={slot.measure}>{body}</div> : <div key={i}>{body}</div>;
+        }}
+      />
+    </section>
   );
 }
 

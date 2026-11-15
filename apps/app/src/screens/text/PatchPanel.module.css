@@ -40,7 +40,6 @@
 }
 .patch {
   min-height: 180px;
-  height: 360px;
   resize: vertical;
   border: 0;
   padding: var(--sd-space-4);

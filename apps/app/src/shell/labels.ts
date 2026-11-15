@@ -6,8 +6,10 @@ export function modeLabel(r: Exclude<CompareResult, { kind: 'parse' }>): string 
     return `${v.startsWith('2') ? 'Swagger' : 'OpenAPI'} ${v.split('.').slice(0, 2).join('.')}`.trim();
   }
   if (r.mode === 'code') {
+    // A09-Fallback: the result is a text diff, so the badge says so.
+    if ('code' in r && 'fallback' in r.code) return 'Text';
     const lang = 'language' in r && r.language ? LANG[r.language] ?? r.language[0]!.toUpperCase() + r.language.slice(1) : '';
-    return lang ? `Code: ${lang}` : 'Code';
+    return lang || 'Code';
   }
   return { json: 'JSON', yaml: 'YAML', markdown: 'Markdown', text: 'Text' }[r.mode];
 }

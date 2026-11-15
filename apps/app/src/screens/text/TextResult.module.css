@@ -38,7 +38,8 @@
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: var(--sd-space-3) var(--sd-space-4);
+  /* A-03: one row at 1440 px. */
+  gap: var(--sd-space-3) 10px;
   padding: var(--sd-space-3) var(--sd-space-3);
   background: var(--sd-surface);
   border: 1px solid var(--sd-line);

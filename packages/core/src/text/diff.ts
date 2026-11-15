@@ -86,6 +86,17 @@ function positional(a: string[], b: string[], same: (x: string, y: string) => bo
   return out;
 }
 
+/** Maps parts of a diff of normalised lines back to the original lines; unchanged lines come from the after side, as in jsdiff. */
+function originalLines(parts: LinePart[], a: string[], b: string[]): LinePart[] {
+  let i = 0, j = 0;
+  return parts.map((p) => {
+    const value = p.removed ? a.slice(i, i + p.count) : b.slice(j, j + p.count);
+    if (!p.added) i += p.count;
+    if (!p.removed) j += p.count;
+    return { ...p, value };
+  });
+}
+
 function splitLines(value: string): string[] {
   const lines = value.split('\n');
   if (lines.at(-1) === '') lines.pop();
@@ -130,12 +141,14 @@ export function diffText(before: string, after: string, opts: TextOptions, extra
     return t;
   };
   const la = splitLines(a), lb = splitLines(b);
+  // Normalise each line once: a comparator that normalises runs O(N·D) times (3× slower on 20,000 lines).
+  const na = la.map(norm), nb = lb.map(norm);
   const same = (l: string, r: string) => norm(l) === norm(r);
   // Myers' diff is O(N·D): when almost everything differs it can take minutes. Past an edit budget,
   // fall back to a positional alignment (common prefix/suffix, the middle paired line by line).
-  const exact = diffArrays(la, lb, { comparator: same, maxEditLength: Math.max(2000, (la.length + lb.length) >> 3) });
-  const approximate = exact === undefined;
-  const parts = exact ?? positional(la, lb, same);
+  const normParts = diffArrays(na, nb, { maxEditLength: Math.max(2000, (la.length + lb.length) >> 3) });
+  const approximate = normParts === undefined;
+  const parts = normParts ? originalLines(normParts, la, lb) : positional(la, lb, same);
   const found = extras.moves ? findMoves(parts, opts.ignoreCase) : null;
 
   const rows: Row[] = [];

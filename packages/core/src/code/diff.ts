@@ -21,6 +21,8 @@ export interface CodeItem {
   lines: { before?: [number, number]; after?: [number, number] };
   beforeText?: string;
   afterText?: string;
+  /** For changed: what changed, in words, when it can be told ("currency no longer defaults to USD"). */
+  summary?: string;
 }
 export type HiddenEdit = 'whitespace' | 'number-literal' | 'trailing-comma' | 'semicolon' | 'keyword-argument-order';
 export interface CodeDiff {
@@ -197,7 +199,8 @@ export function diffCode(before: string, after: string, lang: CodeLang, language
     else if (renameText(a.node.text, sub) !== b.node.text) { status = 'formatting'; hidden = ['whitespace']; }
     else status = stayed.has(a.name) ? 'same' : 'moved';
     if (status === 'same' || status === 'formatting' || status === 'comments') if (!stayed.has(a.name)) status = status === 'same' ? 'moved' : status;
-    items.push({ name: a.name, kind: a.kind, status, ...(renames ? { renames } : {}), ...(renames && commentsDiffer ? { commentsChanged: true as const } : {}), ...(hidden ? { hiddenEdits: hidden } : {}), lines: { before: lines(a.node), after: lines(b.node) }, beforeText: a.node.text, afterText: b.node.text });
+    const summary = status === 'changed' ? describeChange(a.node.text, b.node.text) : undefined;
+    items.push({ name: a.name, kind: a.kind, status, ...(summary ? { summary } : {}), ...(renames ? { renames } : {}), ...(renames && commentsDiffer ? { commentsChanged: true as const } : {}), ...(hidden ? { hiddenEdits: hidden } : {}), lines: { before: lines(a.node), after: lines(b.node) }, beforeText: a.node.text, afterText: b.node.text });
   }
   const added = B.decls.filter((d) => !matched.has(d.name));
   for (const r of removed) {
@@ -220,6 +223,43 @@ export function diffCode(before: string, after: string, lang: CodeLang, language
   for (const i of items) stats[i.status]++;
   ta.delete(); tb.delete(); parser.delete();
   return { language: lang, items, stats, logicChanged: stats.changed + stats.added + stats.removed > 0 };
+}
+
+const LIT = String.raw`"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|-?\d+(?:\.\d+)?[lLfFdD]?|true|false|True|False`;
+const ASSIGN = /([A-Za-z_$][\w$]*)\s*(?<![=!<>])=(?!=)\s*(.*?);?\s*$/;
+const DEFAULT = new RegExp(String.raw`(?:\?\?|\|\||\bor\b|:)\s*(${LIT})\s*$`);
+const unquote = (lit: string) => lit.replace(/^(["'])([\s\S]*)\1$/, '$2');
+
+/** The default literal each variable falls back to (`x = a ?? 10`, `x = c ? a : "USD"`, `x = a or "eu"`). */
+function defaults(text: string): Map<string, string | null> {
+  const out = new Map<string, string | null>();
+  for (const line of text.split(/\r?\n/)) {
+    const m = ASSIGN.exec(line.trim());
+    if (!m) continue;
+    const rhs = m[2]!;
+    const d = DEFAULT.exec(rhs);
+    // `:` only counts as a default after a `?` (a ternary), not in a map literal or a label.
+    const ok = d && (!d[0].trimStart().startsWith(':') || rhs.slice(0, d.index).includes('?'));
+    if (!out.has(m[1]!)) out.set(m[1]!, ok ? unquote(d[1]!) : null);
+  }
+  return out;
+}
+
+/**
+ * A-09: a logic change in words, when it is a variable's default that went away, appeared or changed;
+ * otherwise undefined. Deterministic: the first such variable in source order.
+ */
+export function describeChange(before: string, after: string): string | undefined {
+  const a = defaults(before), b = defaults(after);
+  for (const [name, was] of a) {
+    if (!b.has(name)) continue;
+    const now = b.get(name)!;
+    if (was === now) continue;
+    if (was !== null && now === null) return `${name} no longer defaults to ${was}`;
+    if (was === null && now !== null) return `${name} now defaults to ${now}`;
+    if (was !== null && now !== null) return `${name} default changed from ${was} to ${now}`;
+  }
+  return undefined;
 }
 
 /** Whole-word replacement of renamed declaration names in source text. */

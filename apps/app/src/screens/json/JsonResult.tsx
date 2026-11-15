@@ -176,6 +176,7 @@ export default function JsonResult() {
     <div className={css.page}>
       <Tabs
         label="JSON result"
+        className={css.tabs}
         value={tab}
         onValueChange={(t) => {
           memo.tab = t;
@@ -531,7 +532,7 @@ function DiffTab({
               <VirtualList
                 as="ul"
                 count={tree.length + (rootKeys !== null ? 1 : 0)}
-                estimate={66}
+                estimate={36}
                 label="Changes by path, scrollable"
                 listLabel="Changes by path"
                 listClassName={css.tree}
@@ -758,20 +759,6 @@ function ChangeRow({
             <Value c={c} from={from} />
           )}
         </span>
-        <span className={css.path}>
-          <code>{path}</code>
-          <button
-            type="button"
-            className={css.copy}
-            onClick={(e) => {
-              e.stopPropagation();
-              onCopy();
-            }}
-            aria-label={`Copy JSONPath ${path}`}
-          >
-            <icons.Copy size={13} aria-hidden="true" />
-          </button>
-        </span>
       </span>
       <span className={css.meta}>
         {c.kind === 'typeChanged' && (
@@ -780,18 +767,31 @@ function ChangeRow({
           </span>
         )}
         {nullMissing ? <span className={css.nullPill}>null ≠ missing</span> : <DiffMarker kind={MARKER[c.kind]} />}
+        {/* A07-JsonTree: one line per change; the JSONPath is in "Changes by path" and on this button (JS-05). */}
+        <button
+          type="button"
+          className={css.copy}
+          title={path}
+          onClick={(e) => {
+            e.stopPropagation();
+            onCopy();
+          }}
+          aria-label={`Copy JSONPath ${path}`}
+        >
+          <icons.Copy size={13} aria-hidden="true" />
+        </button>
         <button
           type="button"
           className={css.viewed}
           aria-pressed={viewed}
           aria-label={`Viewed: ${humanPath(path)}`}
+          title="Viewed"
           onClick={(e) => {
             e.stopPropagation();
             onViewed();
           }}
         >
           {viewed ? <icons.CheckSquare size={15} aria-hidden="true" /> : <icons.Square size={15} aria-hidden="true" />}
-          Viewed
         </button>
       </span>
     </li>
@@ -990,8 +990,11 @@ function ExportTab({
           tabIndex={0}
           aria-label={`${file.name} preview`}
         >
-          {file.content}
+          {file.preview ?? file.content}
         </pre>
+        {file.preview !== undefined && file.preview !== file.content && (
+          <p className="sd-visually-hidden">Long values are shortened in this preview; Copy and Download give the whole file.</p>
+        )}
         {file.verified !== undefined && (
           <p className={css.verify} data-ok={file.verified && !file.lossy}>
             {file.verified && !file.lossy ? (

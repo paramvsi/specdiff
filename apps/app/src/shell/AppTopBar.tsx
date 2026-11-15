@@ -63,7 +63,7 @@ function Files({ badge }: { badge: boolean }) {
       <FileChip name={before.name} />
       <icons.ArrowRight size={14} aria-label="compared with" className={css.arrow} />
       <FileChip name={after.name} />
-      {badge && hasResult && <ModeBadge mode={modeLabel(result)} beta={result.mode === 'code'} />}
+      {badge && hasResult && <ModeBadge mode={modeLabel(result)} beta={result.mode === 'code' && 'code' in result && !('fallback' in result.code)} />}
     </div>
   );
 }
@@ -164,5 +164,6 @@ export function AppTopBar() {
       )}
     </div>
   );
-  return <TopBar start={<Files badge />} end={end} homeHref="/app/" />;
+  // No divider after the logo until there are files to show.
+  return <TopBar start={before && after ? <Files badge /> : null} end={end} homeHref="/app/" />;
 }

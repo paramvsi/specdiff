@@ -166,7 +166,8 @@ test('IN-06 reload re-fetches a URL side, on Compare and on the result', async (
       body: bodies[version]!,
     });
   });
-  await page.goto('/app/');
+  // Production build: the dev server compiles the worker on first use, which is slow under parallel load.
+  await page.goto('http://localhost:4173/app/');
   await page.getByRole('textbox', { name: 'Before' }).fill('alpha\nbeta\ngamma\n');
   await page.getByRole('button', { name: 'From URL' }).nth(1).click();
   await page.getByLabel('File URL').fill('https://files.example.test/notes.txt');

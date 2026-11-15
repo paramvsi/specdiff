@@ -45,7 +45,9 @@
 .movedNote { color: var(--sd-muted); white-space: pre; }
 .pane, .panel { min-width: 0; }
 /* The item text wraps so the Viewed button stays inside the card. */
-.desc { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.desc { flex: 1; min-width: 0; overflow-wrap: break-word; }
+/* A-09: names never break mid-word; a name longer than the column wraps at its dots. */
+.desc code { word-break: normal; overflow-wrap: break-word; }
 .paneHead { gap: var(--sd-space-2); flex-wrap: wrap; }
 /* X-05: 44 px targets on phones. */
 @media (max-width: 639px) {

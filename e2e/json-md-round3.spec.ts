@@ -70,7 +70,7 @@ for (const scheme of ['light', 'dark'] as const) {
     await page.emulateMedia({ colorScheme: scheme });
     await openMarkdown(page);
     const summary = page.getByRole('region', { name: 'Summary' });
-    for (const [k, v] of [['Sections added', '2'], ['Sections removed', '2'], ['Sections edited', '3']])
+    for (const [k, v] of [['Sections added', '1'], ['Sections removed', '1'], ['Sections edited', '4']])
       await expect(summary.getByText(k, { exact: true }).locator('xpath=following-sibling::dd')).toHaveText(v);
     // Table: the key cell is untouched, the value cell carries its own marks.
     const cell = page.locator('td', { hasText: 'Idempotency-Key' });

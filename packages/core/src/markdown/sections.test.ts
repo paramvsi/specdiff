@@ -1,5 +1,5 @@
 // AMarkdown round 3: removed and added sections are grouped (never interleaved block by block), GFM tables are
-// diffed cell by cell, and the section counts match the document (2 added, 2 removed in the app's sample).
+// diffed cell by cell, and the section counts match the document (1 added, 1 removed, 4 edited in the app's sample).
 import { describe, expect, it } from 'vitest';
 import { diffMarkdown } from './diff';
 
@@ -42,10 +42,40 @@ describe('GFM tables, cell by cell', () => {
   });
 });
 
+describe('round 4: edits stay edits (AMarkdown)', () => {
+  it('a sentence appended to a short paragraph is one edited paragraph, not removed + added', () => {
+    const x = diffMarkdown(
+      'Create a payment with `POST /v1/payments`.\n',
+      'Create a payment with `POST /v1/payments`. The `currency` field is required and must be an ISO 4217 code.\n',
+    );
+    expect(x.blocks.map((b) => b.status)).toEqual(['edited']);
+    expect(x.blocks[0]!.html).toContain('<ins>');
+    expect(x.blocks[0]!.html).not.toContain('<del>');
+  });
+  it('two unrelated short paragraphs are still removed + added', () => {
+    const x = diffMarkdown('Old intro.\n', 'Brand new lead paragraph here, about something else.\n');
+    expect(x.blocks.map((b) => b.status)).toEqual(['removed', 'added']);
+  });
+  it('a renamed heading whose section body is unchanged is one edited heading, and the anchor check says renamed', () => {
+    const x = diffMarkdown(
+      '## Environment variables\n\nCopy `.env.example`. See [configuration](#environment-variables).\n',
+      '## Configuration\n\nCopy `.env.example`. See [configuration](#environment-variables).\n',
+    );
+    expect(x.blocks.map((b) => [b.status, b.heading?.text ?? b.type])).toEqual([['edited', 'Configuration'], ['same', 'paragraph']]);
+    expect(x.blocks[0]!.heading!.beforeText).toBe('Environment variables');
+    expect(x.outline).toEqual([{ depth: 2, text: 'Configuration', slug: 'configuration', status: 'edited' }]);
+    expect(x.brokenAnchors).toEqual([{ anchor: 'environment-variables', line: 3, renamedFrom: 'environment-variables', renamedTo: 'configuration' }]);
+  });
+  it('a heading of another depth is not a rename', () => {
+    const x = diffMarkdown('## Setup\n\nBody.\n', '### Other\n\nBody.\n');
+    expect(x.blocks.map((b) => b.status)).toEqual(['removed', 'added', 'same']);
+  });
+});
+
 describe('section counts', () => {
-  it("the app's README sample: 2 sections added, 2 removed, 3 edited", () => {
+  it("the app's README sample: 1 section added, 1 removed, 4 edited (Configuration is a rename)", () => {
     const d = diffMarkdown(README_BEFORE, README_AFTER);
-    expect(d.sections).toEqual({ added: 2, removed: 2, edited: 3 });
+    expect(d.sections).toEqual({ added: 1, removed: 1, edited: 4 });
     // Grouped: Rate limits (heading + paragraph) removed, then Migrating to v2 added.
     const tail = d.blocks.slice(-4).map((b) => `${b.status} ${b.heading?.text ?? b.type}`);
     expect(tail).toEqual(['removed Rate limits', 'removed paragraph', 'added Migrating to v2', 'added paragraph']);

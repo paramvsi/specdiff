@@ -41,7 +41,17 @@ export function structuralRows(diff: CodeDiff, before: string, after: string, op
   const nests = (outer?: [number, number], inner?: [number, number]) => !!outer && !!inner && inner[0] >= outer[0] && inner[1] <= outer[1];
   const withLines = diff.items.filter((i) => i.lines.before || i.lines.after);
   // Leaves own their lines; a container's own lines (header, fields, braces) go with the top level.
-  const leaves = withLines.filter((x) => !withLines.some((y) => y !== x && (nests(x.lines.after, y.lines.after) || nests(x.lines.before, y.lines.before))));
+  const blank = (ls: string[], n: number) => n >= 1 && (ls[n - 1] ?? '').trim() === '';
+  // A moved declaration takes the blank line before it on both sides, so the blank lines left behind don't
+  // pair up one place off (which made the left line numbers jump back).
+  const leaves = withLines
+    .filter((x) => !withLines.some((y) => y !== x && (nests(x.lines.after, y.lines.after) || nests(x.lines.before, y.lines.before))))
+    .map((x) => {
+      const a = x.lines.before, b = x.lines.after;
+      return x.status === 'moved' && a && b && blank(la, a[0] - 1) && blank(lb, b[0] - 1)
+        ? { ...x, lines: { before: [a[0] - 1, a[1]] as [number, number], after: [b[0] - 1, b[1]] as [number, number] } }
+        : x;
+    });
   const ownerA = (n: number) => leaves.find((i) => inRange(n, i.lines.before));
   const ownerB = (n: number) => leaves.find((i) => inRange(n, i.lines.after));
 
@@ -91,7 +101,7 @@ export function structuralRows(diff: CodeDiff, before: string, after: string, op
   };
   const out: CodeRow[] = [];
   let id = 0;
-  let movedFrom: CodeItem | undefined;
+  let noted: CodeItem | undefined;
   for (const t of all) {
     const reason = reasonOf(t);
     const last = out.at(-1);
@@ -101,11 +111,12 @@ export function structuralRows(diff: CodeDiff, before: string, after: string, op
       continue;
     }
     if (t.owner?.status === 'moved' && t.row.type === 'same' && t.row.left && t.row.right) {
-      out.push({ kind: 'moved', n: t.row.right.n, from: t.row.left.n, segs: t.row.right.segs, first: movedFrom !== t.owner });
-      movedFrom = t.owner;
+      // "moved from line N" goes on the declaration's first line, not on the blank line it took along.
+      const first = noted !== t.owner && text(t.row.right).trim() !== '';
+      if (first) noted = t.owner;
+      out.push({ kind: 'moved', n: t.row.right.n, from: t.row.left.n, segs: t.row.right.segs, first });
       continue;
     }
-    movedFrom = undefined;
     out.push({ kind: 'row', row: t.row });
   }
   // Labels count the lines of the new file in the fold (the old ones when only those remain).
@@ -117,5 +128,30 @@ export function structuralRows(diff: CodeDiff, before: string, after: string, op
     else v.reason = `${plural(n)} with renamed names, no logic change`;
   }
   // A fold of unchanged lines only (a formatting item whose rows happen to line up) shows as plain rows.
-  return out.flatMap((v) => (v.kind === 'fold' && v.rows.every((r) => r.type === 'same') ? v.rows.map((row) => ({ kind: 'row' as const, row })) : [v]));
+  const flat = out.flatMap((v) => (v.kind === 'fold' && v.rows.every((r) => r.type === 'same') ? v.rows.map((row) => ({ kind: 'row' as const, row })) : [v]));
+  return foldContext(flat, id);
+}
+
+/** Lines of unchanged context kept next to each change (A-09); longer unchanged runs fold. */
+export const CONTEXT = 3;
+
+/** A-09: runs of unchanged rows longer than the context fold to "N unchanged lines" (Show opens them). */
+function foldContext(rows: CodeRow[], firstId: number): CodeRow[] {
+  const out: CodeRow[] = [];
+  let id = firstId;
+  const isSame = (v: CodeRow | undefined) => v?.kind === 'row' && v.row.type === 'same';
+  for (let i = 0; i < rows.length; ) {
+    if (!isSame(rows[i])) { out.push(rows[i]!); i++; continue; }
+    let j = i;
+    while (isSame(rows[j])) j++;
+    const run = rows.slice(i, j) as Array<Extract<CodeRow, { kind: 'row' }>>;
+    const head = i === 0 ? 0 : CONTEXT, tail = j === rows.length ? 0 : CONTEXT;
+    // Fold only when it hides at least two lines; one hidden line is shown as itself.
+    if (run.length - head - tail >= 2) {
+      const hidden = run.slice(head, run.length - tail);
+      out.push(...run.slice(0, head), { kind: 'fold', rows: hidden.map((r) => r.row), reason: `${plural(hidden.length).replace('line', 'unchanged line')}`, id: id++ }, ...run.slice(run.length - tail));
+    } else out.push(...run);
+    i = j;
+  }
+  return out;
 }
