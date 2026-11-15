@@ -11,6 +11,7 @@ import { TextResult } from '../text/TextResult';
 import { VirtualList } from '../../lib/VirtualList';
 import css from './CodeResult.module.css';
 import { structuralRows } from './rows';
+import { showInvisibles } from '../invisibles';
 
 /** A name the user gave (a file), not the "Before"/"After" placeholder of pasted text. */
 const realName = (n: string | undefined) => (n && n !== 'Before' && n !== 'After' ? n : undefined);
@@ -252,7 +253,7 @@ function Line({ row }: { row: Row }) {
       <span className={css.num}>{row.left?.n ?? ''}</span>
       <span className={css.num}>{row.right?.n ?? ''}</span>
       <span className={css.gutter} aria-hidden="true">{kind === 'del' ? '−' : kind === 'add' ? '+' : ''}</span>
-      <span className={css.text}>{segs.map((s, i) => (s.kind === 'same' ? <span key={i}>{s.text}</span> : <mark key={i} className={s.kind === 'add' ? css.wAdd : css.wDel}>{s.text}</mark>))}{kind !== 'same' && <span className="sd-visually-hidden">{kind === 'del' ? ' (removed)' : ' (added)'}</span>}</span>
+      <span className={css.text}>{segs.map((s, i) => (s.kind === 'same' ? <span key={i}>{s.text}</span> : <mark key={i} className={s.kind === 'add' ? css.wAdd : css.wDel}>{showInvisibles(s.text)}</mark>))}{kind !== 'same' && <span className="sd-visually-hidden">{kind === 'del' ? ' (removed)' : ' (added)'}</span>}</span>
     </div>
   );
 }

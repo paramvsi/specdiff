@@ -9,6 +9,10 @@ lede: "For any file, including ones Specdiff has no special mode for."
 
 Split or unified view. Precision is Smart, Word or Char. Ignore whitespace, case or line endings. Unchanged regions collapse, with controls to expand them. Move between changes with the overview ruler or the keyboard.
 
+## Invisible characters
+
+When a changed line differs only by characters you cannot see, they are named in the diff: `BOM`, `ZWSP`, `NBSP`, `SHY` and the bidirectional controls such as `RLO`. Hover a marker for its code point. Bidirectional controls are replaced by their names, so they cannot reorder the line you are reviewing (the Trojan Source attack). This applies in Text, JSON, YAML, code and the OpenAPI raw diff.
+
 ## Filters
 
 Regex filters mask noise on both sides before comparing: timestamps, request IDs, UUIDs. Masked text shows as `‹name›`, with a hit count per filter.

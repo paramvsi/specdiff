@@ -5,6 +5,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import * as icons from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 import css from './DiffRows.module.css';
+import { showInvisibles } from '../invisibles';
 
 export function DiffRows({
   rows,
@@ -101,7 +102,7 @@ function Segs({ segs }: { segs: Seg[] }) {
           <span key={i}>{s.text}</span>
         ) : (
           <mark key={i} className={s.kind === 'add' ? css.wordAdd : css.wordDel}>
-            {s.text}
+            {showInvisibles(s.text)}
           </mark>
         ),
       )}

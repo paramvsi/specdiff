@@ -11,6 +11,7 @@ import { useExplain } from './explainStore';
 import { Title } from './Title';
 import { SEVERITIES } from './util';
 import css from './RawDiff.module.css';
+import { showInvisibles } from '../invisibles';
 
 const SYM = { breaking: '!', possibly: '?', safe: '+', docs: '¶' } as const;
 
@@ -93,7 +94,7 @@ export function RawDiff() {
         <span className={css.num}>{side !== 'right' ? r.left?.n ?? '' : ''}</span>
         <span className={css.num}>{side !== 'left' ? r.right?.n ?? '' : ''}</span>
         <span className={css.gut} aria-hidden="true">{r.type === 'same' ? '' : kind === 'del' ? '−' : kind === 'add' ? '+' : ''}</span>
-        <span className={css.code}>{s?.segs.map((g, i) => (g.kind === 'same' ? g.text : <mark key={i} className={g.kind === 'add' ? css.wAdd : css.wDel}>{g.text}</mark>))}</span>
+        <span className={css.code}>{s?.segs.map((g, i) => (g.kind === 'same' ? g.text : <mark key={i} className={g.kind === 'add' ? css.wAdd : css.wDel}>{showInvisibles(g.text)}</mark>))}</span>
       </div>
     );
   };

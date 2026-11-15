@@ -16,13 +16,14 @@ import {
 } from '@specdiff/ui';
 import * as icons from 'lucide-react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useCommand } from '../../shell/commands';
 import { changeLink, focusChange, readChangeHash, useNav } from '../../shell/nav';
 import { useApp } from '../../state/store';
 import { languageFor, MAX_BYTES, MAX_ROWS, tokenize, type Token } from './highlight';
 import { ReloadButton } from './ReloadButton';
 import css from './TextResult.module.css';
+import { showInvisibles } from '../invisibles';
 
 type Layout = 'split' | 'unified';
 /** Core's views plus TX-12 gaps (lines a patch leaves out) and TX-11 move banners. */
@@ -610,7 +611,7 @@ function Segs({ segs, tokens }: { segs: Seg[]; tokens?: Token[] | undefined }) {
   return (
     <>
       {segs.map((s, i) => {
-        const inner = s.text.split(SPLIT).map((p, j) => (WHOLE.test(p) ? <MaskedText key={j} name={p.slice(1, -1)} /> : p));
+        const inner = s.text.split(SPLIT).map((p, j) => (WHOLE.test(p) ? <MaskedText key={j} name={p.slice(1, -1)} /> : s.kind === 'same' ? p : <Fragment key={j}>{showInvisibles(p)}</Fragment>));
         return s.kind === 'same' ? (
           <span key={i}>{inner}</span>
         ) : (
@@ -653,15 +654,16 @@ function HighlightedSegs({ segs, tokens }: { segs: Seg[]; tokens: Token[] }) {
   return (
     <>
       {splitByTokens(segs, tokens).map((s, i) => {
-        const pieces: ReactNode[] = s.pieces.map((p, j) =>
-          p.color ? (
+        const pieces: ReactNode[] = s.pieces.map((p, j) => {
+          const text = s.kind === 'same' ? p.content : showInvisibles(p.content);
+          return p.color ? (
             <span key={j} style={{ color: p.color }}>
-              {p.content}
+              {text}
             </span>
           ) : (
-            p.content
-          ),
-        );
+            <Fragment key={j}>{text}</Fragment>
+          );
+        });
         return s.kind === 'same' ? (
           <span key={i}>{pieces}</span>
         ) : (
