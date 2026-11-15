@@ -44,6 +44,8 @@
 }
 .input {
   flex: 1;
+  /* Fill the control's height so a tap anywhere on the box lands on the input. */
+  align-self: stretch;
   min-width: 0;
   border: 0;
   outline: 0;

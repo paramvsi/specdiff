@@ -33,3 +33,4 @@
 .group legend { padding: 0 var(--sd-space-2); font-weight: 600; }
 .error { margin: 0; padding: var(--sd-space-3); border-radius: var(--sd-radius-md); background: var(--sd-breaking-bg); color: var(--sd-breaking); font-size: 13.5px; }
 @media (max-width: 1023px) { .layout { grid-template-columns: minmax(0, 1fr); gap: var(--sd-space-5); } .content { min-width: 0; } .tools { flex-wrap: wrap; } .tools .muted { margin-left: 0; } .nav { flex-direction: row; flex-wrap: wrap; position: static; } .head { flex-direction: column; } .table { display: block; overflow-x: auto; } }
+@media (pointer: coarse) { .navItem { height: 44px; } .select { height: 44px; } }
