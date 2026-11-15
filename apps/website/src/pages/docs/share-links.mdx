@@ -12,11 +12,14 @@ The files are compressed into the URL after the `#`. Browsers never send that pa
 
 ```text
 https://…/app/#v=1&c=<compressed comparison>
+https://…/app/#v=1&e=1&s=<salt>&i=<iv>&c=<encrypted comparison>
 ```
+
+The comparison is JSON, compressed with raw DEFLATE and encoded as base64url.
 
 ## Lock it
 
-Add a passphrase and the content is encrypted in your browser with AES-GCM; the key comes from the passphrase through PBKDF2 with at least 310,000 iterations. The passphrase is never stored or sent. Whoever opens the link sees an unlock screen.
+Add a passphrase and the content is encrypted in your browser with AES-GCM; the key comes from the passphrase through PBKDF2 (SHA-256, 310,000 iterations). The passphrase is never stored or sent. Whoever opens the link sees an unlock screen.
 
 ## Large comparisons
 

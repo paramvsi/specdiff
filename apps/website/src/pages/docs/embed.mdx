@@ -7,27 +7,35 @@ lede: "One script tag, no build step."
 
 ## Mount
 
+Host the files from `@specdiff/embed`’s `dist/` folder side by side: `specdiff-embed.js`, `specdiff-embed.css`, `specdiff-compare.js` and the `fonts/` folder. `specdiff-compare.js` is the comparison engine; it is loaded from the same folder as `specdiff-embed.js`, and only when you pass `compareWith`.
+
 ```html
+<link rel="stylesheet" href="/specdiff/specdiff-embed.css" />
 <div id="api"></div>
-<script src="…/@specdiff/embed"></script>
-<script type="module" src="./docs.js"></script>
+<script src="/specdiff/specdiff-embed.js"></script>
+<script src="/docs.js"></script>
 ```
 
 ```js title="docs.js"
 Specdiff.mount(document.getElementById('api'), {
   url: '/openapi.json',
   compareWith: '/openapi-1.5.json',
-  theme: 'auto',
-  brand: { color: '#c8f24a', logo: '/logo.svg' },
+  theme: 'system',
+  brand: { color: '#c8f24a', logo: '/logo.svg', name: 'Acme' },
 })
 ```
 
 | Option | What it does |
 |---|---|
-| `url` | The spec to render |
-| `compareWith` | An older version, for change badges |
-| `mode` | `viewer` (default) or `diff` |
-| `theme` | `light`, `dark` or `auto` |
-| `brand` | Brand colour and logo |
+| `url` | Required. The spec to render, YAML or JSON |
+| `compareWith` | An older version, for change badges, history and “What changed” |
+| `mode` | `reference` (default) opens the overview; `changes` opens “What changed” |
+| `theme` | `light`, `dark` or `system` (default) |
+| `brand` | `color`, `logo` and `name` |
+| `basePath` | Prefix inside the URL hash, for pages that use the hash themselves |
+| `tryIt` | Show Try it (default `true`) |
+| `corsProxy` | A CORS proxy for Try it; `{url}` is replaced by the encoded target URL |
+
+`mount` returns `{ unmount() }`.
 
 Keeping the `mount` call in a file rather than an inline script works with a strict Content Security Policy.

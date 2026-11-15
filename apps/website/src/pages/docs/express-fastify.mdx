@@ -15,6 +15,8 @@ const app = express()
 app.use('/docs', specdiff({ spec: './openapi.yaml' }))
 ```
 
+Express and Fastify are optional peer dependencies: install the one you use.
+
 ## Fastify
 
 ```ts
@@ -25,4 +27,18 @@ const app = Fastify()
 await app.register(specdiffFastify, { prefix: '/docs', spec: './openapi.yaml' })
 ```
 
-Open `/docs` to see the Viewer. Settings come from `.specdiff.yaml`.
+Open `/docs/` to see the Viewer; `/docs` redirects there. The spec is read from disk on each request and served by your app.
+
+## Options
+
+Settings are passed in code; `.specdiff.yaml` is not read.
+
+| Option | What it does |
+|---|---|
+| `spec` | Required. Path to the OpenAPI file (YAML or JSON), or the document itself |
+| `compareWith` | An older version, path or document: adds change badges and “What changed” |
+| `title` | Page title, default “API reference” |
+| `theme` | `light`, `dark` or `system` |
+| `brand` | `color`, `logo` and `name` |
+| `assetsDir` | Folder with the built Viewer; defaults to `@specdiff/embed`’s `dist` |
+| `prefix` | Fastify only: where the plugin is mounted |

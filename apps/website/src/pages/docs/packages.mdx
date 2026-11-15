@@ -13,6 +13,8 @@ lede: "One engine in the web app, your terminal, any CI and your own service. On
 | [`@specdiff/react`](/docs/react/) | npm | Viewer and diff components |
 | [`@specdiff/express`](/docs/express-fastify/) | npm | Express and Fastify middleware serving the Viewer at `/docs` |
 | [`@specdiff/embed`](/docs/embed/) | npm | One script tag, `Specdiff.mount()` |
+| `@specdiff/viewer` | npm | The Viewer as a React component |
+| `@specdiff/ui` | npm | The design system’s React components and tokens |
 | `@specdiff/core` | npm | Parsing, diffing, rules and changelog builder, no DOM |
 
-All of them read the same [`.specdiff.yaml`](/docs/config/).
+The CLI and the pre-commit hook read [`.specdiff.yaml`](/docs/config/). The Viewer packages take their settings in code (or Spring properties).

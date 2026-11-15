@@ -19,7 +19,7 @@ OpenAPI specs are resolved (`$ref`s, split files from a folder or ZIP) and norma
 Each mode has its own engine:
 
 - **OpenAPI** matches endpoints, parameters, bodies, responses, schemas, security, servers and webhooks, then runs the [rules](/rules/) over every difference. Each rule knows its direction: requests may accept more but not less; responses may promise more but not less.
-- **JSON and YAML** compare the tree, matching array items by `id`, `uuid` or `key`.
+- **JSON and YAML** compare the tree, matching array items by `id`, `uuid`, `key` or `name`.
 - **Markdown** compares the rendered document and checks anchors.
 - **Code (Beta)** compares syntax trees with tree-sitter.
 - **Text** compares lines, words or characters.

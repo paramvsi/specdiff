@@ -11,13 +11,26 @@ lede: "Add one dependency and your app serves the Viewer at /specdiff."
 <dependency>
   <groupId>io.github.paramvsi</groupId>
   <artifactId>specdiff-spring-boot-starter</artifactId>
+  <version>0.1.0-SNAPSHOT</version>
 </dependency>
 ```
 
-Then open `http://localhost:8080/specdiff`.
+Then open `http://localhost:8080/specdiff`. It needs a Spring MVC (servlet) app on Java 21.
 
 ## What it reads
 
-The starter finds your app’s OpenAPI document automatically and renders it in the Viewer: search, code samples, Try it, and change badges when more than one version is available.
+The starter renders the OpenAPI document at `/v3/api-docs`, where [springdoc-openapi](https://springdoc.org) serves it; add springdoc to your app. The Viewer has search, code samples and Try it, and change badges when `specdiff.compare-with` points at an older version.
 
-Settings come from `.specdiff.yaml` like everywhere else.
+## Settings
+
+Settings are Spring properties, not `.specdiff.yaml`:
+
+| Property | Default | What it does |
+|---|---|---|
+| `specdiff.enabled` | `true` | Turn the Viewer off |
+| `specdiff.path` | `/specdiff` | Where the Viewer is served |
+| `specdiff.spec-url` | `/v3/api-docs` | The OpenAPI document to render |
+| `specdiff.compare-with` | none | An older version, for change badges and “What changed” |
+| `specdiff.brand-color` | none | Brand colour, as a CSS colour |
+| `specdiff.logo-url` | none | Logo shown in the Viewer header |
+| `specdiff.title` | `API reference` | Title in the browser tab |

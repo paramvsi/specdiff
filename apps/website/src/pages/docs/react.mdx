@@ -8,12 +8,13 @@ lede: "Components that wrap the Viewer and the diff."
 ## Install
 
 ```bash
-npm install @specdiff/react
+npm install @specdiff/react @specdiff/viewer @specdiff/core react@19 react-dom@19
 ```
 
 ## Viewer
 
 ```tsx
+import '@specdiff/viewer/styles.css'
 import { SpecdiffViewer } from '@specdiff/react'
 
 <SpecdiffViewer
@@ -22,6 +23,28 @@ import { SpecdiffViewer } from '@specdiff/react'
 />
 ```
 
-`compareWith` adds the change badges (New, Changed, Breaking, Deprecated) and the “What changed for me?” view. Load a whole timeline with the `versions.json` that [`specdiff-cli history`](/docs/cli/#viewer-timeline-history) writes.
+`compareWith` adds the change badges (New, Changed, Breaking, Deprecated) and the “What changed for me?” view. Other props: `theme` (`light`, `dark`, `system`), `brand` (`color`, `logo`, `name`), `basePath`, `tryIt`, `corsProxy`, `compare` and `className`.
+
+## A whole timeline
+
+`SpecdiffViewer` takes one or two URLs. For a timeline, pass the `versions.json` that [`specdiff-cli history`](/docs/cli/#viewer-timeline-history) writes to the `Viewer` component:
+
+```tsx
+import { Viewer, type VersionSet } from '@specdiff/react'
+import { compareOpenApi } from '@specdiff/core'
+import versions from './versions.json'
+
+<Viewer versions={versions as VersionSet} compare={compareOpenApi} />
+```
+
+## Text diff
+
+```tsx
+import { SpecdiffDiff } from '@specdiff/react'
+
+<SpecdiffDiff before={oldText} after={newText} label="Config changes" />
+```
+
+Added, removed and changed lines carry `+`, `−` and `~`, never colour alone.
 
 The Viewer follows light and dark mode, takes a brand colour and logo, and is themed with CSS variables.

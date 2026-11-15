@@ -20,7 +20,14 @@ repos:
         files: openapi\.yaml$
 ```
 
-`HEAD:openapi.yaml` is the last committed version; `openapi.yaml` is what you are about to commit.
+`HEAD:openapi.yaml` is the last committed version; `openapi.yaml` is the file in your working copy (not only the staged part).
+
+You can also leave out the paths and `pass_filenames: false`, so pre-commit passes the matching file. This works when `files` matches a single file. Given one file, the CLI compares `HEAD:<file>` with the working copy, and a file that is not in `HEAD` yet passes. With two arguments, a file missing from `HEAD` is an input error (exit code 2).
+
+```yaml
+        entry: npx specdiff-cli --ci --fail-on breaking
+        files: openapi\.yaml$
+```
 
 ## Without a framework
 

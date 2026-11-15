@@ -10,7 +10,9 @@ import Callout from '../../components/Callout.astro';
 
 1. The `--config` flag.
 2. `./.specdiff.yaml`.
-3. The repository root.
+3. `.specdiff.yaml` at the root of the git repository.
+
+The CLI and the pre-commit hook read it. If the file is not valid, the CLI names each wrong field and exits with code 2.
 
 The app imports and exports the same file from Rules and settings.
 
@@ -34,6 +36,8 @@ openapi:
   autoUpgrade: true
   includePathParamNames: false
   sunsetGracePeriodDays: 90
+  hideDocsOnly: false
+  ignoreExamples: false
 json:
   ignoreKeyOrder: true
   ignoreArrayOrder: false
@@ -49,7 +53,10 @@ text:
   filters:
     - { name: Timestamps, pattern: '\d{4}-\d{2}-\d{2}T[\d:.]+Z', replace: '‹time›' }
     - { name: Request IDs, pattern: 'req_[a-z0-9]{8,}', replace: '‹req-id›' }
+  transforms: []             # sortLines | lowercase | trim | normaliseLineBreaks
 decisions: .specdiff/decisions.json
 ```
+
+Every field is optional; leave one out to keep its default. `decisions` defaults to `.specdiff/decisions.json`.
 
 <Callout>Rule IDs are listed in the [Rules reference](/rules/). Each rule page has the snippet to change its severity.</Callout>

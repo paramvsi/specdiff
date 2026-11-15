@@ -9,7 +9,7 @@ import Callout from '../../components/Callout.astro';
 ## What counts as a change
 
 - **Key order** is ignored (you can turn this off).
-- **Array items** are matched by key, detected automatically from `id`, `uuid` or `key`. Pick another key, or ignore array order entirely.
+- **Array items** are matched by key, detected automatically from `id`, `uuid`, `key` or `name`. Pick another key, or ignore array order entirely.
 - A **moved** item is shown as a move (`↕`), not a removal and an addition.
 - A **type change**, such as `"25MB"` → `26214400`, is its own category in the stats and filters.
 - `null` and a missing key stay different unless you turn on “treat null as missing”. Duplicate keys are reported with their line.
