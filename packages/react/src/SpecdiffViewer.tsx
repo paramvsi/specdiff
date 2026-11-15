@@ -1,6 +1,6 @@
 // <SpecdiffViewer> (PK-03): fetches one or two spec versions and renders the Viewer.
 // Core (parser + comparison engine) is imported lazily so the reference renders before it loads.
-import { Viewer, type Brand, type CompareFn, type ThemeSetting, type VersionSet, type ViewerVersion } from '@specdiff/viewer';
+import { keepWrittenVersion, Viewer, type Brand, type CompareFn, type ThemeSetting, type VersionSet, type ViewerVersion } from '@specdiff/viewer';
 import { useEffect, useState } from 'react';
 
 export interface SpecdiffViewerProps {
@@ -28,7 +28,7 @@ export function parseWith(core: Pick<Core, 'parseDocument'> & Partial<Pick<Core,
     const e = doc.errors[0];
     throw new Error(e ? `${name}:${e.line}:${e.column} ${e.message}` : `${name} does not contain an object.`);
   }
-  const value = doc.value as { swagger?: unknown };
+  const value = keepWrittenVersion(doc.value, text) as { swagger?: unknown };
   // The Viewer renders OpenAPI 3; Swagger 2.0 is upgraded with core's converter.
   return typeof value.swagger === 'string' && value.swagger.startsWith('2') && core.upgradeSpec ? core.upgradeSpec(value) : value;
 }

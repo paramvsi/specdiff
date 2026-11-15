@@ -5,3 +5,4 @@ export { buildModel, search, deref, typeLabel, METHODS, type Model, type Op, typ
 export { sample, exampleFor, buildUrl, type Lang } from './samples';
 export { indexChanges, checklist, type ChangeIndex } from './change-index';
 export { checkSchema, requestIssues } from './request';
+export { keepWrittenVersion } from './version';

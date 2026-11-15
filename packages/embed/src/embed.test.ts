@@ -50,3 +50,10 @@ describe('@specdiff/embed', () => {
     expect(el.innerHTML).toBe('');
   });
 });
+
+describe('version labels', () => {
+  it('labels an unquoted info.version 1.10 as 1.10, not 1.1', async () => {
+    const v = await loadVersion('https://s.example.com/a.yaml', async () => new Response('openapi: 3.1.0\ninfo: {title: T, version: 1.10}\npaths: {}\n'));
+    expect(v.label).toBe('1.10');
+  });
+});

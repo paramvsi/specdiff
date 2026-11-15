@@ -18,14 +18,15 @@ import { Header, Nav, brandStyle } from './Shell';
 import { authStorageKey, loadAuth, saveAuth, type AuthState } from './request';
 import type { ViewerProps, ViewerVersion } from './types';
 import css from './Viewer.module.css';
+import { keepWrittenVersion } from './version';
 
 const isOpenApi3 = (s: Json) => typeof s?.openapi === 'string' && s.openapi.startsWith('3');
 const isSwagger2 = (s: Json) => typeof s?.swagger === 'string' && s.swagger.startsWith('2');
 
 function parseFile(text: string, name: string, parseSpec: ViewerProps['parseSpec']): object {
-  if (parseSpec) return parseSpec(text, name);
+  if (parseSpec) return keepWrittenVersion(parseSpec(text, name), text);
   try {
-    return JSON.parse(text) as object;
+    return keepWrittenVersion(JSON.parse(text) as object, text);
   } catch {
     throw new Error('This file is not JSON. YAML needs the embedding page to pass a parser.');
   }

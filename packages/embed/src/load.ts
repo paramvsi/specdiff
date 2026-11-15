@@ -1,6 +1,6 @@
 // Fetch and parse spec files for the embed (YAML or JSON), and turn failures into the Viewer's
 // load-error states (VW-13).
-import type { LoadError, ViewerVersion } from '@specdiff/viewer';
+import { keepWrittenVersion, type LoadError, type ViewerVersion } from '@specdiff/viewer';
 import { parse } from 'yaml';
 
 const fileName = (url: string) => {
@@ -14,12 +14,12 @@ const hostOf = (url: string) => {
 export function parseSpecText(text: string): object {
   const t = text.trim();
   if (t.startsWith('{')) {
-    try { return JSON.parse(t) as object; } catch { /* fall through: YAML is a superset */ }
+    try { return keepWrittenVersion(JSON.parse(t) as object, t); } catch { /* fall through: YAML is a superset */ }
   }
   // merge: YAML `<<` keys, as core's parser applies them when comparing.
   const doc = parse(text, { maxAliasCount: 100, merge: true }) as unknown;
   if (!doc || typeof doc !== 'object' || Array.isArray(doc)) throw new Error('The file does not contain an object.');
-  return doc as object;
+  return keepWrittenVersion(doc as object, text);
 }
 
 export async function loadVersion(url: string, fetchImpl: typeof fetch = fetch): Promise<ViewerVersion> {

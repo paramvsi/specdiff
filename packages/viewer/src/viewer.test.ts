@@ -82,3 +82,12 @@ describe('samples', () => {
     expect(sample('curl', { ...input, headers: { X: "it's" }, body: undefined as never })).toContain(`'X: it'\\''s'`);
   });
 });
+
+describe('unquoted info.version (VW-03)', () => {
+  it('puts back the written literal when YAML or JSON read it as a number', async () => {
+    const { keepWrittenVersion } = await import('./version');
+    expect(keepWrittenVersion({ info: { version: 1.1 } }, 'openapi: 3.1.0\ninfo:\n  title: T\n  version: 1.10\n')).toEqual({ info: { version: '1.10' } });
+    expect(keepWrittenVersion({ info: { version: 2 } }, '{"openapi":"3.1.0","info":{"title":"T","version":2.0}}')).toEqual({ info: { version: '2.0' } });
+    expect(keepWrittenVersion({ info: { version: '1.10' } }, 'info:\n  version: "1.10"\n')).toEqual({ info: { version: '1.10' } });
+  });
+});
