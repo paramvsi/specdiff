@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { matchHar, parseOperationList } from './har';
+import { matchHar, parseOperationList, readHarFile } from './har';
 
 const ops = [
   { method: 'get', path: '/v1/payments', operationId: 'listPayments' },
@@ -54,5 +54,14 @@ describe('OA-22 HAR matching edge cases', () => {
   it('a server URL with variables still strips its base path', () => {
     const r = matchHar(har('https://eu.api.x.com/v1/users'), [{ method: 'get', path: '/users' }], ['https://{region}.api.x.com/v1']);
     expect(r.matches.map((m) => m.operationKey)).toEqual(['GET /users']);
+  });
+});
+
+describe('OA-22 reading a HAR file', () => {
+  it('parses JSON, explains bad JSON and a file too large to read', async () => {
+    await expect(readHarFile(new Blob(['{"log":{"entries":[]}}']))).resolves.toEqual({ log: { entries: [] } });
+    await expect(readHarFile(new Blob(['<html>']))).rejects.toThrow('This file is not JSON, so it is not a HAR file.');
+    const huge = { text: () => Promise.reject(new RangeError('Invalid string length')), size: 600e6 } as unknown as Blob;
+    await expect(readHarFile(huge)).rejects.toThrow(/too large to read in the browser \(600 MB\)/);
   });
 });

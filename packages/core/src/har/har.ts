@@ -72,3 +72,16 @@ export function parseOperationList(text: string, ops: Operation[]): string[] {
   }
   return [...out].sort();
 }
+
+/** Read a HAR file the user picked. Errors carry a message fit to show as is. */
+export async function readHarFile(file: Blob): Promise<unknown> {
+  let text: string;
+  try { text = await file.text(); }
+  catch (e) {
+    // Past the engine's string limit (~512 MB): HARs saved with response bodies get there.
+    if (e instanceof RangeError) throw new Error(`This HAR file is too large to read in the browser (${Math.round(file.size / 1e6)} MB). Record a shorter session, or save it without response bodies.`);
+    throw e;
+  }
+  try { return JSON.parse(text) as unknown; }
+  catch { throw new Error('This file is not JSON, so it is not a HAR file.'); }
+}

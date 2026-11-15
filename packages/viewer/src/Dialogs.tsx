@@ -1,5 +1,5 @@
 // V-05 Search (VW-04) and V-04 Pick my endpoints (VW-10, OA-22).
-import { matchHar, parseOperationList, type HarResult } from '@specdiff/core/har';
+import { matchHar, parseOperationList, readHarFile, type HarResult } from '@specdiff/core/har';
 import { Button, Dialog, DialogClose, Kbd } from '@specdiff/ui';
 import { ArrowUpToLine, Search as SearchIcon } from 'lucide-react';
 import { useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
@@ -120,12 +120,12 @@ export function MyEndpointsDialog({ open, onOpenChange }: { open: boolean; onOpe
   const readHar = async (file: File) => {
     setError(undefined);
     try {
-      const json = JSON.parse(await file.text()) as unknown;
+      const json = await readHarFile(file);
       const result = matchHar(json, ops.map((o) => ({ method: o.method, path: o.path, ...(o.operationId ? { operationId: o.operationId } : {}) })), servers);
       setHar({ name: file.name, result });
       setChecked(new Set(result.matches.map((m) => m.operationKey)));
     } catch (e) {
-      setError(e instanceof SyntaxError ? 'This file is not JSON, so it is not a HAR file.' : e instanceof Error ? e.message : String(e));
+      setError(e instanceof Error ? e.message : String(e));
     }
   };
   const matchedRequests = har?.result.matches.reduce((n, m) => n + m.calls, 0) ?? 0;

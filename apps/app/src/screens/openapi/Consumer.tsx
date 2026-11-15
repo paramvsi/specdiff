@@ -1,6 +1,6 @@
 // A-05 SDK impact (OA-20, Beta) and A-05 Changes that affect me (OA-22).
 import { parseDocument, type Change } from '@specdiff/core';
-import { parseOperationList } from '@specdiff/core/har';
+import { parseOperationList, readHarFile } from '@specdiff/core/har';
 import { BetaLabel, Button, Dialog, MethodChip, SegmentedControl, SeverityBadge } from '@specdiff/ui';
 import * as icons from 'lucide-react';
 import { useMemo, useState } from 'react';
@@ -106,8 +106,8 @@ export function AffectsMeDialog() {
     set({ filter: { source: 'your list', keys, calls: {}, failing: [] }, editing: false });
   };
   const har = async (f: File) => {
-    try { set({ filter: fromHar(f.name, JSON.parse(await f.text()), spec, changes), editing: false }); }
-    catch (e) { setError(e instanceof SyntaxError ? 'That file is not valid JSON.' : (e as Error).message); }
+    try { set({ filter: fromHar(f.name, await readHarFile(f), spec, changes), editing: false }); }
+    catch (e) { setError(e instanceof Error ? e.message : String(e)); }
   };
   return (
     <Dialog open title="Changes that affect me" description="Paste the operations you call, or drop a HAR file recorded from your app. It stays in this browser." onOpenChange={(o) => { if (!o) close(); }}
