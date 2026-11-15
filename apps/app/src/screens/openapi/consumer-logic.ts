@@ -73,22 +73,72 @@ export function fromHar(name: string, har: unknown, beforeSpec: unknown, changes
     const m = r.matches.find((x) => x.operationKey === opKey(c.operation!));
     if (!m) continue;
     if (c.ruleId === 'endpoint-removed') failing.push({ change: c, count: m.calls, reason: `${m.calls} calls to ${m.operationKey}, which is removed` });
-    const bound = /maximum|minimum|maxLength/.exec(c.path)?.[0];
-    const param = c.path.split(' › ').find((s) => s.startsWith('query '))?.slice(6);
-    if (c.ruleId === 'request-param-constraint-tightened' && param && bound && typeof c.after === 'number') {
-      const over = m.requests.filter((q) => {
-        const v = new URL(q.url).searchParams.get(param);
-        if (v === null) return false;
-        const n = bound === 'maxLength' ? v.length : Number(v);
-        return bound === 'minimum' ? n < (c.after as number) : n > (c.after as number);
-      }).length;
-      if (over) failing.push({ change: c, count: over, reason: `${over} calls with ${param} ${bound === 'minimum' ? 'below' : 'above'} ${String(c.after)}` });
-    }
+    const over = overBound(c, m.requests);
+    if (over) failing.push({ change: c, count: over.count, reason: `${over.count} calls with ${over.param} ${over.dir} ${over.limit}` });
   }
   return { source: name, keys: Object.keys(calls).sort(), calls, failing };
 }
 
+const NUMERIC_BOUNDS = ['maximum', 'minimum', 'exclusiveMaximum', 'exclusiveMinimum', 'maxLength', 'minLength'] as const;
+type Bound = (typeof NUMERIC_BOUNDS)[number];
+
+/**
+ * Recorded calls that break a tightened query bound. The param name comes from the change's path
+ * ("GET /v1/payments › query limit › maximum"); the bound and its new value from `after`
+ * (`{ maximum: 50 }` in real reports; a bare number is accepted too).
+ */
+export function overBound(c: Change, requests: Array<{ url: string }>): { count: number; param: string; dir: 'above' | 'below'; limit: number } | null {
+  if (c.ruleId !== 'request-param-constraint-tightened') return null;
+  const segs = c.path.split(' › ');
+  const param = segs.find((s) => s.startsWith('query '))?.slice('query '.length);
+  if (!param) return null;
+  const after = c.after;
+  const bound = (NUMERIC_BOUNDS as readonly string[]).includes(segs.at(-1)!)
+    ? (segs.at(-1) as Bound)
+    : after && typeof after === 'object' ? (Object.keys(after).find((k) => (NUMERIC_BOUNDS as readonly string[]).includes(k)) as Bound | undefined) : undefined;
+  if (!bound) return null;
+  const raw = typeof after === 'number' ? after : after && typeof after === 'object' ? (after as Record<string, unknown>)[bound] : undefined;
+  if (typeof raw !== 'number') return null;
+  const lower = bound === 'minimum' || bound === 'exclusiveMinimum' || bound === 'minLength';
+  const count = requests.filter((q) => {
+    let v: string | null;
+    try { v = new URL(q.url).searchParams.get(param); } catch { return false; }
+    if (v === null) return false;
+    const n = bound === 'maxLength' || bound === 'minLength' ? v.length : Number(v);
+    if (Number.isNaN(n)) return false;
+    if (bound === 'exclusiveMaximum') return n >= raw;
+    if (bound === 'exclusiveMinimum') return n <= raw;
+    return lower ? n < raw : n > raw;
+  }).length;
+  return count ? { count, param, dir: lower ? 'below' : 'above', limit: raw } : null;
+}
+
+/**
+ * The endpoints in `keys` that a change touches. A shared-schema change touches every endpoint that
+ * uses the schema; its `operation` is only the first of them, so it must not decide the row's path.
+ */
+export function affectedEndpoints(c: Change, keys: string[], usagesToo = true): string[] {
+  const own = c.operation ? [opKey(c.operation)] : [];
+  const all = c.sharedSchema && usagesToo ? [...new Set([...c.sharedSchema.usages, ...own])] : own;
+  return all.filter((k) => keys.includes(k)).sort();
+}
+
 export function affects(c: Change, keys: string[], usagesToo = true): boolean {
-  if (c.operation && keys.includes(opKey(c.operation))) return true;
-  return usagesToo && !!c.sharedSchema?.usages.some((u) => keys.includes(u));
+  return affectedEndpoints(c, keys, usagesToo).length > 0;
+}
+
+const SEV_ORDER = ['breaking', 'possibly', 'safe', 'docs'];
+export interface AffectsRow { change: Change; endpoint: string; endpoints: string[]; calls: number | undefined }
+
+/** Rows of the "Changes that affect me" table (A05-ConsumerFilter): one per change and matched endpoint, no docs-only, breaking first. */
+export function affectsRows(changes: Change[], keys: string[], calls: Record<string, number> = {}): AffectsRow[] {
+  const rows: AffectsRow[] = [];
+  for (const c of changes) {
+    if ((c.severity ?? 'docs') === 'docs') continue;
+    const eps = affectedEndpoints(c, keys);
+    if (!eps.length) continue;
+    const n = eps.reduce<number | undefined>((sum, k) => (calls[k] === undefined ? sum : (sum ?? 0) + calls[k]), undefined);
+    rows.push({ change: c, endpoint: eps[0]!, endpoints: eps, calls: n });
+  }
+  return rows.sort((a, b) => SEV_ORDER.indexOf(a.change.severity ?? 'docs') - SEV_ORDER.indexOf(b.change.severity ?? 'docs'));
 }

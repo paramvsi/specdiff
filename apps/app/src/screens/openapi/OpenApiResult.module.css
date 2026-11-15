@@ -4,6 +4,11 @@
 .tab { position: relative; height: 44px; padding: 0 2px; border: 0; background: none; font-size: 15px; color: var(--sd-muted); cursor: pointer; }
 .tab[aria-selected='true'] { color: var(--sd-ink); font-weight: 600; }
 .tab[aria-selected='true']::after { content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--sd-ink); }
-.progress { min-width: 260px; }
+.progress { display: flex; align-items: center; gap: var(--sd-space-3); font-size: 13.5px; }
+.progressLabel { color: var(--sd-muted); }
+.track { display: flex; width: 120px; height: 6px; border-radius: 3px; background: var(--sd-line); overflow: hidden; }
+.acc { background: var(--sd-ink); }
+.rej { background: var(--sd-breaking); }
+.count { font-family: var(--sd-font-mono); font-size: 13px; }
 .panel { outline: none; }
 @media (max-width: 639px) { .tabs { gap: var(--sd-space-3); overflow-x: auto; } .progress { display: none; } }

@@ -23,7 +23,7 @@
 .card > section:first-child .group { margin-top: calc(-1 * var(--sd-space-4)); border-top: 0; }
 .chips { display: flex; gap: var(--sd-space-2); overflow-x: auto; padding-bottom: 2px; }
 .chip { flex: none; height: 44px; padding: 0 var(--sd-space-4); border-radius: var(--sd-radius-pill); border: 1px solid var(--sd-line); background: var(--sd-surface); font-size: 15px; color: var(--sd-ink); }
-.chip[aria-pressed='true'] { background: var(--sd-ink); color: var(--sd-on-inverse); border-color: var(--sd-ink); }
+.chip[aria-pressed='true'] { background: var(--sd-ink); color: var(--sd-surface); border-color: var(--sd-ink); }
 .primary, .secondary { min-height: 48px; display: flex; align-items: center; justify-content: center; gap: var(--sd-space-2); border-radius: var(--sd-radius-md); font: inherit; font-weight: 600; }
 .primary { border: 0; background: var(--sd-brand); color: var(--sd-on-brand); }
 .secondary { border: 1px solid var(--sd-line); background: var(--sd-surface); color: var(--sd-ink); }

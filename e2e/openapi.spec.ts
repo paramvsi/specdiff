@@ -118,3 +118,118 @@ test('the app opens the comparison in the Viewer with change badges', async ({ p
   await page.getByRole('button', { name: 'Back to comparison' }).click();
   await expect(page.getByRole('tab', { name: 'Summary' })).toBeVisible();
 });
+
+// ---- Design fixes (A-04, A-05, O-04, OA-21, OA-22, OUT-05) ----
+
+test('A-04 titles match the design copy for the 5 breaking and possibly-breaking changes', async ({ page }) => {
+  await page.goto('/app/?sample=openapi');
+  const breaking = page.getByRole('region', { name: 'Breaking changes' }).or(page.locator('section[aria-labelledby="breaking-h"]'));
+  for (const t of ['Endpoint removed without deprecation', 'Request field currency is now required', 'Query limit maximum lowered from 100 to 50', 'Response field card.last4 removed']) {
+    await expect(breaking.getByRole('heading', { level: 3, name: t, exact: true })).toBeVisible();
+  }
+  await expect(page.locator('section[aria-labelledby="possibly-h"]').getByText('Response enum status gained disputed', { exact: true })).toBeVisible();
+  // Inline code is rendered as <code>, never as literal backticks.
+  await expect(page.locator('main')).not.toContainText('`');
+});
+
+test('OA-21 decisions.json downloads and imports back', async ({ page }) => {
+  await page.goto('/app/?sample=openapi');
+  await page.getByRole('tab', { name: 'Workspace' }).click();
+  await expect(page.getByText('0 of 5 decided')).toBeVisible();
+  await page.keyboard.press('a');
+  await expect(page.getByText('1 of 5 decided')).toBeVisible();
+  const dl = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Download decisions.json' }).click();
+  const file = await dl;
+  expect(file.suggestedFilename()).toBe('decisions.json');
+  const path = await file.path();
+  const body = JSON.parse(await (await import('node:fs/promises')).readFile(path, 'utf8')) as { version: number; decisions: Record<string, { decision: string }> };
+  expect(body.version).toBe(1);
+  expect(Object.values(body.decisions).map((d) => d.decision)).toEqual(['accepted']);
+
+  await page.goto('/app/?sample=openapi');
+  await page.getByRole('tab', { name: 'Workspace' }).click();
+  await expect(page.getByText('0 of 5 decided')).toBeVisible();
+  const chooser = page.waitForEvent('filechooser');
+  await page.getByRole('button', { name: 'Import decisions.json' }).click();
+  await (await chooser).setFiles(path);
+  await expect(page.getByText('1 of 5 decided')).toBeVisible();
+});
+
+test('OUT-05 a shared link opens on the change it was shared from', async ({ page, context }) => {
+  await page.goto('/app/?sample=openapi');
+  await page.getByRole('tab', { name: 'Workspace' }).click();
+  await page.getByRole('navigation', { name: 'Changes' }).getByRole('button', { name: /last4/ }).first().click();
+  await expect(page.getByRole('heading', { level: 2, name: /last4/ })).toBeVisible();
+  await page.getByRole('button', { name: 'Share', exact: true }).click();
+  const field = page.getByRole('textbox', { name: 'Share link' });
+  await expect(field).toHaveValue(/#v=/);
+  const link = await field.inputValue();
+  const other = await context.newPage();
+  await other.goto(link);
+  await expect(other.getByRole('tab', { name: 'Workspace', selected: true })).toBeVisible();
+  await expect(other.getByRole('heading', { level: 2, name: /last4/ })).toBeVisible();
+});
+
+test('OA-22 changes that affect me lists only the endpoints asked for', async ({ page }) => {
+  await page.goto('/app/?sample=openapi');
+  await page.getByRole('tab', { name: 'Workspace' }).click();
+  await page.getByRole('button', { name: 'Affects me' }).click();
+  await page.getByLabel(/operationIds or METHOD/).fill('GET /v1/payments/{id}');
+  await page.getByRole('button', { name: 'Filter' }).click();
+  const rows = page.getByRole('region', { name: 'Changes that affect you' }).locator('tbody tr');
+  await expect(rows.first()).toBeVisible();
+  const paths = await rows.locator('td:nth-child(3)').allInnerTexts();
+  expect(paths.length).toBeGreaterThan(0);
+  for (const p of paths) expect(p.trim()).toBe('/v1/payments/{id}');
+  await expect(rows.filter({ hasText: 'card.last4' })).toHaveCount(1);
+});
+
+test('O-04 Explain drawer is 480 px wide with the fix options', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/app/?sample=openapi');
+  await page.getByRole('tab', { name: 'Workspace' }).click();
+  await page.getByRole('button', { name: /Request field currency is now required/ }).first().click();
+  await page.keyboard.press('e');
+  const drawer = page.getByRole('dialog');
+  await expect(drawer).toBeVisible();
+  expect((await drawer.boundingBox())!.width).toBeGreaterThanOrEqual(470);
+  await expect(drawer.getByRole('heading', { name: 'Request field currency is now required' })).toHaveCount(1);
+  await expect(drawer.getByText('# Option 1')).toBeVisible();
+  await expect(drawer.getByText('# Option 2')).toBeVisible();
+});
+
+for (const scheme of ['light', 'dark'] as const) {
+  test(`axe is clean on every OpenAPI view (${scheme})`, async ({ page }) => {
+    await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' });
+    await page.goto('/app/?sample=openapi');
+    await expect(page.getByRole('tab', { name: 'Summary', selected: true })).toBeVisible();
+    await expectAxeClean(page);
+    await page.getByRole('tab', { name: 'Workspace' }).click();
+    await expect(page.getByRole('heading', { level: 2 }).first()).toBeVisible();
+    await expectAxeClean(page);
+    await page.getByRole('radio', { name: 'Inline' }).click();
+    await expectAxeClean(page);
+    await page.keyboard.press('e');
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await expectAxeClean(page);
+    await page.keyboard.press('Escape');
+    await page.getByRole('radio', { name: 'SDK calls' }).click();
+    await expectAxeClean(page);
+    await page.getByRole('radio', { name: 'Endpoints' }).click();
+    await page.getByRole('button', { name: 'Affects me' }).click();
+    await page.getByLabel(/operationIds or METHOD/).fill('createPayment');
+    await page.getByRole('button', { name: 'Filter' }).click();
+    await expectAxeClean(page);
+    await page.getByRole('button', { name: 'Clear filter' }).click();
+    await page.getByRole('tab', { name: 'Raw diff' }).click();
+    await expect(page.getByRole('heading', { name: 'Changes in this file' })).toBeVisible();
+    await expectAxeClean(page);
+    await page.getByRole('tab', { name: 'Changelog' }).click();
+    await expect(page.getByRole('heading', { name: 'Changelog' })).toBeVisible();
+    await expectAxeClean(page);
+    await page.getByRole('button', { name: 'Copy for LLM' }).click();
+    await expect(page.getByRole('menu')).toBeVisible();
+    await expectAxeClean(page);
+  });
+}

@@ -1,5 +1,4 @@
 // OpenAPI result: Summary · Workspace · Raw diff · Changelog (A-04, A-05, A-06, A-10).
-import { ReviewProgress } from '@specdiff/ui';
 import { useCallback, useEffect, useSyncExternalStore } from 'react';
 import { useCommand } from '../../shell/commands';
 import { readChangeHash, useNav } from '../../shell/nav';
@@ -56,7 +55,18 @@ export default function OpenApiResult() {
           ))}
         </div>
         {tab === 'workspace' && <ConsumerControls />}
-        {r.total > 0 && <ReviewProgress accepted={r.accepted} rejected={r.rejected} total={r.total} className={css.progress} />}
+        {/* One review progress per view: the Workspace tree has its own, the other tabs show it here (A-04). */}
+        {r.total > 0 && tab !== 'workspace' && (
+          <div className={css.progress}>
+            <span className={css.progressLabel} id="review-progress-l">Review progress</span>
+            <span role="progressbar" aria-labelledby="review-progress-l" aria-valuemin={0} aria-valuemax={r.total} aria-valuenow={r.accepted + r.rejected}
+              aria-valuetext={`${r.accepted + r.rejected} of ${r.total} decided: ${r.accepted} accepted, ${r.rejected} rejected`} className={css.track}>
+              <span className={css.acc} style={{ width: `${(r.accepted / r.total) * 100}%` }} />
+              <span className={css.rej} style={{ width: `${(r.rejected / r.total) * 100}%` }} />
+            </span>
+            <span className={css.count}>{r.accepted + r.rejected} / {r.total}</span>
+          </div>
+        )}
       </div>
       <div id={`panel-${tab}`} role="tabpanel" aria-labelledby={`tab-${tab}`} className={css.panel}>
         {tab === 'summary' && <Summary />}

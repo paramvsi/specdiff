@@ -1,6 +1,8 @@
 // OpenAPI exports for the top-bar Export menu (OUT-03). The OpenAPI result screen fills these in;
 // until then every kind returns null and the menu says the export isn't available.
-import { buildChangelog, changelogFeed, reportToHtml } from '@specdiff/core';
+import { changelogFeed, reportToHtml } from '@specdiff/core';
+import { designChangelog } from './changelogText';
+import { specContext } from './Title';
 import { useApp } from '../../state/store';
 
 export type OpenApiExportKind = 'markdown' | 'json' | 'html' | 'atom';
@@ -24,7 +26,7 @@ export function exportOpenApi(kind: OpenApiExportKind): OpenApiExportFile | null
   const r = result.report;
   const base = (after?.name ?? 'spec').replace(/\.[^.]+$/, '');
   const version = r.versionCheck?.suggested ?? r.inputs.after.infoVersion ?? '';
-  if (kind === 'markdown') return { name: `${base}-changelog.md`, type: 'text/markdown', content: buildChangelog(r, 'release-notes', { groupBySeverity: true, includeDocs: false, version, date: new Date().toISOString().slice(0, 10) }) };
+  if (kind === 'markdown') return { name: `${base}-changelog.md`, type: 'text/markdown', content: designChangelog(r, 'release-notes', { groupBySeverity: true, includeDocs: false, version, date: new Date().toISOString().slice(0, 10) }, specContext(after?.content, after?.name).spec) };
   if (kind === 'json') return { name: `${base}-report.json`, type: 'application/json', content: JSON.stringify(r, null, 2) + '\n' };
   if (kind === 'html') return { name: `${base}-report.html`, type: 'text/html', content: reportToHtml(r) };
   // OUT-10: host this file next to your docs and point feed readers at it.

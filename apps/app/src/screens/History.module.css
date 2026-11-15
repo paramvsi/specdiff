@@ -59,7 +59,7 @@
 .chip[aria-pressed='true'] {
   background: var(--sd-ink);
   border-color: var(--sd-ink);
-  color: var(--sd-on-inverse);
+  color: var(--sd-surface);
 }
 .chipCount {
   opacity: 0.8;

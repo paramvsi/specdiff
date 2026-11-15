@@ -1,13 +1,19 @@
-.body { display: flex; flex-direction: column; gap: var(--sd-space-4); padding-bottom: var(--sd-space-4); }
+/* O-04: a 480 px sheet (doubled class beats the Drawer's 300 px default regardless of stylesheet order). */
+.drawer.drawer { width: min(480px, 100vw); }
+.wrap { display: flex; flex-direction: column; min-height: 100%; }
+.body { flex: 1; display: flex; flex-direction: column; gap: var(--sd-space-4); padding: var(--sd-space-2) var(--sd-space-3) var(--sd-space-4); }
 .body section { border-top: 1px solid var(--sd-line); padding-top: var(--sd-space-3); }
-.body p { margin: 0; font-size: 15px; }
+.body p { margin: 0; font-size: 15px; line-height: 1.55; }
 .meta { display: flex; align-items: center; gap: var(--sd-space-2); font-family: var(--sd-font-mono); font-size: 14px; font-weight: 600; }
-.title { margin: 0; font-size: 22px; line-height: 1.25; font-weight: 700; letter-spacing: -0.5px; }
 .h3 { margin: 0 0 var(--sd-space-2); font-size: 13.5px; font-weight: 600; color: var(--sd-muted); }
-.who { margin: 0; padding-left: 18px; font-size: 15px; }
+.who { margin: 0; padding-left: 18px; font-size: 15px; line-height: 1.5; }
 .who li::marker { color: var(--sd-breaking); }
+.code { font-family: var(--sd-font-mono); font-size: .92em; padding: 0 4px; border-radius: var(--sd-radius-xs); background: var(--sd-raised); }
+.pick { margin-top: var(--sd-space-3) !important; }
+.option { margin: var(--sd-space-2) 0 0; padding: var(--sd-space-3); border: 1px solid var(--sd-line); border-radius: var(--sd-radius-md); background: var(--sd-raised); font-family: var(--sd-font-mono); font-size: 13px; line-height: 1.6; font-variant-ligatures: none; white-space: pre-wrap; overflow-wrap: anywhere; }
+.comment { color: var(--sd-muted); }
 .ruleRow { display: flex; justify-content: space-between; align-items: flex-end; gap: var(--sd-space-3); }
-.ruleRow code { font-family: var(--sd-font-mono); font-size: 13px; }
-.muted { margin: 4px 0 0 !important; font-size: 12.5px !important; color: var(--sd-muted); }
-.link { font-size: 13.5px; font-weight: 600; color: var(--sd-ink); }
-.foot { display: flex; gap: var(--sd-space-2); flex-wrap: wrap; padding-top: var(--sd-space-4); border-top: 1px solid var(--sd-line); }
+.ruleRow code { font-family: var(--sd-font-mono); font-size: 13px; overflow-wrap: anywhere; }
+.link { font-size: 13.5px; font-weight: 600; color: var(--sd-ink); white-space: nowrap; }
+/* Footer pinned to the bottom of the sheet with a top border. */
+.foot { position: sticky; bottom: calc(-1 * var(--sd-space-2)); display: flex; gap: var(--sd-space-2); flex-wrap: wrap; margin: 0 calc(-1 * var(--sd-space-2)) calc(-1 * var(--sd-space-2)); padding: var(--sd-space-4) var(--sd-space-5); border-top: 1px solid var(--sd-line); background: var(--sd-raised); }

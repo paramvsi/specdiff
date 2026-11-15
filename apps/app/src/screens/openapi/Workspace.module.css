@@ -10,7 +10,7 @@
 .muted { margin: 0; font-size: 12.5px; color: var(--sd-muted); }
 .chips { display: flex; flex-wrap: wrap; gap: var(--sd-space-2); }
 .chip { height: 30px; padding: 0 var(--sd-space-3); border-radius: var(--sd-radius-pill); border: 1px solid var(--sd-line); background: var(--sd-surface); font-size: 13px; cursor: pointer; }
-.chip[aria-pressed='true'] { background: var(--sd-ink); color: var(--sd-on-inverse); border-color: var(--sd-ink); }
+.chip[aria-pressed='true'] { background: var(--sd-ink); color: var(--sd-surface); border-color: var(--sd-ink); }
 .treeTools { display: flex; flex-direction: column; gap: var(--sd-space-2); }
 .group { display: flex; align-items: center; justify-content: space-between; font-size: 12.5px; color: var(--sd-muted); }
 .group select { height: 30px; border: 1px solid var(--sd-line); border-radius: var(--sd-radius-sm); background: var(--sd-surface); }
@@ -24,7 +24,7 @@
 .state[data-d='accepted'] { background: var(--sd-safe-bg); color: var(--sd-safe); }
 .state[data-d='rejected'] { background: var(--sd-breaking-bg); color: var(--sd-breaking); }
 .all { font-family: var(--sd-font-mono); font-size: 11px; padding: 2px 6px; border-radius: var(--sd-radius-xs); background: var(--sd-raised); color: var(--sd-muted); }
-.itemText { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.itemText { flex: 1; min-width: 0; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; line-height: 1.35; overflow-wrap: anywhere; }
 .viewed { color: var(--sd-muted); flex: none; }
 .detail { overflow: hidden; }
 .detailHead { padding: var(--sd-space-5); display: flex; flex-direction: column; gap: var(--sd-space-2); }
@@ -38,7 +38,7 @@
 .pane { min-width: 0; overflow-x: auto; }
 .pane + .pane { border-left: 1px solid var(--sd-line); }
 .paneHead { padding: var(--sd-space-2) var(--sd-space-3); background: var(--sd-raised); border-bottom: 1px solid var(--sd-line); color: var(--sd-muted); font-size: 12px; }
-.line { display: grid; grid-template-columns: 40px 16px 1fr; white-space: pre; }
+.line { display: grid; grid-template-columns: 40px 16px 1fr; white-space: pre-wrap; overflow-wrap: anywhere; }
 .line[data-kind='del'] { background: var(--sd-removed-bg); color: var(--sd-removed-strong); }
 .line[data-kind='add'] { background: var(--sd-added-bg); color: var(--sd-added-strong); }
 .line[data-kind='empty'] { background: var(--sd-raised); }
@@ -49,7 +49,7 @@
 .usages { padding: var(--sd-space-4) var(--sd-space-5); border-top: 1px solid var(--sd-line); }
 .h3 { margin: 0 0 var(--sd-space-2); font-size: 15px; font-weight: 600; }
 .usageList { list-style: none; margin: 0; padding: 0; }
-.usageList li { display: flex; align-items: center; gap: var(--sd-space-3); padding: var(--sd-space-2) 0; border-top: 1px solid var(--sd-line); font-family: var(--sd-font-mono); font-size: 13px; }
+.usageList li { justify-content: flex-start; display: flex; align-items: center; gap: var(--sd-space-3); padding: var(--sd-space-2) 0; border-top: 1px solid var(--sd-line); font-family: var(--sd-font-mono); font-size: 13px; }
 .detailFoot { display: flex; align-items: center; gap: var(--sd-space-2); padding: var(--sd-space-4) var(--sd-space-5); border-top: 1px solid var(--sd-line); background: var(--sd-raised); }
 .spacer { flex: 1; }
 .inspector { display: flex; flex-direction: column; gap: var(--sd-space-4); }
@@ -65,3 +65,17 @@
 .link { align-self: flex-start; padding: 0; border: 0; background: none; font: inherit; font-size: 13.5px; font-weight: 600; text-decoration: underline; cursor: pointer; color: var(--sd-ink); }
 @media (max-width: 1279px) { .layout { grid-template-columns: 260px minmax(0, 1fr); } .inspector { grid-column: 1 / -1; } }
 @media (max-width: 1023px) { .layout { grid-template-columns: 1fr; } .tree { position: static; max-height: none; } }
+
+/* Change titles in the tree keep identifiers in the list font, as designed; <code> still marks them. */
+.plainCode { font: inherit; }
+.snippet { border-top: 1px solid var(--sd-line); }
+.snippetBar { display: flex; justify-content: flex-end; padding: var(--sd-space-2) var(--sd-space-3); }
+.snippet .split { border-top: 1px solid var(--sd-line); }
+.inline { border-top: 1px solid var(--sd-line); font-family: var(--sd-font-mono); font-size: 12.5px; line-height: 22px; font-variant-ligatures: none; overflow-x: auto; }
+.iline { display: grid; grid-template-columns: 40px 40px 16px 1fr; white-space: pre-wrap; overflow-wrap: anywhere; }
+.iline[data-kind='del'] { background: var(--sd-removed-bg); color: var(--sd-removed-strong); }
+.iline[data-kind='add'] { background: var(--sd-added-bg); color: var(--sd-added-strong); }
+.paneEmpty { margin: 0; padding: var(--sd-space-3); color: var(--sd-muted); font-family: var(--sd-font-sans); font-size: 13px; }
+.fileActions { display: flex; flex-wrap: wrap; gap: var(--sd-space-2); }
+.clLine strong { font-weight: 700; }
+.clLine code, .body code { font-family: var(--sd-font-mono); font-size: .92em; }

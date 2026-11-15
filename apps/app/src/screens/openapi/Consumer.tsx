@@ -7,9 +7,8 @@ import { useMemo, useState } from 'react';
 import { create } from 'zustand';
 import { focusChange } from '../../shell/nav';
 import { useApp } from '../../state/store';
-import { affects, fromHar, opKey, operationsOf, sdkCall, type AffectsMe, type Lang } from './consumer-logic';
-import { Title } from './Summary';
-import { methodOf } from './util';
+import { affectsRows, fromHar, operationsOf, sdkCall, type AffectsMe, type Lang } from './consumer-logic';
+import { Title } from './Title';
 import css from './Consumer.module.css';
 
 export const useConsumer = create<{ view: 'endpoints' | 'sdk'; lang: Lang; filter: AffectsMe | null; editing: boolean; set: (p: Partial<{ view: 'endpoints' | 'sdk'; lang: Lang; filter: AffectsMe | null; editing: boolean }>) => void }>((set) => ({ view: 'endpoints', lang: 'ts', filter: null, editing: false, set: (p) => set(p) }));
@@ -28,7 +27,9 @@ export function ConsumerControls() {
 export function SdkView({ changes }: { changes: Change[] }) {
   const { lang, set } = useConsumer();
   const config = useApp((s) => s.settings.config);
-  const rows = changes.filter((c) => c.severity !== 'docs');
+  // Breaking first, then possibly, then safe (A05-SdkImpact).
+  const order = ['breaking', 'possibly', 'safe'];
+  const rows = changes.filter((c) => c.severity !== 'docs').sort((a, b) => order.indexOf(a.severity ?? 'safe') - order.indexOf(b.severity ?? 'safe'));
   return (
     <section className={css.card} aria-labelledby="sdk-h">
       <header className={css.head}>
@@ -41,7 +42,7 @@ export function SdkView({ changes }: { changes: Change[] }) {
             <button type="button" className={css.row} onClick={() => focusChange(c.id)}>
               <SeverityBadge severity={c.severity ?? 'docs'} />
               <code className={css.call}>{sdkCall(c, lang)}</code>
-              <span className={css.what}>{c.operation ? `${c.operation.method} ${c.operation.path}` : c.sourceBlock} · <Title c={c} /></span>
+              <span className={css.what}>{c.operation ? `${c.operation.method} ${c.operation.path}` : c.sourceBlock} · <Title c={c} short /></span>
             </button>
           </li>
         ))}
@@ -54,31 +55,34 @@ export function SdkView({ changes }: { changes: Change[] }) {
 export function AffectsMeView({ changes }: { changes: Change[] }) {
   const { filter, set } = useConsumer();
   if (!filter) return null;
-  const shown = changes.filter((c) => affects(c, filter.keys));
-  const callsFor = (c: Change) => (c.operation ? filter.calls[opKey(c.operation)] : c.sharedSchema?.usages.reduce((n, u) => n + (filter.calls[u] ?? 0), 0));
+  const rows = affectsRows(changes, filter.keys, filter.calls);
+  const hasCalls = Object.keys(filter.calls).length > 0;
   return (
     <>
       <div className={css.banner} role="status">
         <icons.Filter size={16} aria-hidden="true" />
         <strong>Only changes to the {filter.keys.length} endpoint{filter.keys.length === 1 ? '' : 's'} in {filter.source}</strong>
-        <span className={css.muted}>{shown.length} of {changes.length} shown</span>
+        <span className={css.muted}>{rows.length} of {changes.length} shown</span>
         <span className={css.spacer} />
         <Button variant="secondary" onClick={() => set({ editing: true })}>Edit</Button>
-        <Button variant="ghost" icon={<icons.X size={15} />} onClick={() => set({ filter: null })}>Clear filter</Button>
+        <Button variant="secondary" icon={<icons.X size={15} />} onClick={() => set({ filter: null })}>Clear filter</Button>
       </div>
       <section className={css.card} aria-label="Changes that affect you">
         <table className={css.table}>
           <thead><tr><th scope="col"><span className="sd-visually-hidden">Severity</span></th><th scope="col">Method</th><th scope="col">Path</th><th scope="col">Change</th><th scope="col" className={css.num}>Your calls</th></tr></thead>
           <tbody>
-            {shown.map((c) => (
-              <tr key={c.id}>
-                <td><SeverityBadge severity={c.severity ?? 'docs'} compact /></td>
-                <td>{methodOf(c) ? <MethodChip method={methodOf(c)!} /> : <span className={css.muted}>schema</span>}</td>
-                <td><code>{c.operation?.path ?? c.sharedSchema?.name ?? c.sourceBlock}</code></td>
-                <td><button type="button" className={css.link} onClick={() => focusChange(c.id)}><Title c={c} /></button></td>
-                <td className={css.num}>{callsFor(c)?.toLocaleString('en') ?? '—'}</td>
-              </tr>
-            ))}
+            {rows.map(({ change: c, endpoint, calls }) => {
+              const [m, p] = [endpoint.slice(0, endpoint.indexOf(' ')), endpoint.slice(endpoint.indexOf(' ') + 1)];
+              return (
+                <tr key={c.id}>
+                  <td><SeverityBadge severity={c.severity ?? 'docs'} compact /></td>
+                  <td>{['GET', 'POST', 'PUT', 'PATCH', 'DELETE'].includes(m) ? <MethodChip method={m as 'GET'} /> : <span className={css.muted}>{m}</span>}</td>
+                  <td><code>{p}</code></td>
+                  <td><button type="button" className={css.link} onClick={() => focusChange(c.id)}><Title c={c} short /></button></td>
+                  <td className={css.num}>{calls?.toLocaleString('en') ?? (hasCalls ? '0' : '—')}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
         {filter.failing.map((f) => <p key={f.change.id} className={css.foot}>Your {filter.source.endsWith('.har') ? 'HAR' : 'list'} also has <strong>{f.reason}</strong>. They will be rejected after the upgrade.</p>)}

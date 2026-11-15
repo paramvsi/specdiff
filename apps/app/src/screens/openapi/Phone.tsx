@@ -6,7 +6,7 @@ import * as icons from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { changeLink } from '../../shell/nav';
 import { useApp } from '../../state/store';
-import { Title } from './Summary';
+import { Md, Title } from './Title';
 import { copy, groupKey, lineWindow, methodOf, SEV_LABEL } from './util';
 import css from './Phone.module.css';
 
@@ -121,8 +121,8 @@ function PhoneChange({ c, index, total, onBack, onGo }: { c: Change; index: numb
       </section>
       {c.explanation && (
         <section className={css.card}>
-          <h3 className={css.eyebrow}>Why it breaks</h3><p className={css.body}>{c.explanation.who} {c.explanation.see}</p>
-          <h3 className={css.eyebrow}>How to avoid it</h3><p className={css.body}>{c.explanation.avoid}</p>
+          <h3 className={css.eyebrow}>Why it breaks</h3><p className={css.body}><Md text={`${c.explanation.who} ${c.explanation.see}`} /></p>
+          <h3 className={css.eyebrow}>How to avoid it</h3><p className={css.body}><Md text={c.explanation.avoid} /></p>
           <code className={css.small}>rule: {c.ruleId}</code>
         </section>
       )}

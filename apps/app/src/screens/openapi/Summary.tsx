@@ -1,10 +1,11 @@
 // A-04 OpenAPI summary (OA-08, OA-14, OA-19, OA-21, X-11).
-import { Config, rules, type Change } from '@specdiff/core';
+import { bumpLabel, Config, type Change } from '@specdiff/core';
 import { MethodChip, SegmentedControl, SeverityBadge } from '@specdiff/ui';
 import * as icons from 'lucide-react';
 import { useApp } from '../../state/store';
 import { useNav, focusChange } from '../../shell/nav';
-import { decisionOf, headline, methodOf, SEV_LABEL } from './util';
+import { Md, Title } from './Title';
+import { decisionOf, methodOf, rulesOn, SEV_LABEL } from './util';
 import css from './Summary.module.css';
 
 export function Summary() {
@@ -14,7 +15,7 @@ export function Summary() {
   const s = report.summary;
   const breakingReviewed = report.changes.filter((c) => c.severity === 'breaking' && decisionOf(decisions, c)).length;
   const config = Config.parse(settings.config);
-  const enabled = rules.filter((x) => x.reportedAs === 'change' && config.rules[x.id]?.enabled !== false && !(x.id === 'extension-changed' && config.ignore.extensions));
+  const ruleCount = rulesOn(config);
   const breaking = report.changes.filter((c) => c.severity === 'breaking');
   const possibly = report.changes.filter((c) => c.severity === 'possibly');
   const shared = groupShared(report.changes);
@@ -32,11 +33,18 @@ export function Summary() {
         {vc && (
           <section className={css.version} aria-label="Suggested version">
             <p className={css.versionLabel}>Suggested version</p>
-            <p className={css.versionValue}>{vc.suggested} <span className={css.bump}>{vc.bump}</span></p>
+            <p className={css.versionValue}>{vc.suggested} <span className={css.bump}>{bumpLabel(vc.bump)}</span></p>
             <p className={css.versionMsg} data-verdict={vc.verdict}>{vc.verdict !== 'ok' && <icons.TriangleAlert size={14} aria-hidden="true" />} {vc.message}</p>
           </section>
         )}
       </div>
+
+      {report.warnings?.length ? (
+        <section className={css.warnings} aria-labelledby="warn-h">
+          <h2 id="warn-h" className={css.h3}><icons.TriangleAlert size={16} aria-hidden="true" /> {report.warnings.length === 1 ? 'One thing to check' : `${report.warnings.length} things to check`}</h2>
+          <ul>{report.warnings.map((w) => <li key={w}><Md text={w} codeClass={css.code} /></li>)}</ul>
+        </section>
+      ) : null}
 
       <div className={css.grid}>
         <div className={css.main}>
@@ -56,7 +64,7 @@ export function Summary() {
                     <button type="button" className={css.prow} onClick={() => focusChange(c.id)}>
                       <span className={css.dot} data-sev="possibly" aria-hidden="true" />
                       {methodOf(c) ? <MethodChip method={methodOf(c)!} /> : <span className={css.schemaChip}>schema</span>}
-                      <span className={css.ptitle}><Title c={c} /></span>
+                      <span className={css.ptitle}><Title c={c} codeClass={css.plainCode} /></span>
                       <code className={css.rule}>{c.ruleId}</code>
                     </button>
                   </li>
@@ -86,8 +94,8 @@ export function Summary() {
                 {shared.map((g) => (
                   <li key={g.name}>
                     <button type="button" className={css.sharedRow} onClick={() => focusChange(g.first.id)}>
-                      <span><code className={css.schema}>{g.name}</code><span className={css.sharedWhat}>{g.what}</span></span>
-                      <span className={css.muted}>{g.count} endpoint{g.count === 1 ? '' : 's'}</span>
+                      <span className={css.sharedText}><code className={css.schema}>{g.name}</code><span className={css.sharedWhat}>{g.what}</span></span>
+                      <span className={css.sharedCount}>{g.count} endpoint{g.count === 1 ? '' : 's'}</span>
                     </button>
                   </li>
                 ))}
@@ -100,7 +108,7 @@ export function Summary() {
             <SegmentedControl label="Strictness" value={config.preset} onValueChange={(p) => { updateConfig((c) => ({ ...c, preset: p })); void compare(); }} options={[{ value: 'wire', label: 'Wire' }, { value: 'sdk', label: 'SDK' }]} />
             <p className={css.muted}>Wire checks what breaks HTTP requests and responses. SDK also flags renamed operationIds, schemas and enums.</p>
             <dl className={css.facts}>
-              <div><dt>Rules on</dt><dd>{enabled.length} of {rules.filter((x) => x.reportedAs === 'change').length}</dd></div>
+              <div><dt>Rules on</dt><dd>{ruleCount.on} of {ruleCount.total}</dd></div>
               <div><dt>Ignored paths</dt><dd>{config.ignore.paths.length ? config.ignore.paths.join(', ') : 'none'}</dd></div>
             </dl>
             <button type="button" className={css.link} onClick={() => setScreen('settings')}>Edit rules</button>
@@ -122,11 +130,6 @@ function Stat({ sev, n, caption }: { sev: Change['severity'] & string; n: number
   );
 }
 
-export function Title({ c }: { c: Change }) {
-  const h = headline(c);
-  return <>{h.before}{h.code && <code className={css.code}>{h.code}</code>}{h.after}</>;
-}
-
 function BreakingRow({ c }: { c: Change }) {
   const { decisions } = useApp();
   const d = decisionOf(decisions, c);
@@ -140,10 +143,10 @@ function BreakingRow({ c }: { c: Change }) {
         </span>
       </div>
       <div className={css.browTitleRow}>
-        <h3 id={`b-${c.id}`} className={css.browTitle}><Title c={c} /></h3>
+        <h3 id={`b-${c.id}`} className={css.browTitle}><Title c={c} codeClass={css.plainCode} /></h3>
         <button type="button" className={css.link} onClick={() => { focusChange(c.id); set({ tab: 'workspace' }); }}>Open in workspace</button>
       </div>
-      {c.explanation && <p className={css.explain}>{c.explanation.who} {c.explanation.see} {c.explanation.avoid}</p>}
+      {c.explanation && <p className={css.explain}><Md text={`${c.explanation.who} ${c.explanation.see} ${c.explanation.avoid}`} codeClass={css.code} /></p>}
       {c.sharedSchema && <p className={css.muted}>Comes from the shared schema {c.sharedSchema.name}, which {c.sharedSchema.usageCount} endpoint{c.sharedSchema.usageCount === 1 ? '' : 's'} use.</p>}
       <code className={css.rule}>rule: {c.ruleId}</code>
     </article>
@@ -159,7 +162,11 @@ function groupShared(changes: Change[]) {
   }
   return [...by.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
 }
+/** "last4 removed", "disputed added", "currency now required": what changed in the schema, without the schema name. */
 const headlineShort = (c: Change) => {
-  const t = c.path.split(' › ').at(-1) ?? '';
-  return c.kind === 'removed' ? `${t} removed` : c.kind === 'added' ? `${t} added` : c.ruleId?.includes('enum') ? `${String(c.after ?? 'value')} added` : `${t} changed`;
+  const prop = c.path.split(' › ').slice(1).join('.');
+  if (c.ruleId?.includes('enum-value')) return `${String(c.after ?? c.before ?? 'value')} ${c.kind === 'removed' ? 'removed' : 'added'}`;
+  const what = prop || 'schema';
+  if (c.ruleId?.includes('became-required') || c.ruleId?.includes('added-required')) return `${what} now required`;
+  return c.kind === 'removed' ? `${what} removed` : c.kind === 'added' ? `${what} added` : `${what} changed`;
 };

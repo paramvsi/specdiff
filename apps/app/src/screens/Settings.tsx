@@ -5,7 +5,7 @@ import * as icons from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 import { parse, stringify } from 'yaml';
 import { useApp, type DiffTheme, type Theme } from '../state/store';
-import { download } from './openapi/Changelog';
+import { download, rulesOn } from './openapi/util';
 import css from './Settings.module.css';
 
 type Section = 'rules' | 'ignore' | 'diff' | 'appearance' | 'file';
@@ -43,7 +43,8 @@ export default function Settings() {
     const list = useMemo(() => reported.filter((r) => !q || r.id.includes(q.toLowerCase()) || r.area.toLowerCase().includes(q.toLowerCase())), [q]);
     const effective = (id: string, def: Severity) => config.rules[id]?.severity ?? (config.preset === 'sdk' && reported.find((r) => r.id === id)?.preset === 'K→B' ? 'breaking' : def);
     const changed = Object.keys(config.rules).filter((k) => config.rules[k]?.severity || config.rules[k]?.enabled === false).length;
-    const on = reported.filter((r) => config.rules[r.id]?.enabled !== false).length;
+    // Same count as the Summary's "Rules on N of M" (A-04).
+    const { on } = rulesOn(config);
     const setRule = (id: string, patch: { severity?: Severity; enabled?: boolean }) => updateConfig((c) => {
       const cur = { ...(c.rules?.[id] ?? {}), ...patch };
       const def = reported.find((r) => r.id === id)!;
@@ -97,7 +98,7 @@ export default function Settings() {
                       {SEV.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                     </select>
                   </td>
-                  <td><Switch label={`${r.id} on`} checked={enabled} onCheckedChange={(v) => setRule(r.id, { enabled: v })} /></td>
+                  <td><Switch label={`${r.id} on`} hideLabel checked={enabled} onCheckedChange={(v) => setRule(r.id, { enabled: v })} /></td>
                 </tr>
               );
             })}

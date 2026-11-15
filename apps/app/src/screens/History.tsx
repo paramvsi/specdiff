@@ -1,11 +1,11 @@
 // A-11 History and empty state (OUT-07): kept only in this browser (IndexedDB).
-import type { HistoryEntry, Mode } from '@specdiff/core';
+import type { Mode } from '@specdiff/core';
 import { Button, Dialog, EmptyHistoryState, ModeBadge, TextField } from '@specdiff/ui';
 import * as icons from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { formatBytes } from '../lib/input';
 import { openSample } from '../shell/boot';
-import { clearHistory, deleteEntry, listHistory, loadPayload, updateEntry } from '../state/persist';
+import { clearHistory, deleteEntry, listHistory, loadPayload, updateEntry, type StoredHistoryEntry as HistoryEntry } from '../state/persist';
 import { useApp } from '../state/store';
 import css from './History.module.css';
 
@@ -40,16 +40,43 @@ export function opened(iso: string, now = new Date()): string {
 
 const files = (e: HistoryEntry) => `${e.before.name} → ${e.after.name}`;
 
+/** Mode chip colours (A-11): OpenAPI chartreuse, JSON/YAML blue, Markdown purple, Text and Code grey. Tokens only. */
+const MODE_TONE: Partial<Record<Mode, { background: string; color: string }>> = {
+  json: { background: 'var(--sd-added-bg)', color: 'var(--sd-added-strong)' },
+  yaml: { background: 'var(--sd-added-bg)', color: 'var(--sd-added-strong)' },
+  markdown: { background: 'var(--sd-changed-bg)', color: 'var(--sd-changed)' },
+  text: { background: 'var(--sd-docs-bg)', color: 'var(--sd-ink)' },
+  code: { background: 'var(--sd-docs-bg)', color: 'var(--sd-ink)' },
+};
+
+const modeVars = (m: Mode) => {
+  const t = MODE_TONE[m];
+  return (t ? { '--sd-brand-tint': t.background, '--sd-brand-ink': t.color } : {}) as CSSProperties;
+};
+
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+
+/** The Result column, per mode: "4 breaking · 28 changes", "17 changes", "6 blocks changed", "9 lines differ". */
+export function resultLabel(e: HistoryEntry): string {
+  const s = e.summary;
+  if (e.mode === 'openapi') return `${s.breaking} breaking · ${plural(s.total, 'change', 'changes')}`;
+  // Rows saved before per-mode counts only stored a line count.
+  const c = e.count ?? { unit: 'lines' as const, n: s.total };
+  if (c.unit === 'changes') return plural(c.n, 'change', 'changes');
+  if (c.unit === 'blocks') return `${plural(c.n, 'block', 'blocks')} changed`;
+  return `${c.n} line${c.n === 1 ? '' : 's'} differ${c.n === 1 ? 's' : ''}`;
+}
+
 function resultText(e: HistoryEntry) {
   const s = e.summary;
   if (e.mode === 'openapi')
     return (
       <>
         <span className={css.dot} data-sev={s.breaking ? 'breaking' : 'safe'} aria-hidden="true" />
-        {s.breaking} breaking <span className={css.sep}>· {s.total} changes</span>
+        {s.breaking} breaking <span className={css.sep}>· {plural(s.total, 'change', 'changes')}</span>
       </>
     );
-  return `${s.total} line${s.total === 1 ? '' : 's'} differ${s.total === 1 ? 's' : ''}`;
+  return resultLabel(e);
 }
 
 export default function History() {
@@ -134,7 +161,7 @@ export default function History() {
             {all.length} comparison{all.length === 1 ? '' : 's'}, {formatBytes(bytes)}.
           </p>
         </div>
-        <Button variant="danger" icon={<icons.Trash2 size={15} />} onClick={() => setConfirm(true)}>
+        <Button variant="secondary" icon={<icons.Trash2 size={15} />} style={{ color: 'var(--sd-breaking)' }} onClick={() => setConfirm(true)}>
           Clear history
         </Button>
       </header>
@@ -191,7 +218,10 @@ export default function History() {
                 {g.items.map((e) => (
                   <tr key={e.id}>
                     <td>
-                      <ModeBadge mode={MODE_LABEL[e.mode]} />
+                      {/* The badge reads --sd-brand-tint / --sd-brand-ink; each mode re-points them at its own tokens. */}
+                      <span style={{ display: 'contents', ...modeVars(e.mode) }}>
+                        <ModeBadge mode={MODE_LABEL[e.mode]} />
+                      </span>
                     </td>
                     <td>
                       <button

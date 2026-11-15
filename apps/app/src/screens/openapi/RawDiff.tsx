@@ -8,7 +8,7 @@ import { useCommand } from '../../shell/commands';
 import { focusChange, useNav } from '../../shell/nav';
 import { useApp } from '../../state/store';
 import { useExplain } from './explainStore';
-import { Title } from './Summary';
+import { Title } from './Title';
 import { SEVERITIES } from './util';
 import css from './RawDiff.module.css';
 
@@ -82,7 +82,7 @@ export function RawDiff() {
             <li key={c.id}>
               <button type="button" className={css.item} aria-current={c.id === changeId ? 'true' : undefined} onClick={() => focusChange(c.id, 'raw')}>
                 <SeverityBadge severity={c.severity ?? 'docs'} compact />
-                <span className={css.itemText}><Title c={c} /></span>
+                <span className={css.itemText}><Title c={c} short /></span>
                 <span className={css.lineNo}>L{c.location.after?.line ?? c.location.before?.line}</span>
               </button>
             </li>

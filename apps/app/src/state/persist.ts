@@ -9,6 +9,28 @@ const history = createStore('specdiff-history', 'entries');
 const payloads = createStore('specdiff-payloads', 'payloads');
 const prefs = createStore('specdiff-settings', 'settings');
 
+/** What the History "Result" column counts, per mode (A-11): the same number the result screen shows. */
+export interface ResultCount {
+  unit: 'changes' | 'blocks' | 'lines';
+  n: number;
+}
+/** History rows written since per-mode counts; older rows have no `count` and stay readable. */
+export type StoredHistoryEntry = HistoryEntry & { count?: ResultCount };
+
+export function countOf(r: CompareResult): ResultCount | undefined {
+  if ('kind' in r) return undefined;
+  if ('report' in r) return { unit: 'changes', n: r.report.summary.total };
+  if ('json' in r) return { unit: 'changes', n: r.json.changes.length };
+  if ('markdown' in r) {
+    const s = r.markdown.stats;
+    return { unit: 'blocks', n: s.added + s.removed + s.edited };
+  }
+  // Text and code: lines differ, counted as the text screen counts them (moved lines are not differences).
+  const t = r.text;
+  const moved = (t.moves ?? []).reduce((n, m) => n + m.to[1] - m.to[0] + 1, 0);
+  return { unit: 'lines', n: t.stats.added + t.stats.removed + 2 * t.stats.changed - 2 * moved };
+}
+
 export function summarise(r: CompareResult): Summary {
   if ('report' in r) return r.report.summary;
   if ('text' in r) {
@@ -22,11 +44,12 @@ export async function saveHistory(
   before: Source,
   after: Source,
   r: CompareResult,
-): Promise<HistoryEntry> {
+): Promise<StoredHistoryEntry> {
   if ('kind' in r) throw new Error('not a result');
+  const count = countOf(r);
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
-  const entry: HistoryEntry = {
+  const entry: StoredHistoryEntry = {
     id,
     createdAt: now,
     openedAt: now,
@@ -36,14 +59,15 @@ export async function saveHistory(
     after: { name: after.name, size: after.size },
     summary: summarise(r),
     payloadRef: id,
+    ...(count ? { count } : {}),
   };
   await set(id, { before, after, mode: r.mode }, payloads);
   await set(id, entry, history);
   return entry;
 }
 
-export async function listHistory(): Promise<HistoryEntry[]> {
-  const all = (await entries<string, HistoryEntry>(history)).map(([, v]) => v);
+export async function listHistory(): Promise<StoredHistoryEntry[]> {
+  const all = (await entries<string, StoredHistoryEntry>(history)).map(([, v]) => v);
   return all.sort(
     (a, b) => Number(b.pinned) - Number(a.pinned) || b.openedAt.localeCompare(a.openedAt),
   );

@@ -1,15 +1,17 @@
 // A-05 OpenAPI workspace and review mode (OA-09, OA-10, OA-12, OA-13, OA-14, OA-15, OA-21, X-11).
 import type { Change } from '@specdiff/core';
 import { diffText } from '@specdiff/core/text';
-import { Button, Checkbox, DecisionButtons, MethodChip, SeverityBadge, TextField, useToast } from '@specdiff/ui';
+import { Button, Checkbox, DecisionButtons, MethodChip, SegmentedControl, SeverityBadge, TextField, useToast } from '@specdiff/ui';
 import * as icons from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useCommand } from '../../shell/commands';
 import { changeLink, focusChange, useNav } from '../../shell/nav';
 import { useApp } from '../../state/store';
 import { useExplain } from './explainStore';
-import { Title } from './Summary';
-import { copy, decisionOf, groupKey, methodOf, needsDecision, reviewCounts, lineWindow, type GroupBy } from './util';
+import { DecisionsActions } from './DecisionsActions';
+import { Md, Title, useSpecContext } from './Title';
+import { changeTitleText, fixChangelogLine } from './titles';
+import { copy, decisionOf, excerpts, groupKey, matchesSearch, methodOf, needsDecision, reviewCounts, type GroupBy } from './util';
 import css from './Workspace.module.css';
 
 type Filter = 'review' | 'breaking' | 'possibly' | 'safe' | 'docs' | 'all';
@@ -23,14 +25,12 @@ export function Workspace() {
   const [query, setQuery] = useState('');
   const changes = useMemo(() => (result && 'report' in result ? result.report.changes : []), [result]);
   const counts = reviewCounts(changes, decisions);
+  const { ctx, spec } = useSpecContext();
 
-  const visible = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return changes.filter((c) => {
-      const f = filter === 'all' ? true : filter === 'review' ? needsDecision(c) : c.severity === filter;
-      return f && (!q || c.path.toLowerCase().includes(q) || c.jsonPath?.toLowerCase().includes(q) || c.ruleId?.includes(q));
-    });
-  }, [changes, filter, query]);
+  const visible = useMemo(() => changes.filter((c) => {
+    const f = filter === 'all' ? true : filter === 'review' ? needsDecision(c) : c.severity === filter;
+    return f && matchesSearch(c, query, changeTitleText(c, ctx));
+  }), [changes, filter, query, ctx]);
   const groups = useMemo(() => {
     const m = new Map<string, Change[]>();
     for (const c of visible) { const k = groupKey(c, groupBy); m.set(k, [...(m.get(k) ?? []), c]); }
@@ -77,7 +77,7 @@ export function Workspace() {
           {chips.map(([f, label]) => <button key={f} type="button" className={css.chip} aria-pressed={filter === f} onClick={() => setFilter(f)}>{label}</button>)}
         </div>
         <div className={css.treeTools}>
-          <TextField label="Search changes or JSONPath" hideLabel value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search or $.paths…" />
+          <TextField label="Search changes or JSONPath" hideLabel value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search or $.paths['/v1/…'].." />
           <label className={css.group}>Group by
             <select value={groupBy} onChange={(e) => setGroupBy(e.target.value as GroupBy)}>
               <option value="path">Path</option><option value="tag">Tag</option><option value="schema">Schema</option><option value="severity">Severity</option>
@@ -96,7 +96,7 @@ export function Workspace() {
                       <span className={css.state} data-d={dc ?? (needsDecision(c) ? 'open' : 'none')} aria-label={dc ? dc : needsDecision(c) ? 'to review' : undefined}>{dc === 'accepted' ? <icons.Check size={11} /> : dc === 'rejected' ? <icons.X size={11} /> : null}</span>
                       <SeverityBadge severity={c.severity ?? 'docs'} compact />
                       {methodOf(c) ? <MethodChip method={methodOf(c)!} /> : <span className={css.all}>ALL</span>}
-                      <span className={css.itemText}><Title c={c} /></span>
+                      <span className={css.itemText}><Title c={c} codeClass={css.plainCode} /></span>
                       {viewed[c.id] && <icons.Eye size={13} aria-label="viewed" className={css.viewed} />}
                     </button>
                   </li>
@@ -119,10 +119,10 @@ export function Workspace() {
           <h2 id="change-title" className={css.title}><Title c={current} /></h2>
           <p className={css.jsonPath}>{current.location.after ? `${current.location.after.file}:${current.location.after.line}:${current.location.after.column} · ` : ''}{current.jsonPath}</p>
         </header>
-        <SplitSnippet c={current} before={before?.content ?? ''} after={after?.content ?? ''} />
+        <Snippet c={current} before={before?.content ?? ''} after={after?.content ?? ''} />
         {current.sharedSchema && (
           <div className={css.usages}>
-            <h3 className={css.h3}>Endpoints that use {current.sharedSchema.name}</h3>
+            <h3 className={css.h3}>Endpoints that {current.direction === 'response' ? 'return' : current.direction === 'request' ? 'accept' : 'use'} {current.sharedSchema.name}</h3>
             <ul className={css.usageList}>
               {current.sharedSchema.usages.map((u) => { const [m, p] = u.split(' '); return <li key={u}>{['GET', 'POST', 'PUT', 'PATCH', 'DELETE'].includes(m!) ? <MethodChip method={m as 'GET'} /> : null}<code>{p ?? u}</code></li>; })}
               {current.sharedSchema.usageCount > current.sharedSchema.usages.length && <li className={css.muted}>and {current.sharedSchema.usageCount - current.sharedSchema.usages.length} more</li>}
@@ -143,15 +143,16 @@ export function Workspace() {
             <h2 id="decision-h" className={css.cardTitle}>Your decision</h2>
             <DecisionButtons value={d} onChange={setDecision} />
             <NoteField c={current} />
-            <p className={css.small}>Saved to <code>.specdiff/decisions.json</code> as <code>{current.fingerprint.slice(0, 4)}…{current.fingerprint.slice(-4)}</code>. Commit the file so the CLI and pre-commit hook honour it.</p>
+            <p className={css.small}>Recorded as <code>{current.fingerprint.slice(0, 4)}…{current.fingerprint.slice(-4)}</code>. Download <code>decisions.json</code>, put it in <code>.specdiff/</code> and commit it so the CLI and pre-commit hook honour it.</p>
+            <DecisionsActions className={css.fileActions} />
           </section>
         )}
         {current.explanation && (
           <section className={css.card} aria-labelledby="why-h">
             <h2 id="why-h" className={css.eyebrow}>{current.severity === 'breaking' || current.severity === 'possibly' ? 'Why it breaks' : 'What it means'}</h2>
-            <p className={css.body}>{current.explanation.who} {current.explanation.see}</p>
+            <p className={css.body}><Md text={`${current.explanation.who} ${current.explanation.see}`} /></p>
             <h3 className={css.eyebrow}>How to avoid it</h3>
-            <p className={css.body}>{current.explanation.avoid}</p>
+            <p className={css.body}><Md text={current.explanation.avoid} /></p>
             <code className={css.small}>rule: {current.ruleId}</code>
             <button type="button" className={css.link} onClick={() => useExplain.getState().open(current.id)} aria-keyshortcuts="E">Explain in detail</button>
           </section>
@@ -159,8 +160,8 @@ export function Workspace() {
         {current.changelogLine && (
           <section className={css.card} aria-labelledby="cl-h">
             <h2 id="cl-h" className={css.eyebrow}>Changelog line</h2>
-            <pre className={css.clLine}>{current.severity === 'breaking' ? '**Breaking:** ' : ''}{current.changelogLine}</pre>
-            <Button variant="secondary" onClick={() => { void copy(`${current.severity === 'breaking' ? '**Breaking:** ' : ''}${current.changelogLine}`); toast({ title: 'Changelog line copied' }); }}>Copy line</Button>
+            <p className={css.clLine}>{current.severity === 'breaking' ? <strong>Breaking: </strong> : null}<Md text={fixChangelogLine(current.changelogLine, current, spec)} /></p>
+            <Button variant="secondary" onClick={() => { void copy(`${current.severity === 'breaking' ? '**Breaking:** ' : ''}${fixChangelogLine(current.changelogLine!, current, spec)}`); toast({ title: 'Changelog line copied' }); }}>Copy line</Button>
           </section>
         )}
       </aside>
@@ -183,34 +184,73 @@ function NoteField({ c }: { c: Change }) {
   );
 }
 
-/** Before/after source around the change, with a line diff of the two windows (OA-10). */
-function SplitSnippet({ c, before, after }: { c: Change; before: string; after: string }) {
-  const { before: bf, after: af } = useMemo(() => {
-    const b = lineWindow(before, c.location.before?.line ?? c.location.after?.line, 6);
-    const a = lineWindow(after, c.location.after?.line ?? c.location.before?.line, 6);
-    return { before: b, after: a };
-  }, [c, before, after]);
-  const d = useMemo(() => diffText(bf.lines.join('\n') + '\n', af.lines.join('\n') + '\n', { ignoreWhitespace: false, ignoreCase: false, ignoreLineEndings: true, precision: 'word', filters: [], transforms: [] }), [bf, af]);
+type Layout = 'split' | 'inline';
+type Rows = ReturnType<typeof diffText>['rows'];
+
+/** Rows to show: the whole block when short, else a window around the changed row nearest the change's line. */
+function windowRows(rows: Rows, starts: { b: number; a: number }, c: Change): Array<{ r: Rows[number]; i: number }> {
+  const all = rows.map((r, i) => ({ r, i }));
+  if (rows.length <= 40) return all;
+  const lineOf = (x: Rows[number]) => ({ b: x.left ? starts.b + x.left.n - 1 : -1, a: x.right ? starts.a + x.right.n - 1 : -1 });
+  const want = { b: c.location.before?.line ?? -1, a: c.location.after?.line ?? -1 };
+  const changed = all.filter((x) => x.r.type !== 'same');
+  const hit = changed.find((x) => lineOf(x.r).b === want.b || lineOf(x.r).a === want.a) ?? changed[0] ?? all[0]!;
+  return all.slice(Math.max(0, hit.i - 10), hit.i + 16);
+}
+
+/** Before/after of the block the change lives in (operation or schema), aligned row by row (OA-10). Side by side or inline. */
+function Snippet({ c, before, after }: { c: Change; before: string; after: string }) {
+  const [layout, setLayout] = useState<Layout>('split');
+  const ex = useMemo(() => excerpts(c, before, after), [c, before, after]);
+  const d = useMemo(() => diffText(ex.before.lines.join('\n') + '\n', ex.after.lines.join('\n') + '\n', { ignoreWhitespace: false, ignoreCase: false, ignoreLineEndings: true, precision: 'word', filters: [], transforms: [] }), [ex]);
+  const shown = useMemo(() => windowRows(d.rows, { b: ex.before.start, a: ex.after.start }, c).filter(({ r }) => r.left || r.right), [d, ex, c]);
   const files = useApp();
-  const row = (side: 'left' | 'right', r: (typeof d.rows)[number], i: number) => {
+  const line = (side: 'left' | 'right', r: Rows[number], key: string | number, inline = false) => {
     const s = r[side];
     const kind = !s ? 'empty' : r.type === 'same' ? 'same' : side === 'left' ? 'del' : 'add';
-    const n = s ? (side === 'left' ? bf.start : af.start) + s.n - 1 : '';
+    const n = s ? (side === 'left' ? ex.before.start : ex.after.start) + s.n - 1 : '';
     return (
-      <div key={i} className={css.line} data-kind={kind}>
-        <span className={css.num}>{n}</span>
+      <div key={key} className={inline ? css.iline : css.line} data-kind={kind}>
+        {inline ? (
+          <>
+            <span className={css.num}>{r.left && (side === 'left' || r.type === 'same') ? ex.before.start + r.left.n - 1 : ''}</span>
+            <span className={css.num}>{r.right && (side === 'right' || r.type === 'same') ? ex.after.start + r.right.n - 1 : ''}</span>
+          </>
+        ) : (
+          <span className={css.num}>{n}</span>
+        )}
         <span className={css.gut} aria-hidden="true">{kind === 'del' ? '−' : kind === 'add' ? '+' : ''}</span>
         <span className={css.code}>{s?.segs.map((g, j) => (g.kind === 'same' ? g.text : <mark key={j} className={g.kind === 'add' ? css.wAdd : css.wDel}>{g.text}</mark>))}{kind === 'del' || kind === 'add' ? <span className="sd-visually-hidden">{kind === 'del' ? ' (removed)' : ' (added)'}</span> : null}</span>
       </div>
     );
   };
+  const empty = (side: 'left' | 'right') => (side === 'left' ? !ex.before.lines.length : !ex.after.lines.length);
   return (
-    <div className={css.split}>
-      {/* Panes scroll sideways on long lines, so they take keyboard focus (axe scrollable-region-focusable). */}
-      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex */}
-      <div className={css.pane} role="region" aria-label={`Before: ${files.before?.name ?? ''}`} tabIndex={0}><div className={css.paneHead}>{files.before?.name}</div>{d.rows.map((r, i) => row('left', r, i))}</div>
-      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex */}
-      <div className={css.pane} role="region" aria-label={`After: ${files.after?.name ?? ''}`} tabIndex={0}><div className={css.paneHead}>{files.after?.name}</div>{d.rows.map((r, i) => row('right', r, i))}</div>
+    <div className={css.snippet}>
+      <div className={css.snippetBar}>
+        <SegmentedControl label="Diff layout" size="sm" value={layout} onValueChange={setLayout} options={[{ value: 'split', label: 'Side by side' }, { value: 'inline', label: 'Inline' }]} />
+      </div>
+      {layout === 'split' ? (
+        <div className={css.split}>
+          {/* Panes scroll sideways on long lines, so they take keyboard focus (axe scrollable-region-focusable). */}
+          {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex */}
+          <div className={css.pane} role="region" aria-label={`Before: ${files.before?.name ?? ''}`} tabIndex={0}>
+            <div className={css.paneHead}>{files.before?.name}</div>
+            {empty('left') ? <p className={css.paneEmpty}>Not in this version.</p> : shown.map(({ r, i }) => line('left', r, i))}
+          </div>
+          {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex */}
+          <div className={css.pane} role="region" aria-label={`After: ${files.after?.name ?? ''}`} tabIndex={0}>
+            <div className={css.paneHead}>{files.after?.name}</div>
+            {empty('right') ? <p className={css.paneEmpty}>Not in this version.</p> : shown.map(({ r, i }) => line('right', r, i))}
+          </div>
+        </div>
+      ) : (
+        /* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex */
+        <div className={css.inline} role="region" aria-label={`Inline: ${files.before?.name ?? ''} to ${files.after?.name ?? ''}`} tabIndex={0}>
+          <div className={css.paneHead}>{files.before?.name} → {files.after?.name}</div>
+          {shown.flatMap(({ r, i }) => (r.type === 'same' ? [line('left', r, i, true)] : [r.left ? line('left', r, `${i}-l`, true) : null, r.right ? line('right', r, `${i}-r`, true) : null]))}
+        </div>
+      )}
     </div>
   );
 }
