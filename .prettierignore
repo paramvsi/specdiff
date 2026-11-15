@@ -1,0 +1,6 @@
+specdiff-handover
+pnpm-lock.yaml
+dist
+fixtures
+docs
+*.md

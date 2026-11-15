@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Specdiff · Open a patch</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=Geist+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#ECEEE9}
+a{color:#15171A}a:hover{color:#565C63}
+</style>
+</helmet>
+<div style="font-family: 'Geist', sans-serif; color: #15171A; background: #ECEEE9; position: relative"><header style="background: #FFFFFF; border-bottom: 1px solid #DADDD5"><div style="max-width: 1360px; margin: 0 auto; padding: 12px 24px; display: flex; flex-wrap: wrap; align-items: center; gap: 14px; justify-content: space-between"><div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap; font-family: 'Geist', sans-serif; color: #15171A"><span style="display: inline-flex; align-items: center; gap: 9px; font-weight: 700; font-size: 17px; letter-spacing: -0.3px"><svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><rect x="2" y="5" width="13" height="16" rx="3.5" fill="none" stroke="#15171A" stroke-width="2"></rect><rect x="11" y="5" width="13" height="16" rx="3.5" fill="#C8F24A"></rect><path d="M14.5 13h6" stroke="#15171C" stroke-width="2" stroke-linecap="round"></path><path d="M17.5 10v6" stroke="#15171C" stroke-width="2" stroke-linecap="round"></path></svg>specdiff</span></div><div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap"><button style="min-height: 40px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 0 14px; border-radius: 10px; border: 1px solid #DADDD5; background: #FFFFFF; color: #15171A; font: 600 13px 'Geist', sans-serif"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#15171A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>Back</button></div></div></header><main style="max-width: 1360px; margin: 0 auto; padding: 8px 24px 40px; display: flex; flex-direction: column; gap: 16px"><h1 style="margin: 12px 0 0; font: 700 22px 'Geist', sans-serif; letter-spacing: -0.5px">Open a patch</h1><div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start"><section style="flex: 999 1 560px; min-width: 0; background: #FFFFFF; border: 1px solid #DADDD5; border-radius: 16px; overflow: hidden"><div style="padding: 10px 14px; border-bottom: 1px solid #DADDD5; background: #F6F7F3; font: 500 12.5px 'Geist Mono', monospace; color: #565C63">Pasted patch</div><pre style="margin: 0; padding: 14px 16px; font: 400 13px/1.8 'Geist Mono', monospace; white-space: pre; overflow-x: auto">diff --git a/openapi.yaml b/openapi.yaml
+index 3f1c2ab..9e04d71 100644
+--- a/openapi.yaml
++++ b/openapi.yaml
+@@ -127,3 +127,3 @@
+-            required: [amount]
++            required: [amount, currency]</pre></section><div style="background: #FFFFFF; border: 1px solid #DADDD5; border-radius: 16px; padding: 18px; display: flex; flex-direction: column; gap: 12px; min-width: 0; flex: 1 1 320px"><h2 style="margin: 0; font: 700 16px 'Geist', sans-serif">This looks like a git patch</h2><p style="margin: 0; font: 400 14px/1.6 'Geist', sans-serif; color: #565C63">1 file, 1 hunk. A patch only holds the changed lines, so Specdiff can show it as a text diff. For an OpenAPI comparison with severities, it needs the full files.</p><div style="display: flex; flex-direction: column; gap: 8px"><button style="min-height: 40px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 0 14px; border-radius: 10px; border: 0; background: #C8F24A; color: #15171C; font: 600 13px 'Geist', sans-serif">Show as text diff</button><button style="min-height: 40px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 0 14px; border-radius: 10px; border: 1px solid #DADDD5; background: #FFFFFF; color: #15171A; font: 600 13px 'Geist', sans-serif">Compare full files instead</button></div><p style="margin: 0; font: 400 12.5px/1.5 'Geist', sans-serif; color: #565C63">From a terminal: <code style="font: 500 0.9em 'Geist Mono', monospace; background: #F6F7F3; border: 1px solid #DADDD5; padding: 1px 5px; border-radius: 5px">npx specdiff HEAD~1:openapi.yaml openapi.yaml</code></p></div></div></main></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":760}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
