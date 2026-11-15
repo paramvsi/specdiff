@@ -37,9 +37,14 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        // Syntax grammars (70 lazy chunks) are cached when first used, not at install.
+        globIgnores: ['**/assets/lang-*.js'],
         navigateFallback: '/app/index.html',
         // Grammars are large; cache each the first time its language is used.
-        runtimeCaching: [{ urlPattern: /\.wasm$/, handler: 'CacheFirst', options: { cacheName: 'specdiff-wasm', expiration: { maxEntries: 10 } } }],
+        runtimeCaching: [
+          { urlPattern: /\.wasm$/, handler: 'CacheFirst', options: { cacheName: 'specdiff-wasm', expiration: { maxEntries: 10 } } },
+          { urlPattern: /\/assets\/lang-[^/]+\.js$/, handler: 'CacheFirst', options: { cacheName: 'specdiff-grammars', expiration: { maxEntries: 80 } } },
+        ],
       },
     }),
   ],
@@ -47,5 +52,13 @@ export default defineConfig({
   worker: { format: 'es' },
   server: { port: 5173, strictPort: true },
   preview: { port: 4173, strictPort: true },
-  build: { assetsInlineLimit: 0 },
+  build: {
+    assetsInlineLimit: 0,
+    rollupOptions: {
+      output: {
+        // Name Shiki grammar chunks so the service worker can leave them out of the precache.
+        chunkFileNames: (c) => (c.moduleIds.some((id) => /@shikijs[+/]langs|[\\/]langs[\\/][^\\/]+\.mjs$/.test(id)) ? 'assets/lang-[name]-[hash].js' : 'assets/[name]-[hash].js'),
+      },
+    },
+  },
 });

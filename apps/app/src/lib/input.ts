@@ -1,4 +1,5 @@
 // Input sources (IN-01..IN-04, IN-10). Everything stays in the browser.
+import type { PatchSide } from '@specdiff/core/text/patch';
 import { unzipSync, strFromU8 } from 'fflate';
 
 export interface Source {
@@ -6,6 +7,10 @@ export interface Source {
   content: string;
   size: number;
   files?: Record<string, string>;
+  /** IN-06: where the content came from, so one side can be reloaded. */
+  origin?: { kind: 'file' | 'url' | 'paste'; url?: string };
+  /** TX-12: this side was rebuilt from a patch; real line numbers and hunk starts. */
+  patch?: PatchSide;
 }
 
 export const WARN_BYTES = 10 * 1024 * 1024; // IN-10: warn above 10 MB
@@ -83,7 +88,7 @@ export async function loadUrl(url: string, signal?: AbortSignal): Promise<Source
     } satisfies LoadError;
   const content = await res.text();
   const name = decodeURIComponent(parsed.pathname.split('/').filter(Boolean).pop() ?? parsed.host);
-  return { name, content, size: new Blob([content]).size };
+  return { name, content, size: new Blob([content]).size, origin: { kind: 'url', url } };
 }
 
 const SPEC_FILE = /\.(ya?ml|json)$/i;
@@ -123,7 +128,7 @@ export function fromFiles(name: string, files: Record<string, string>): Source {
     } satisfies LoadError;
   const content = files[entry]!;
   const size = Object.values(files).reduce((n, c) => n + c.length, 0);
-  return { name: `${name}/${entry}`, content, size, files };
+  return { name: `${name}/${entry}`, content, size, files, origin: { kind: 'file' } };
 }
 
 /** Read whatever was dropped or picked: one file, a ZIP, or a folder (webkitGetAsEntry). */
@@ -140,9 +145,36 @@ export async function fromDataTransfer(dt: DataTransfer): Promise<Source | undef
 }
 
 export async function fromFile(file: File): Promise<Source> {
-  if (/\.zip$/i.test(file.name))
-    return fromZip(file.name.replace(/\.zip$/i, ''), new Uint8Array(await file.arrayBuffer()));
-  return { name: file.name, content: await file.text(), size: file.size };
+  const s: Source = /\.zip$/i.test(file.name)
+    ? fromZip(file.name.replace(/\.zip$/i, ''), new Uint8Array(await file.arrayBuffer()))
+    : { name: file.name, content: await file.text(), size: file.size, origin: { kind: 'file' } };
+  picked.set(s, file);
+  return s;
+}
+
+// IN-06: the File each source was read from. A browser may refuse to re-read a file that changed on disk.
+const picked = new WeakMap<Source, File>();
+
+export function canReload(s: Source | null | undefined): boolean {
+  return s?.origin?.kind === 'file' || (s?.origin?.kind === 'url' && !!s.origin.url);
+}
+
+/**
+ * Re-read one side from where it came (IN-06). URL: fetch again. File: read the same File again; when the browser
+ * can't (the file changed or the source came from history), returns 'pick' so the screen asks for the file again.
+ */
+export async function reloadSource(s: Source): Promise<Source | 'pick'> {
+  if (s.origin?.kind === 'url' && s.origin.url) return loadUrl(s.origin.url);
+  if (s.origin?.kind === 'file') {
+    const f = picked.get(s);
+    if (!f) return 'pick';
+    try {
+      return await fromFile(f);
+    } catch {
+      return 'pick';
+    }
+  }
+  throw { kind: 'invalid', message: 'Pasted text has nowhere to reload from.' } satisfies LoadError;
 }
 
 async function walk(

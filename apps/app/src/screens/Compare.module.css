@@ -270,3 +270,26 @@
     grid-template-columns: 1fr;
   }
 }
+.sample {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sd-space-1);
+}
+.patchNotice {
+  display: flex;
+  align-items: center;
+  gap: var(--sd-space-3);
+  padding: var(--sd-space-3) var(--sd-space-4);
+  border: 1px dashed var(--sd-changed);
+  border-radius: var(--sd-radius-md);
+  background: var(--sd-changed-bg);
+  color: var(--sd-ink);
+  font-size: 13.5px;
+}
+.patchNotice > :last-child {
+  margin-left: auto;
+}
+.patchNotice code {
+  font-family: var(--sd-font-mono);
+  font-size: 12.5px;
+}

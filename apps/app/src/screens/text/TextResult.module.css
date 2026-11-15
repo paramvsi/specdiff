@@ -19,6 +19,7 @@
 }
 .stats {
   margin: 0;
+  align-items: center;
   color: var(--sd-muted);
   font-size: 13.5px;
   display: flex;
@@ -341,4 +342,133 @@
   .nav {
     margin-left: 0;
   }
+}
+
+/* TX-03 syntax colours: Shiki's CSS-variables theme points every token at one of these. Mixed with the ink
+   token so they keep contrast on the diff backgrounds in light and dark (ink flips with the theme). */
+.scroller {
+  --sd-syn-foreground: currentColor;
+  --sd-syn-background: transparent;
+  --sd-syn-token-keyword: color-mix(in oklab, var(--sd-changed) 72%, var(--sd-ink));
+  --sd-syn-token-string: color-mix(in oklab, var(--sd-safe) 78%, var(--sd-ink));
+  --sd-syn-token-string-expression: color-mix(in oklab, var(--sd-safe) 78%, var(--sd-ink));
+  --sd-syn-token-comment: color-mix(in oklab, var(--sd-muted) 80%, var(--sd-ink));
+  --sd-syn-token-constant: color-mix(in oklab, var(--sd-possibly) 78%, var(--sd-ink));
+  --sd-syn-token-function: color-mix(in oklab, var(--sd-added-strong) 78%, var(--sd-ink));
+  --sd-syn-token-parameter: currentColor;
+  --sd-syn-token-punctuation: currentColor;
+  --sd-syn-token-link: color-mix(in oklab, var(--sd-safe) 78%, var(--sd-ink));
+  --sd-syn-token-inserted: var(--sd-added-strong);
+  --sd-syn-token-deleted: var(--sd-removed-strong);
+  --sd-syn-token-changed: var(--sd-changed);
+}
+.note {
+  margin: 0;
+  padding: var(--sd-space-2) var(--sd-space-3);
+  border-bottom: 1px solid var(--sd-line);
+  color: var(--sd-muted);
+  font-size: 12.5px;
+}
+.paneName {
+  display: flex;
+  align-items: center;
+  gap: var(--sd-space-2);
+  min-width: 0;
+}
+.paneHead .paneName {
+  padding-top: 3px;
+  padding-bottom: 3px;
+  min-height: 32px;
+}
+.paneHead .reload {
+  min-height: 26px;
+  height: 26px;
+  padding: 0 var(--sd-space-2);
+  margin-left: auto;
+  font-family: var(--sd-font-sans);
+  font-size: 12.5px;
+}
+.paneHead .reload + .reload {
+  margin-left: 0;
+}
+.moved {
+  color: var(--sd-changed);
+  font-weight: 600;
+  margin-left: var(--sd-space-2);
+}
+.progress {
+  margin-left: var(--sd-space-3);
+  font-family: var(--sd-font-mono);
+  font-size: 12.5px;
+}
+.vrow:focus-visible,
+.vrow:focus {
+  outline: 2px solid var(--sd-focus);
+  outline-offset: -2px;
+}
+.vrow[data-viewed] {
+  box-shadow: inset 3px 0 0 var(--sd-muted);
+}
+.cell[data-kind='moved'] {
+  background: var(--sd-changed-bg);
+  color: var(--sd-changed);
+}
+.gutter {
+  text-align: center;
+}
+.moveBanner {
+  display: flex;
+  align-items: center;
+  gap: var(--sd-space-3);
+  margin: var(--sd-space-1) var(--sd-space-3);
+  padding: var(--sd-space-1) var(--sd-space-4);
+  min-height: 32px;
+  border: 1px dashed var(--sd-changed);
+  border-radius: var(--sd-radius-md);
+  background: var(--sd-changed-bg);
+  color: var(--sd-ink);
+  font-family: var(--sd-font-sans);
+  font-size: 13px;
+}
+.moveBanner:focus-visible,
+.moveBanner:focus {
+  outline: 2px solid var(--sd-focus);
+  outline-offset: 1px;
+}
+.moveIcon {
+  color: var(--sd-changed);
+  font-weight: 700;
+  font-size: 15px;
+}
+.jump {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--sd-ink);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+  min-height: 24px;
+}
+.gap {
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sd-space-2);
+  border-top: 1px dashed var(--sd-line);
+  border-bottom: 1px dashed var(--sd-line);
+  background: var(--sd-raised);
+  color: var(--sd-muted);
+  font-family: var(--sd-font-sans);
+  font-size: 13px;
+}
+.tick[data-kind='moved'] {
+  background: var(--sd-changed);
+}
+.viewedToggle {
+  margin-left: var(--sd-space-3);
+  font-size: 13px;
+  color: var(--sd-ink);
 }

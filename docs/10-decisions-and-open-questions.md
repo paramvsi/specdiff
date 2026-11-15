@@ -59,4 +59,9 @@ Claude Code adds rows here when it takes a default without the owner.
 | B-19 | Settings panes Ignore paths, Diff options, Appearance and Rule-set file have no design; built in the A-12 style. `.specdiff.yaml` downloads as `specdiff.yaml` (browsers drop a leading dot) and the UI says to rename it | P1.8 | No prototype |
 | B-20 | Raw-diff gutter markers are mouse-only shortcuts (aria-hidden, not in tab order): 18 px markers on 22 px rows can't meet WCAG 2.2 target size; the "Changes in this file" list is the accessible path | P1.6 | WCAG 2.5.8 |
 | B-21 | Not measured: Lighthouse (no Lighthouse package in docs/05) and visual pixel baselines (B-3: locked only after the owner approves each screen) | P5.5 | Needs owner |
+| B-22 | TX-03: Shiki with the JS regex engine (no WASM, no eval), 70 grammars as lazy chunks named `assets/lang-*`, cached on first use (not precached by the service worker). Off above 5,000 rows or 2 MB | P5 gap fix | CSP and budget |
+| B-23 | TX-11: moved blocks are ≥3 lines, ≥80% similar; opt-in in core (`diffText(…, { moves: true })`), on in the app's text mode only. Moved rows use `↕` (docs/09), not the design's `~` | P5 gap fix | Symbol convention |
+| B-24 | TX-12: the A03-Patch view renders inside Compare (Back returns), not as its own route | P5 gap fix | Minimal routing |
+| B-25 | D-1: `pnpm model:coverage` downloads the oasdiff model to a git-ignored cache; 61 of 76 rules carry modelRefs; model coverage 42% (docs/model-coverage.md). The model file itself is not in the repo | P5 gap fix | Licence: ask before copying |
+| B-26 | The diff driver is used by `git diff` by default; `git log -p` needs `--ext-diff` (verified in a scratch repo) | P4 | git behaviour |
 

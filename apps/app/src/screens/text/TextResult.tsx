@@ -1,7 +1,9 @@
-// A-03 Text diff (TX-01..TX-10): split/unified, precision, ignore options, filters with hit counts,
-// transforms, wrap, go to line, next/previous change with an overview ruler, folding, live re-diff.
+// A-03 Text diff (TX-01..TX-12): split/unified, precision, ignore options, filters with hit counts,
+// transforms, wrap, go to line, next/previous change with an overview ruler, folding, live re-diff,
+// syntax highlighting (TX-03), moved blocks (TX-11, A03-MovedBlock), patches (TX-12), reload a side (IN-06),
+// mark as viewed (X-11) and deep links #change=t-<n> (X-12).
 import { Config, type TextFilter } from '@specdiff/core';
-import { foldRows, MASK, type Row, type Seg, type View } from '@specdiff/core/text';
+import { foldRows, MASK, type Move, type Row, type Seg, type View } from '@specdiff/core/text';
 import {
   Button,
   Checkbox,
@@ -10,19 +12,35 @@ import {
   Menu,
   SegmentedControl,
   TextField,
+  useToast,
 } from '@specdiff/ui';
 import * as icons from 'lucide-react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useCommand } from '../../shell/commands';
+import { changeLink, focusChange, readChangeHash } from '../../shell/nav';
 import { useApp } from '../../state/store';
+import { languageFor, MAX_BYTES, MAX_ROWS, tokenize, type Token } from './highlight';
+import { ReloadButton } from './ReloadButton';
 import css from './TextResult.module.css';
 
 type Layout = 'split' | 'unified';
+/** Core's views plus TX-12 gaps (lines a patch leaves out) and TX-11 move banners. */
+type TView =
+  | View
+  | { kind: 'gap'; before: number; after: number }
+  | { kind: 'move'; move: number; end: 'from' | 'to' };
+type Tokens = { text: unknown; left: Map<number, Token[]>; right: Map<number, Token[]> };
+
+export const blockId = (i: number) => `t-${i}`;
+const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
 export function TextResult() {
-  const { result, before, after, settings, updateConfig, compare, setText } = useApp();
+  const { result, before, after, settings, updateConfig, compare, setText, viewed, toggleViewed } =
+    useApp();
+  const { toast } = useToast();
   const text = result && 'text' in result ? result.text : null;
+  const detectedLanguage = result && 'language' in result ? result.language : undefined;
   const opts = Config.parse(settings.config).text;
   const [layout, setLayout] = useState<Layout>(() =>
     window.matchMedia?.('(max-width: 1023px)').matches ? 'unified' : 'split',
@@ -47,14 +65,54 @@ export function TextResult() {
     return () => clearTimeout(t);
   }, [settings.config.text, comparedText, compare]);
 
-  const views: View[] = useMemo(
-    () => (text ? foldRows(text.rows, 3, expanded) : []),
-    [text, expanded],
-  );
+  const views: TView[] = useMemo(() => (text ? withExtras(foldRows(text.rows, 3, expanded), text) : []), [text, expanded]);
   const blockView = useMemo(
     () => text?.blocks.map((b) => views.findIndex((v) => v.kind === 'row' && v.index === b)) ?? [],
     [text, views],
   );
+  // Row index → block index, for the viewed marker and focus target on the first row of each block.
+  const blockAt = useMemo(() => new Map(text?.blocks.map((b, i) => [b, i]) ?? []), [text]);
+
+  // TX-03: highlight lazily; off for plain text, logs and very large comparisons.
+  const lang = languageFor(after?.name, detectedLanguage) ?? languageFor(before?.name, detectedLanguage);
+  const tooBig =
+    !!text && (text.rows.length > MAX_ROWS || (before?.size ?? 0) + (after?.size ?? 0) > MAX_BYTES);
+  const [tokens, setTokens] = useState<Tokens | null>(null);
+  useEffect(() => {
+    if (!text || !lang || tooBig) return;
+    let live = true;
+    const side = (pick: 'left' | 'right') => {
+      const idx: number[] = [];
+      const lines: string[] = [];
+      text.rows.forEach((r, i) => {
+        const s = r[pick];
+        if (!s) return;
+        idx.push(i);
+        lines.push(s.segs.map((x) => x.text).join(''));
+      });
+      return { idx, lines };
+    };
+    const L = side('left');
+    const R = side('right');
+    const toMap = (s: { idx: number[]; lines: string[] }, toks: Token[][]) => {
+      const m = new Map<number, Token[]>();
+      s.idx.forEach((ri, k) => {
+        const t = toks[k];
+        // Only use tokens that cover the line exactly; masked lines (‹name›) stay plain.
+        if (t && !s.lines[k]!.includes('‹') && t.map((x) => x.content).join('') === s.lines[k]) m.set(ri, t);
+      });
+      return m;
+    };
+    void Promise.all([tokenize(lang, L.lines.join('\n')), tokenize(lang, R.lines.join('\n'))])
+      .then(([lt, rt]) => {
+        if (live) setTokens({ text, left: toMap(L, lt), right: toMap(R, rt) });
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [text, lang, tooBig]);
+  const hl = tokens && tokens.text === text && !tooBig ? tokens : null;
   const v = useVirtualizer({
     count: views.length,
     getScrollElement: () => scroller.current,
@@ -62,14 +120,55 @@ export function TextResult() {
     overscan: 30,
   });
 
+  /** Scroll to a view and move focus to the element with that id once the virtualiser has rendered it. */
+  const reveal = useCallback(
+    (viewIndex: number, focusId?: string) => {
+      v.scrollToIndex(Math.max(0, viewIndex - 2), { align: 'start' });
+      if (!focusId) return;
+      let tries = 0;
+      const tick = () => {
+        const el = document.getElementById(focusId);
+        if (el) el.focus({ preventScroll: true });
+        else if (tries++ < 10) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    },
+    [v],
+  );
   const go = useCallback(
-    (i: number) => {
+    (i: number, focus = false) => {
       if (!blockView.length) return;
       const n = (i + blockView.length) % blockView.length;
       setCurrent(n);
-      v.scrollToIndex(Math.max(0, blockView[n]! - 2), { align: 'start' });
+      focusChange(blockId(n)); // X-12: #change=t-<n>
+      reveal(blockView[n]!, focus ? `sd-${blockId(n)}` : undefined);
     },
-    [blockView, v],
+    [blockView, reveal],
+  );
+  // X-12: open the block in the URL hash once, on first render.
+  const linked = useRef(false);
+  useEffect(() => {
+    if (linked.current || !blockView.length) return;
+    linked.current = true;
+    const m = /^t-(\d+)$/.exec(readChangeHash() ?? '');
+    if (m && Number(m[1]) < blockView.length) go(Number(m[1]), true);
+  }, [blockView, go]);
+  const currentId = blockId(current);
+  useCommand(
+    'mark-viewed',
+    useCallback(() => {
+      if (blockView.length) toggleViewed(currentId);
+    }, [blockView, currentId, toggleViewed]),
+  );
+  useCommand(
+    'copy-link',
+    useCallback(() => {
+      if (!blockView.length) return;
+      void navigator.clipboard
+        ?.writeText(changeLink(currentId))
+        .then(() => toast({ title: 'Link to this change copied' }))
+        .catch(() => toast({ title: "Couldn't copy the link", tone: 'error' }));
+    }, [blockView, currentId, toast]),
   );
   useCommand(
     'next-change',
@@ -107,38 +206,86 @@ export function TextResult() {
   );
 
   if (!text) return null;
-  const plus = text.stats.added + text.stats.changed;
-  const minus = text.stats.removed + text.stats.changed;
+  const moves = text.moves ?? [];
+  const movedLines = moves.reduce((n, m) => n + m.to[1] - m.to[0] + 1, 0);
+  const plus = text.stats.added + text.stats.changed - movedLines;
+  const minus = text.stats.removed + text.stats.changed - movedLines;
   const masked = text.filters.reduce((n, f) => n + f.hits, 0);
+  const total = text.blocks.length;
+  const seen = text.blocks.filter((_, i) => viewed[blockId(i)]).length;
+  // "1 move, 1 edit" (A03-MovedBlock): edits are blocks that aren't only moved lines, plus moves edited inside.
+  const editBlocks = text.blocks.filter((b, i) => {
+    const end = text.blocks[i + 1] ?? text.rows.length;
+    return text.rows.slice(b, end).some((r) => r.type !== 'same' && r.move === undefined);
+  }).length;
+  const edits = editBlocks + moves.filter((m) => m.edited).length;
 
-  const renderCell = (side: Row['left'], kind: 'del' | 'add' | 'same') => (
-    <div className={css.cell} data-kind={side ? kind : 'empty'}>
+  const renderCell = (
+    side: Row['left'],
+    kind: 'del' | 'add' | 'same',
+    toks?: Token[],
+    moved?: boolean,
+  ) => (
+    <div className={css.cell} data-kind={side ? (moved ? 'moved' : kind) : 'empty'}>
       <span className={css.num}>{side?.n ?? ''}</span>
       <span className={css.gutter} aria-hidden="true">
-        {side ? (kind === 'del' ? '−' : kind === 'add' ? '+' : '') : ''}
+        {side ? (moved ? '↕' : kind === 'del' ? '−' : kind === 'add' ? '+' : '') : ''}
       </span>
       <span className={wrap ? css.codeWrap : css.code}>
-        {side && <Segs segs={side.segs} />}
+        {side && <Segs segs={side.segs} tokens={toks} />}
         {side && kind !== 'same' && (
-          <span className="sd-visually-hidden">{kind === 'del' ? ' (removed)' : ' (added)'}</span>
+          <span className="sd-visually-hidden">
+            {moved
+              ? kind === 'del'
+                ? ' (moved away)'
+                : ' (moved here)'
+              : kind === 'del'
+                ? ' (removed)'
+                : ' (added)'}
+          </span>
         )}
       </span>
     </div>
   );
+  const jumpTo = (m: number, end: 'from' | 'to') => {
+    const vi = views.findIndex((x) => x.kind === 'move' && x.move === m && x.end === end);
+    if (vi >= 0) reveal(vi, `sd-move-${m}-${end}`);
+  };
 
   return (
     <div className={css.page}>
       <header className={css.head}>
         <h1 className={css.h1}>
-          {plus + minus} lines differ{opts.filters.length ? ' after filters' : ''}
+          {moves.length
+            ? `${plural(moves.length, 'move')}, ${plural(edits, 'edit')}`
+            : `${plus + minus} lines differ${opts.filters.length ? ' after filters' : ''}`}
         </h1>
         <p className={css.stats}>
           <span className={css.add}>+ {plus}</span> lines <span className={css.del}>− {minus}</span>{' '}
           lines
+          {moves.length ? (
+            <span className={css.moved}>
+              <span aria-hidden="true">↕</span> {movedLines} moved
+            </span>
+          ) : null}
           {masked ? (
             <>
               {' '}
               <span>{masked} masked</span>
+            </>
+          ) : null}
+          {total ? (
+            <>
+              <span className={css.progress} data-testid="viewed-progress">
+                {seen} of {total} viewed
+              </span>
+              <span className={css.viewedToggle}>
+                <Checkbox
+                  label="Viewed"
+                  checked={!!viewed[currentId]}
+                  onCheckedChange={() => toggleViewed(currentId)}
+                />
+              </span>
             </>
           ) : null}
         </p>
@@ -271,15 +418,28 @@ export function TextResult() {
           <div className={css.paneHead} data-layout={layout}>
             {layout === 'split' ? (
               <>
-                <span>{before?.name}</span>
-                <span>{after?.name}</span>
+                <span className={css.paneName}>
+                  {before?.name}
+                  <ReloadButton side="before" className={css.reload} onReloaded={() => void compare()} />
+                </span>
+                <span className={css.paneName}>
+                  {after?.name}
+                  <ReloadButton side="after" className={css.reload} onReloaded={() => void compare()} />
+                </span>
               </>
             ) : (
-              <span>
+              <span className={css.paneName}>
                 {before?.name} → {after?.name}
+                <ReloadButton side="before" className={css.reload} onReloaded={() => void compare()} />
+                <ReloadButton side="after" className={css.reload} onReloaded={() => void compare()} />
               </span>
             )}
           </div>
+          {lang && tooBig && (
+            <p className={css.note} role="note">
+              Syntax highlighting is off for comparisons this large, to keep scrolling smooth.
+            </p>
+          )}
           <div
             ref={scroller}
             className={css.scroller}
@@ -288,10 +448,15 @@ export function TextResult() {
             // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
             tabIndex={0}
             aria-label={`Differences between ${before?.name} and ${after?.name}`}
+            data-lang={hl ? lang : undefined}
           >
             <div style={{ height: v.getTotalSize(), position: 'relative' }}>
               {v.getVirtualItems().map((it) => {
                 const view = views[it.index]!;
+                const block = view.kind === 'row' ? blockAt.get(view.index) : undefined;
+                const moved = view.kind === 'row' && view.row.move !== undefined;
+                const lt = view.kind === 'row' ? hl?.left.get(view.index) : undefined;
+                const rt = view.kind === 'row' ? hl?.right.get(view.index) : undefined;
                 return (
                   <div
                     key={it.key}
@@ -299,8 +464,34 @@ export function TextResult() {
                     ref={v.measureElement}
                     className={css.vrow}
                     style={{ transform: `translateY(${it.start}px)` }}
+                    {...(block !== undefined
+                      ? {
+                          id: `sd-${blockId(block)}`,
+                          tabIndex: -1,
+                          'data-block': block,
+                          'data-viewed': viewed[blockId(block)] ? true : undefined,
+                          'data-current': block === current ? true : undefined,
+                        }
+                      : {})}
                   >
-                    {view.kind === 'fold' ? (
+                    {block !== undefined && viewed[blockId(block)] && (
+                      <span className="sd-visually-hidden">Viewed. </span>
+                    )}
+                    {view.kind === 'gap' ? (
+                      <div className={css.gap}>
+                        <icons.Ellipsis size={14} aria-hidden="true" />{' '}
+                        {view.before === view.after
+                          ? `${plural(view.before, 'line')} not in the patch`
+                          : `${plural(view.before, 'line')} before and ${plural(view.after, 'line')} after not in the patch`}
+                      </div>
+                    ) : view.kind === 'move' ? (
+                      <MoveBanner
+                        id={`sd-move-${view.move}-${view.end}`}
+                        m={text.moves![view.move]!}
+                        end={view.end}
+                        onJump={() => jumpTo(view.move, view.end === 'to' ? 'from' : 'to')}
+                      />
+                    ) : view.kind === 'fold' ? (
                       <button
                         type="button"
                         className={css.fold}
@@ -311,17 +502,17 @@ export function TextResult() {
                       </button>
                     ) : layout === 'split' ? (
                       <div className={css.split}>
-                        {renderCell(view.row.left, view.row.type === 'same' ? 'same' : 'del')}
-                        {renderCell(view.row.right, view.row.type === 'same' ? 'same' : 'add')}
+                        {renderCell(view.row.left, view.row.type === 'same' ? 'same' : 'del', lt, moved)}
+                        {renderCell(view.row.right, view.row.type === 'same' ? 'same' : 'add', rt, moved)}
                       </div>
                     ) : (
                       <div>
                         {view.row.type === 'same' ? (
-                          renderCell(view.row.right, 'same')
+                          renderCell(view.row.right, 'same', rt)
                         ) : (
                           <>
-                            {view.row.left && renderCell(view.row.left, 'del')}
-                            {view.row.right && renderCell(view.row.right, 'add')}
+                            {view.row.left && renderCell(view.row.left, 'del', lt, moved)}
+                            {view.row.right && renderCell(view.row.right, 'add', rt, moved)}
                           </>
                         )}
                       </div>
@@ -383,7 +574,8 @@ function scheduleRediff(compare: () => Promise<void>) {
 const SPLIT = new RegExp(`(${MASK.source})`);
 const WHOLE = new RegExp(`^${MASK.source}$`);
 
-function Segs({ segs }: { segs: Seg[] }) {
+function Segs({ segs, tokens }: { segs: Seg[]; tokens?: Token[] | undefined }) {
+  if (tokens) return <HighlightedSegs segs={segs} tokens={tokens} />;
   return (
     <>
       {segs.map((s, i) => {
@@ -400,12 +592,112 @@ function Segs({ segs }: { segs: Seg[] }) {
   );
 }
 
+/** Cut syntax tokens along word-diff segments, so add/remove highlights still show (TX-03). */
+function splitByTokens(segs: Seg[], tokens: Token[]): Array<{ kind: Seg['kind']; pieces: Token[] }> {
+  let ti = 0;
+  let off = 0;
+  return segs.map((s) => {
+    const pieces: Token[] = [];
+    let rest = s.text;
+    while (rest.length) {
+      const tok = tokens[ti];
+      if (!tok) {
+        pieces.push({ content: rest });
+        break;
+      }
+      const take = Math.min(tok.content.length - off, rest.length);
+      pieces.push(tok.color ? { content: rest.slice(0, take), color: tok.color } : { content: rest.slice(0, take) });
+      rest = rest.slice(take);
+      off += take;
+      if (off >= tok.content.length) {
+        ti++;
+        off = 0;
+      }
+    }
+    return { kind: s.kind, pieces };
+  });
+}
+
+function HighlightedSegs({ segs, tokens }: { segs: Seg[]; tokens: Token[] }) {
+  return (
+    <>
+      {splitByTokens(segs, tokens).map((s, i) => {
+        const pieces: ReactNode[] = s.pieces.map((p, j) =>
+          p.color ? (
+            <span key={j} style={{ color: p.color }}>
+              {p.content}
+            </span>
+          ) : (
+            p.content
+          ),
+        );
+        return s.kind === 'same' ? (
+          <span key={i}>{pieces}</span>
+        ) : (
+          <mark key={i} className={s.kind === 'add' ? css.wordAdd : css.wordDel}>
+            {pieces}
+          </mark>
+        );
+      })}
+    </>
+  );
+}
+
+/** Insert TX-12 gap rows and TX-11 move banners into the folded views. */
+function withExtras(views: View[], text: { gaps?: Array<{ row: number; before: number; after: number }>; moves?: Move[] }): TView[] {
+  const gaps = new Map((text.gaps ?? []).map((g) => [g.row, g]));
+  const banners = new Map<number, Array<{ move: number; end: 'from' | 'to' }>>();
+  (text.moves ?? []).forEach((m, i) => {
+    banners.set(m.rows[0], [...(banners.get(m.rows[0]) ?? []), { move: i, end: 'from' }]);
+    banners.set(m.rows[1], [...(banners.get(m.rows[1]) ?? []), { move: i, end: 'to' }]);
+  });
+  if (!gaps.size && !banners.size) return views;
+  const out: TView[] = [];
+  for (const view of views) {
+    if (view.kind === 'fold') {
+      // A gap inside a folded run is shown before the fold.
+      for (const [row, g] of gaps) if (row >= view.from && row < view.to) out.push({ kind: 'gap', before: g.before, after: g.after });
+    } else {
+      const g = gaps.get(view.index);
+      if (g) out.push({ kind: 'gap', before: g.before, after: g.after });
+      for (const b of banners.get(view.index) ?? []) out.push({ kind: 'move', ...b });
+    }
+    out.push(view);
+  }
+  return out;
+}
+
+/** A03-MovedBlock: "↕ 6 lines moved from line 42 to line 21 · 1 word changed inside · Jump to old position". */
+function MoveBanner({ id, m, end, onJump }: { id: string; m: Move; end: 'from' | 'to'; onJump: () => void }) {
+  const lines = m.to[1] - m.to[0] + 1;
+  return (
+    // Focus target for the jump links; not in the tab order.
+    <div id={id} className={css.moveBanner} tabIndex={-1}>
+      <span aria-hidden="true" className={css.moveIcon}>
+        ↕
+      </span>
+      <span>
+        {end === 'to'
+          ? `${plural(lines, 'line')} moved from line ${m.from[0]} to line ${m.to[0]}`
+          : `${plural(lines, 'line')} moved to line ${m.to[0]} (from line ${m.from[0]})`}
+        {' · '}
+        {m.edited ? `${plural(m.words, 'word')} changed inside` : 'unchanged'}
+      </span>
+      <button type="button" className={css.jump} onClick={onJump}>
+        {end === 'to' ? 'Jump to old position' : 'Jump to new position'}
+      </button>
+    </div>
+  );
+}
+
 function Ruler({ rows, onJump }: { rows: Row[]; onJump: (row: number) => void }) {
   const marks = useMemo(() => {
     const out: Array<{ top: number; kind: string; row: number }> = [];
     rows.forEach((r, i) => {
-      if (r.type !== 'same' && (i === 0 || rows[i - 1]!.type !== r.type))
-        out.push({ top: (i / Math.max(1, rows.length)) * 100, kind: r.type, row: i });
+      const kind = r.move !== undefined ? 'moved' : r.type;
+      const prev = rows[i - 1];
+      if (r.type !== 'same' && (!prev || (prev.move !== undefined ? 'moved' : prev.type) !== kind))
+        out.push({ top: (i / Math.max(1, rows.length)) * 100, kind, row: i });
     });
     return out.slice(0, 400);
   }, [rows]);

@@ -3,6 +3,7 @@ import { Config, type Mode } from '@specdiff/core';
 import { detectMode, detectPair } from '@specdiff/core/detect';
 import { diffMarkdown } from '@specdiff/core/markdown';
 import { diffText } from '@specdiff/core/text';
+import { layoutPatch } from '@specdiff/core/text/patch';
 import type { CompareRequest, CompareResult, Progress } from './protocol';
 import { compareCode } from './code';
 import { compareStructured } from './structured';
@@ -44,7 +45,10 @@ export async function runCompare(
   }
   onProgress({ step: 'parse', state: 'done' });
   onProgress({ step: 'compare', state: 'running' });
-  const text = diffText(req.before.content, req.after.content, config.text);
+  // TX-11: text mode detects moved blocks; TX-12: a side rebuilt from a patch gets its real line numbers back.
+  const diff = diffText(req.before.content, req.after.content, config.text, { moves: true });
+  const text =
+    req.before.patch && req.after.patch ? layoutPatch(diff, req.before.patch, req.after.patch) : diff;
   onProgress({ step: 'compare', state: 'done' });
   return {
     mode: mode as 'text',

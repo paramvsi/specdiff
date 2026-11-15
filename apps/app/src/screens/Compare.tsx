@@ -1,6 +1,8 @@
-// A-01 Compare (IN-01..IN-07, IN-10, X-01), with A-01 drag over, O-05 Load from URL and O-08 File too large.
+// A-01 Compare (IN-01..IN-07, IN-10, X-01), with A-01 drag over, O-05 Load from URL and O-08 File too large;
+// A03-Patch (TX-12) opens from here, and each side can be reloaded from where it came (IN-06).
 import type { HistoryEntry, Mode } from '@specdiff/core';
 import { detectMode } from '@specdiff/core/detect';
+import { looksLikePatch } from '@specdiff/core/text/patch';
 import {
   Button,
   Checkbox,
@@ -13,7 +15,7 @@ import {
   useToast,
 } from '@specdiff/ui';
 import * as icons from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import {
   formatBytes,
   fromDataTransfer,
@@ -30,6 +32,9 @@ import { useCommand } from '../shell/commands';
 import { listHistory, loadPayload } from '../state/persist';
 import { useApp, type Side } from '../state/store';
 import css from './Compare.module.css';
+import { ReloadButton } from './text/ReloadButton';
+
+const PatchPanel = lazy(() => import('./text/PatchPanel').then((m) => ({ default: m.PatchPanel })));
 
 const MODES: Array<{ value: Mode | 'auto'; label: string }> = [
   { value: 'auto', label: 'Auto' },
@@ -67,6 +72,8 @@ export function Compare() {
   const [dragging, setDragging] = useState<Side | null>(null);
   const [urlFor, setUrlFor] = useState<Side | null>(null);
   const [tooLarge, setTooLarge] = useState<Source | null>(null);
+  // TX-12: the patch being opened (null: show the two editors).
+  const [patch, setPatch] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const fileSide = useRef<Side>('before');
 
@@ -124,6 +131,20 @@ export function Compare() {
   const parseError = result && 'kind' in result ? result : null;
   const ignoreWs = settings.config.text?.ignoreWhitespace ?? false;
   const hideDocs = settings.config.openapi?.hideDocsOnly ?? false;
+  // TX-12: one side holds a patch and the other is empty.
+  const patchSide: Side | null =
+    before?.content && !after?.content && looksLikePatch(before.content)
+      ? 'before'
+      : after?.content && !before?.content && looksLikePatch(after.content)
+        ? 'after'
+        : null;
+
+  if (patch !== null)
+    return (
+      <Suspense fallback={null}>
+        <PatchPanel initial={patch} onClose={() => setPatch(null)} />
+      </Suspense>
+    );
 
   return (
     <div className={css.page}>
@@ -146,8 +167,27 @@ export function Compare() {
               {s.label}
             </button>
           ))}
+          <button type="button" className={css.sample} onClick={() => setPatch('')}>
+            <icons.FileDiff size={14} aria-hidden="true" /> Paste a patch
+          </button>
         </div>
       </header>
+
+      {patchSide && (
+        <div className={css.patchNotice} role="status">
+          <icons.FileDiff size={16} aria-hidden="true" />
+          <span>
+            {patchSide === 'before' ? 'Before' : 'After'} looks like a patch or <code>git diff</code>{' '}
+            output.
+          </span>
+          <Button
+            variant="secondary"
+            onClick={() => setPatch((patchSide === 'before' ? before : after)?.content ?? '')}
+          >
+            Open as a patch
+          </Button>
+        </div>
+      )}
 
       {error && (
         <p role="alert" className={css.error}>
@@ -225,6 +265,7 @@ export function Compare() {
                 <Button variant="secondary" onClick={() => setUrlFor(side)}>
                   From URL
                 </Button>
+                <ReloadButton side={side} />
               </div>
             </section>
           );

@@ -80,6 +80,7 @@ export const useApp = create<State>((set, get) => ({
         name: prev?.name ?? (side === 'before' ? 'Before' : 'After'),
         content,
         size: new Blob([content]).size,
+        origin: { kind: 'paste' },
       },
     } as Pick<State, Side>);
   },
