@@ -288,3 +288,18 @@ test.describe('phone 390 @phone', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Capture a payment' })).toBeVisible();
   });
 });
+
+test('V-04 My endpoints rows fit a phone: call counts are not clipped (VW-10) @phone', async ({ page }) => {
+  await ready(page, `${H}#/changes`);
+  await page.getByRole('button', { name: 'Pick my endpoints' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Which endpoints does your app use?' });
+  const har = { log: { entries: Array(3901).fill({ request: { method: 'GET', url: 'https://api.example.com/v1/payments/pay_1' } }) } };
+  await dialog.locator('input[type=file]').setInputFiles({ name: 'a.har', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(har)) });
+  await expect(dialog.getByText('3,901 calls')).toBeVisible();
+  const rows = await dialog.getByRole('listitem').evaluateAll((ls) => ls.map((l) => {
+    const r = l.getBoundingClientRect();
+    return { box: Math.round(l.querySelector('input')!.getBoundingClientRect().width), fits: l.lastElementChild!.getBoundingClientRect().right <= r.right + 0.5 && l.scrollWidth <= l.clientWidth };
+  }));
+  expect(rows.length).toBeGreaterThan(0);
+  expect(rows.filter((r) => !r.fits || r.box < 18)).toEqual([]);
+});
