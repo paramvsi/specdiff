@@ -3,7 +3,7 @@ import { compareOpenApi, parseDocument, type Change } from '@specdiff/core';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { affectedEndpoints, affects, affectsRows, fromHar, sdkCall, sdkName } from './consumer-logic';
+import { affectedEndpoints, affects, affectsRows, fromHar, operationsOf, sdkCall, sdkName } from './consumer-logic';
 
 const ch = (p: Partial<Change>): Change => ({ id: 'c', fingerprint: 'f', mode: 'openapi', kind: 'changed', path: '', location: {}, ...p });
 
@@ -65,5 +65,15 @@ describe('changes that affect me on the payments sample', () => {
     // A change on another endpoint does not show up.
     expect(report.changes.filter((c) => affects(c, keys)).every((c) => affectedEndpoints(c, keys).length === 1)).toBe(true);
     expect(affects(report.changes.find((c) => c.ruleId === 'endpoint-removed')!, keys)).toBe(false);
+  });
+});
+
+describe('OpenAPI 3.2 operations', () => {
+  it('includes QUERY and additionalOperations (LINK) when matching calls', () => {
+    const spec = { paths: { '/items': { query: { operationId: 'searchItems' }, additionalOperations: { LINK: { operationId: 'linkItem' } } } } };
+    expect(operationsOf(spec).ops).toEqual([
+      { method: 'QUERY', path: '/items', operationId: 'searchItems' },
+      { method: 'LINK', path: '/items', operationId: 'linkItem' },
+    ]);
   });
 });

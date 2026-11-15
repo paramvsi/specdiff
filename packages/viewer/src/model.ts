@@ -54,13 +54,16 @@ function contentMap(spec: Json, content: Json) {
 
 export function buildModel(spec: Json): Model {
   const ops: Op[] = [];
+  const rawOps = new Map<string, Json>();
   const globalSecurity = spec.security ?? [];
   for (const path of Object.keys(spec.paths ?? {}).sort()) {
     const item = deref(spec, spec.paths[path]);
     const shared: Json[] = item.parameters ?? [];
-    for (const method of METHODS) {
-      const op = item[method];
-      if (!op) continue;
+    // Fixed methods, then OpenAPI 3.2 `additionalOperations` (LINK, PURGE…), as core diffs them.
+    const extra = item.additionalOperations && typeof item.additionalOperations === 'object' ? Object.entries<Json>(item.additionalOperations).map(([k, v]) => [k.toLowerCase(), v] as const) : [];
+    for (const [method, op] of [...METHODS.map((m) => [m, item[m]] as const), ...extra]) {
+      if (!op || typeof op !== 'object') continue;
+      rawOps.set(`${method.toUpperCase()} ${path}`, op);
       const params = new Map<string, Param>();
       for (const p of [...shared, ...(op.parameters ?? [])].map((x) => deref(spec, x))) {
         if (!p?.name) continue;
@@ -105,7 +108,7 @@ export function buildModel(spec: Json): Model {
   };
   const usedIn = new Map<string, Set<string>>();
   for (const o of ops) {
-    const raw = deref(spec, spec.paths[o.path])[o.method];
+    const raw = rawOps.get(o.key);
     for (const n of refsOf({ p: raw.parameters, b: raw.requestBody, r: raw.responses, s: deref(spec, spec.paths[o.path]).parameters })) {
       (usedIn.get(n) ?? usedIn.set(n, new Set()).get(n)!).add(o.key);
     }

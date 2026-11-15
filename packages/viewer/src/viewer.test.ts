@@ -42,6 +42,25 @@ describe('buildModel', () => {
   });
 });
 
+describe('OpenAPI 3.2 operations', () => {
+  const spec = {
+    openapi: '3.2.0', info: { title: 'T', version: '1' },
+    paths: {
+      '/items': {
+        query: { operationId: 'searchItems', requestBody: { content: { 'application/json': { schema: { $ref: '#/components/schemas/Q' } } } }, responses: { '200': { description: 'ok' } } },
+        additionalOperations: { LINK: { operationId: 'linkItem', responses: { '204': { description: 'linked' } } } },
+      },
+    },
+    components: { schemas: { Q: { type: 'object' } } },
+  };
+  it('lists QUERY and additionalOperations (LINK) as operations', () => {
+    const m = buildModel(spec);
+    const ops = m.tags.flatMap((t) => t.ops).map((o) => o.key);
+    expect(ops).toEqual(['QUERY /items', 'LINK /items']);
+    expect(m.schemas.find((x) => x.name === 'Q')?.usedIn).toEqual(['QUERY /items']);
+  });
+});
+
 describe('samples', () => {
   const op = buildModel(spec).ops.find((o) => o.key === 'POST /v1/payments')!;
   const body = JSON.stringify(exampleFor(spec, spec.components.schemas.PaymentInput));

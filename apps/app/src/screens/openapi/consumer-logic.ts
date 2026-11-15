@@ -53,11 +53,15 @@ export function sdkCall(c: Change, lang: Lang): string {
 export const opKey = (o: { method: string; path: string }) => `${o.method.toUpperCase()} ${o.path}`;
 
 export function operationsOf(spec: unknown): { ops: Operation[]; servers: string[] } {
-  const s = spec as { paths?: Record<string, Record<string, { operationId?: string }>>; servers?: Array<{ url: string }>; host?: string; basePath?: string; schemes?: string[] };
+  const s = spec as { paths?: Record<string, Record<string, { operationId?: string } | undefined> & { additionalOperations?: Record<string, { operationId?: string }> }>; servers?: Array<{ url: string }>; host?: string; basePath?: string; schemes?: string[] };
   const ops: Operation[] = [];
   for (const [path, item] of Object.entries(s?.paths ?? {})) for (const m of ['get', 'put', 'post', 'delete', 'patch', 'options', 'head', 'trace', 'query']) {
     const op = item?.[m];
     if (op) ops.push({ method: m.toUpperCase(), path, ...(op.operationId ? { operationId: op.operationId } : {}) });
+  }
+  // OpenAPI 3.2 `additionalOperations` (LINK, PURGE…), keyed by method name as core reports them.
+  for (const [path, item] of Object.entries(s?.paths ?? {})) for (const [m, op] of Object.entries(item?.additionalOperations ?? {})) {
+    if (op && typeof op === 'object') ops.push({ method: m.toUpperCase(), path, ...(op.operationId ? { operationId: op.operationId } : {}) });
   }
   const servers = s?.servers?.map((x) => x.url) ?? (s?.host ? [`${s.schemes?.[0] ?? 'https'}://${s.host}${s.basePath ?? ''}`] : []);
   return { ops, servers };
