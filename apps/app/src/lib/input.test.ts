@@ -55,3 +55,18 @@ describe('ZIP size limits (IN-04)', () => {
     expect(fromZip('ok', zip).name).toBe('ok/openapi.yaml');
   });
 });
+
+describe('toRawUrl: code hosts (IN-03)', () => {
+  it('keeps GitHub conversion, dropping ?plain=1 and #L anchors', () => {
+    expect(toRawUrl('https://github.com/acme/api/blob/main/specs/openapi.yaml?plain=1#L12')).toBe('https://raw.githubusercontent.com/acme/api/main/specs/openapi.yaml');
+  });
+  it('converts GitLab blob links to raw (groups and subgroups too)', () => {
+    expect(toRawUrl('https://gitlab.com/acme/platform/api/-/blob/main/openapi.yaml')).toBe('https://gitlab.com/acme/platform/api/-/raw/main/openapi.yaml');
+  });
+  it('converts Bitbucket src links to raw', () => {
+    expect(toRawUrl('https://bitbucket.org/acme/api/src/main/openapi.yaml')).toBe('https://bitbucket.org/acme/api/raw/main/openapi.yaml');
+  });
+  it('leaves other URLs alone', () => {
+    expect(toRawUrl('https://example.com/openapi.yaml')).toBe('https://example.com/openapi.yaml');
+  });
+});

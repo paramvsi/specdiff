@@ -39,6 +39,13 @@ export function toRawUrl(input: string): string {
     const m = /^\/([^/]+)\/([^/]+)\/(?:blob|raw)\/(.+)$/.exec(u.pathname);
     if (m) return `https://raw.githubusercontent.com/${m[1]}/${m[2]}/${m[3]}`;
   }
+  // GitLab: …/-/blob/<ref>/<path> → …/-/raw/<ref>/<path> (groups and subgroups keep their path).
+  if (u.hostname === 'gitlab.com' && u.pathname.includes('/-/blob/')) return `${u.origin}${u.pathname.replace('/-/blob/', '/-/raw/')}`;
+  // Bitbucket: /<workspace>/<repo>/src/<ref>/<path> → …/raw/<ref>/<path>.
+  if (u.hostname === 'bitbucket.org') {
+    const m = /^\/([^/]+)\/([^/]+)\/src\/(.+)$/.exec(u.pathname);
+    if (m) return `https://bitbucket.org/${m[1]}/${m[2]}/raw/${m[3]}`;
+  }
   if (u.hostname === 'gist.github.com') {
     const m = /^\/([^/]+)\/([0-9a-f]+)\/?$/.exec(u.pathname);
     if (m) return `https://gist.githubusercontent.com/${m[1]}/${m[2]}/raw`;
