@@ -18,8 +18,8 @@ export function jsonPathKey(parent: string, key: string | number): string {
 function hintFor(code: string, message: string): string {
   if (code === 'MISSING_CHAR' || /end with a|flow (map|sequence|collection)|missing/i.test(message)) return 'A bracket, brace or quote is not closed. Look for a missing ] } or " near here.';
   if (code === 'BAD_INDENT' || /indent/i.test(message)) return 'Check the indentation on this line: it must line up with its siblings, using spaces, not tabs.';
-  if (code === 'MISSING_CHAR' || /flow/i.test(message)) return 'A bracket, brace or quote is not closed. Look for a missing ] } or " near here.';
   if (code === 'TAB_AS_INDENT') return 'YAML does not allow tabs for indentation. Replace them with spaces.';
+  if (/multiple documents/i.test(message)) return 'This file holds more than one YAML document (separated by ---). Compare one document at a time.';
   if (code === 'DUPLICATE_KEY') return 'The same key appears twice in one object.';
   if (/JSON|unexpected/i.test(message)) return 'This is not valid JSON or YAML here. Look for a stray comma or a missing colon.';
   return 'Fix the syntax on this line and compare again.';
@@ -27,7 +27,7 @@ function hintFor(code: string, message: string): string {
 
 export function parseWithPositions(content: string): Parsed | { error: ParseError } {
   const lc = new LineCounter();
-  const doc = parseDocument(content, { lineCounter: lc, uniqueKeys: false, prettyErrors: false, strict: false });
+  const doc = parseDocument(content, { lineCounter: lc, uniqueKeys: false, prettyErrors: false, strict: false, merge: true });
   const err = doc.errors[0];
   if (err) {
     const p = lc.linePos(err.pos[0]);
@@ -61,5 +61,10 @@ export function parseWithPositions(content: string): Parsed | { error: ParseErro
     }
   };
   walk(doc.contents, '$');
-  return { value: doc.toJS({ maxAliasCount: 1000 }), positions, duplicates };
+  try {
+    return { value: doc.toJS({ maxAliasCount: 1000 }), positions, duplicates };
+  } catch (e) {
+    // yaml refuses alias bombs ("Excessive alias count"): report it like any other parse error.
+    return { error: { line: 1, column: 1, message: e instanceof Error ? e.message : String(e), hint: 'The YAML aliases expand to far more data than the file holds. Remove the repeated aliases.' } };
+  }
 }

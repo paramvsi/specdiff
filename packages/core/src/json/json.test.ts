@@ -69,6 +69,22 @@ describe('parse', () => {
     expect('error' in r && r.error.line).toBeGreaterThan(0);
     expect('error' in r && r.error.hint).toBeTruthy();
   });
+  it('applies YAML merge keys like the OpenAPI parser does', () => {
+    expect(parse('base: &b {x: 1}\nd:\n  <<: *b\n  y: 2\n').value).toEqual({ base: { x: 1 }, d: { x: 1, y: 2 } });
+  });
+  it('keeps a quoted "<<" key in JSON as an ordinary key', () => {
+    expect(parse('{"<<": {"x": 1}}').value).toEqual({ '<<': { x: 1 } });
+  });
+  it('returns an error, not a throw, for an alias bomb', () => {
+    const level = (n: string, prev: string) => `${n}: &${n} [${Array(9).fill(`*${prev}`).join(',')}]\n`;
+    const bomb = 'a: &a [x,x,x,x,x,x,x,x,x]\n' + level('b', 'a') + level('c', 'b') + level('d', 'c') + level('e', 'd') + 'f: [*e,*e,*e,*e,*e,*e,*e,*e,*e]\n';
+    const r = parseWithPositions(bomb);
+    expect('error' in r && r.error.message).toMatch(/alias/i);
+  });
+  it('explains a file with several YAML documents', () => {
+    const r = parseWithPositions('a: 1\n---\nb: 2\n');
+    expect('error' in r && r.error.hint).toMatch(/one document/i);
+  });
 });
 
 describe('exports', () => {
