@@ -86,3 +86,20 @@ test('A-05 SDK impact (Beta) and changes that affect me', async ({ page }) => {
   await page.getByRole('button', { name: 'Clear filter' }).click();
   await expect(page.getByText('Only changes to')).toHaveCount(0);
 });
+
+for (const scheme of ['light', 'dark'] as const) {
+  test(`@phone M-01..M-03 read-only phone flow (${scheme})`, async ({ page }) => {
+    test.skip(test.info().project.name !== 'phone');
+    await page.emulateMedia({ colorScheme: scheme });
+    await page.goto('/app/?sample=openapi');
+    await expect(page.getByText('Read-only on phones.')).toBeVisible();
+    await expectAxeClean(page);
+    await page.getByRole('button', { name: 'See all 28 changes' }).click();
+    await expect(page.getByRole('heading', { name: '28 changes' })).toBeVisible();
+    await expectAxeClean(page);
+    await page.getByRole('button', { name: /Endpoint removed/ }).first().click();
+    await expect(page.getByRole('heading', { name: /of 28/ })).toBeVisible();
+    await expect(page.getByText('Why it breaks')).toBeVisible();
+    await expectAxeClean(page);
+  });
+}

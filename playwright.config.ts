@@ -30,5 +30,12 @@ export default defineConfig({
       reuseExistingServer: true,
       timeout: 180_000,
     },
+    {
+      // Production build of the app, for the PWA/offline test (service workers only exist in builds).
+      command: 'pnpm --filter @specdiff/app build && pnpm --filter @specdiff/app preview',
+      url: 'http://localhost:4173/app/',
+      reuseExistingServer: true,
+      timeout: 180_000,
+    },
   ],
 });

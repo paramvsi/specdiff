@@ -1,6 +1,6 @@
 // OpenAPI result: Summary · Workspace · Raw diff · Changelog (A-04, A-05, A-06, A-10).
 import { ReviewProgress } from '@specdiff/ui';
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useSyncExternalStore } from 'react';
 import { useCommand } from '../../shell/commands';
 import { readChangeHash, useNav } from '../../shell/nav';
 import { useApp } from '../../state/store';
@@ -9,6 +9,7 @@ import { AffectsMeDialog, AffectsMeView, ConsumerControls, SdkView, useConsumer 
 import { Explain } from './Explain';
 import { RawDiff } from './RawDiff';
 import { Summary } from './Summary';
+import { PhoneOpenApi } from './Phone';
 import { reviewCounts } from './util';
 import { Workspace } from './Workspace';
 import css from './OpenApiResult.module.css';
@@ -32,7 +33,9 @@ export default function OpenApiResult() {
   useCommand('tab-3', useCallback(() => set({ tab: 'raw' }), [set]));
   useCommand('tab-4', useCallback(() => set({ tab: 'changelog' }), [set]));
   const consumer = useConsumer();
+  const phone = usePhone();
   if (!result || !('report' in result)) return null;
+  if (phone) return <PhoneOpenApi />;
   const r = reviewCounts(result.report.changes, decisions);
   return (
     <div className={css.page}>
@@ -64,5 +67,13 @@ export default function OpenApiResult() {
       <Explain />
       <AffectsMeDialog />
     </div>
+  );
+}
+
+const PHONE = '(max-width: 639px)';
+function usePhone(): boolean {
+  return useSyncExternalStore(
+    (cb) => { const m = window.matchMedia(PHONE); m.addEventListener('change', cb); return () => m.removeEventListener('change', cb); },
+    () => window.matchMedia(PHONE).matches,
   );
 }
