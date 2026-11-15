@@ -23,6 +23,7 @@
   color: var(--sd-muted);
   font-size: 13.5px;
   display: flex;
+  flex-wrap: wrap; /* reflows at 320 px (WCAG 1.4.10) */
   gap: var(--sd-space-2);
 }
 .add {
