@@ -3,10 +3,11 @@
 import { Config } from '@specdiff/core';
 import type { BlockStatus, MdBlock, MdDiff } from '@specdiff/core/markdown';
 import { diffText } from '@specdiff/core/text';
-import { SegmentedControl, Tooltip } from '@specdiff/ui';
+import { IdenticalState, SegmentedControl, Tooltip, useToast } from '@specdiff/ui';
 import * as icons from 'lucide-react';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useCommand } from '../../shell/commands';
+import { changeLink, focusChange, readChangeHash } from '../../shell/nav';
 import { useApp } from '../../state/store';
 import { DiffRows } from '../json/DiffRows';
 import { blockLabel } from './summary';
@@ -35,8 +36,11 @@ function Html({ html, className }: { html: string; className?: string | undefine
   );
 }
 
+const changeIdOf = (i: number) => `m-${i}`;
+
 export default function MarkdownResult() {
-  const { result, before, after } = useApp();
+  const { result, before, after, viewed, toggleViewed } = useApp();
+  const { toast } = useToast();
   const md = result && 'markdown' in result ? result.markdown : null;
   const [view, setView] = useState<View>(memo.view);
   const [current, setCurrent] = useState(-1);
@@ -64,6 +68,7 @@ export default function MarkdownResult() {
       if (!changed.length) return;
       const n = (current + d + changed.length) % changed.length;
       setCurrent(n);
+      focusChange(changeIdOf(changed[n]!)); // X-12
       jump(changed[n]!);
     },
     [changed, current, jump],
@@ -76,8 +81,23 @@ export default function MarkdownResult() {
     'prev-change',
     useCallback(() => go(-1), [go]),
   );
+  // X-11: mark the current changed block as viewed; X-12: copy a link to it, open the linked one on load.
+  const at = current >= 0 ? changed[current] : changed[0];
+  useCommand('mark-viewed', useCallback(() => { if (at !== undefined) toggleViewed(changeIdOf(at)); }, [at, toggleViewed]));
+  useCommand('copy-link', useCallback(() => { if (at !== undefined) void navigator.clipboard?.writeText(changeLink(changeIdOf(at))).then(() => toast({ title: 'Link to this change copied' })); }, [at, toast]));
+  const linked = useRef(false);
+  useEffect(() => {
+    if (linked.current) return;
+    linked.current = true;
+    const id = readChangeHash();
+    const i = id?.startsWith('m-') ? Number(id.slice(2)) : -1;
+    const k = changed.indexOf(i);
+    if (k >= 0) { setCurrent(k); jump(i); }
+  }, [changed, jump]);
 
   if (!md || !result) return null;
+  if (!changed.length) return <IdenticalState ignoredLines={0} />;
+  const seen = changed.filter((i) => viewed[changeIdOf(i)]).length;
   const names = { before: before?.name ?? 'before', after: after?.name ?? 'after' };
   const links = md.blocks.flatMap((b) => b.links ?? []);
   const codes = md.blocks.filter((b) => b.code && b.status === 'edited').length;
@@ -140,7 +160,7 @@ export default function MarkdownResult() {
         {view === 'rendered' && (
           <div className={css.doc}>
             {md.blocks.map((b, i) => (
-              <Block key={i} b={b} i={i} />
+              <Block key={i} b={b} i={i} viewed={!!viewed[changeIdOf(i)]} onViewed={() => toggleViewed(changeIdOf(i))} />
             ))}
           </div>
         )}
@@ -168,6 +188,7 @@ export default function MarkdownResult() {
                 ['Blocks edited', md.stats.edited],
                 ['Links changed', links.length],
                 ['Code blocks changed', codes],
+                ['Viewed', `${seen} of ${changed.length}`],
               ] as const
             ).map(([k, v]) => (
               <div key={k}>
@@ -240,7 +261,7 @@ export default function MarkdownResult() {
   );
 }
 
-function Block({ b, i }: { b: MdBlock; i: number }) {
+function Block({ b, i, viewed, onViewed }: { b: MdBlock; i: number; viewed: boolean; onViewed: () => void }) {
   return (
     // tabIndex -1: outline and J/K move focus here.
     <div id={blockId(i)} className={css.block} data-status={b.status} tabIndex={-1}>
@@ -253,6 +274,11 @@ function Block({ b, i }: { b: MdBlock; i: number }) {
         <span className="sd-visually-hidden">
           {b.status === 'edited' ? 'Edited' : b.status === 'added' ? 'Added' : 'Removed'} {b.type}:
         </span>
+      )}
+      {b.status !== 'same' && (
+        <button type="button" className={css.viewedBtn} aria-pressed={viewed} onClick={onViewed}>
+          {viewed ? <icons.CheckSquare size={14} aria-hidden="true" /> : <icons.Square size={14} aria-hidden="true" />} Viewed
+        </button>
       )}
       {b.code && b.status === 'edited' ? <CodeDiff code={b.code} /> : <Html html={b.html} className={css.md} />}
       {b.links?.map((l, k) => (

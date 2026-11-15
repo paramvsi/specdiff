@@ -1,9 +1,11 @@
 // A-09 Code diff (Beta; CD-01..CD-06) and A-09 fallback to text (CD-04).
 import type { CodeDiff, CodeItem, CodeStatus } from '@specdiff/core/code';
 import type { Row } from '@specdiff/core/text';
-import { BetaLabel, Button, Checkbox, SegmentedControl } from '@specdiff/ui';
+import { BetaLabel, Button, Checkbox, IdenticalState, SegmentedControl, useToast } from '@specdiff/ui';
 import * as icons from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCommand } from '../../shell/commands';
+import { changeLink, focusChange, readChangeHash } from '../../shell/nav';
 import { useApp } from '../../state/store';
 import { TextResult } from '../text/TextResult';
 import css from './CodeResult.module.css';
@@ -37,32 +39,37 @@ export default function CodeResult() {
       </div>
     );
   }
+  if (outcome.items.every((i) => i.status === 'same')) return <IdenticalState ignoredLines={0} />;
   return <Structural diff={outcome} rows={result.text.rows} />;
 }
 
-const BADGE: Partial<Record<CodeStatus, string>> = { renamed: 'Renamed', moved: 'Moved', changed: 'Logic', added: 'Added', removed: 'Removed', formatting: 'Format', comments: 'Comments' };
+const BADGE: Partial<Record<CodeStatus, string>> = { renamed: 'Renamed', renamedLocals: 'Renamed', moved: 'Moved', changed: 'Logic', added: 'Added', removed: 'Removed', formatting: 'Format', comments: 'Comments' };
 
 function title(d: CodeDiff): string {
   const s = d.stats;
   const parts = [
     s.changed + s.added + s.removed && `${s.changed + s.added + s.removed} logic change${s.changed + s.added + s.removed > 1 ? 's' : ''}`,
     s.moved && `${s.moved} move${s.moved > 1 ? 's' : ''}`,
-    s.renamed && `${s.renamed} rename${s.renamed > 1 ? 's' : ''}`,
+    s.renamed + s.renamedLocals && `${s.renamed + s.renamedLocals} rename${s.renamed + s.renamedLocals > 1 ? 's' : ''}`,
   ].filter(Boolean);
   return parts.length ? parts.join(', ') : s.formatting || s.comments ? 'No logic change' : 'No changes';
 }
 
 type V = { kind: 'row'; row: Row } | { kind: 'fold'; rows: Row[]; reason: string; id: number };
 
+const itemId = (i: CodeItem) => `k-${i.name}`;
+
 function Structural({ diff, rows }: { diff: CodeDiff; rows: Row[] }) {
-  const { before, after } = useApp();
+  const { before, after, viewed, toggleViewed } = useApp();
+  const { toast } = useToast();
+  const [cur, setCur] = useState(0);
   const [view, setView] = useState<'structural' | 'text'>('structural');
   const [hideRenames, setHideRenames] = useState(true);
   const [hideComments, setHideComments] = useState(false);
   const [open, setOpen] = useState<Set<number>>(new Set());
 
   const quiet = useMemo(() => {
-    const statuses = new Set<CodeStatus>(['formatting', ...(hideRenames ? (['renamed'] as const) : []), ...(hideComments ? (['comments'] as const) : [])]);
+    const statuses = new Set<CodeStatus>(['formatting', ...(hideRenames ? (['renamed', 'renamedLocals'] as const) : []), ...(hideComments ? (['comments'] as const) : [])]);
     return diff.items.filter((i) => statuses.has(i.status));
   }, [diff, hideRenames, hideComments]);
 
@@ -88,6 +95,27 @@ function Structural({ diff, rows }: { diff: CodeDiff; rows: Row[] }) {
 
   const formattingLines = diff.items.filter((i) => i.status === 'formatting').reduce((n, i) => n + ((i.lines.after?.[1] ?? 0) - (i.lines.after?.[0] ?? 0) + 1), 0);
   const listed = diff.items.filter((i) => i.status !== 'same' && i.status !== 'formatting' && !(hideComments && i.status === 'comments'));
+  // X-11 / X-12: navigate, mark viewed and link to the listed items.
+  const goTo = useCallback((k: number) => {
+    if (!listed.length) return;
+    const n = (k + listed.length) % listed.length;
+    setCur(n);
+    focusChange(itemId(listed[n]!));
+    requestAnimationFrame(() => document.getElementById(itemId(listed[n]!))?.focus());
+  }, [listed]);
+  useCommand('next-change', useCallback(() => goTo(cur + 1), [goTo, cur]));
+  useCommand('prev-change', useCallback(() => goTo(cur - 1), [goTo, cur]));
+  useCommand('mark-viewed', useCallback(() => { const i = listed[cur]; if (i) toggleViewed(itemId(i)); }, [listed, cur, toggleViewed]));
+  useCommand('copy-link', useCallback(() => { const i = listed[cur]; if (i) void navigator.clipboard?.writeText(changeLink(itemId(i))).then(() => toast({ title: 'Link to this change copied' })); }, [listed, cur, toast]));
+  const linked = useRef(false);
+  useEffect(() => {
+    if (linked.current) return;
+    linked.current = true;
+    const id = readChangeHash();
+    const k = id ? listed.findIndex((i) => itemId(i) === id) : -1;
+    if (k >= 0) goTo(k);
+  }, [listed, goTo]);
+  const seen = listed.filter((i) => viewed[itemId(i)]).length;
 
   return (
     <div className={css.page}>
@@ -115,11 +143,15 @@ function Structural({ diff, rows }: { diff: CodeDiff; rows: Row[] }) {
           <h2 id="what-changed" className={css.panelTitle}>What changed</h2>
           <ul className={css.items}>
             {listed.map((i) => (
-              <li key={`${i.status}-${i.name}`} className={css.item}>
+              <li key={`${i.status}-${i.name}`} id={itemId(i)} tabIndex={-1} className={css.item} data-current={listed[cur] === i || undefined}>
                 <span className={css.badge} data-status={i.status}>{BADGE[i.status]}</span>
-                <span>{i.status === 'renamed' ? <><code>{i.from}</code> → <code>{i.name}</code></> : i.status === 'moved' ? <><code>{i.name}</code>, line {i.lines.before?.[0]} → {i.lines.after?.[0]}</> : <><code>{i.name}</code> {i.status === 'added' ? 'added' : i.status === 'removed' ? 'removed' : i.status === 'comments' ? 'comments changed' : 'changed'}</>}</span>
+                <span>{i.status === 'renamedLocals' ? <>{i.renames!.map((r, k) => <span key={r.from}>{k ? ', ' : ''}<code>{r.from}</code> → <code>{r.to}</code>, {r.uses} use{r.uses === 1 ? '' : 's'}</span>)} <span className={css.muted2}>in {i.name}</span></> : i.status === 'renamed' ? <><code>{i.from}</code> → <code>{i.name}</code></> : i.status === 'moved' ? <><code>{i.name}</code>, line {i.lines.before?.[0]} → {i.lines.after?.[0]}</> : <><code>{i.name}</code> {i.status === 'added' ? 'added' : i.status === 'removed' ? 'removed' : i.status === 'comments' ? 'comments changed' : 'changed'}</>}</span>
+                <button type="button" className={css.viewed} aria-pressed={!!viewed[itemId(i)]} aria-label={`Mark ${i.name} as viewed`} onClick={() => toggleViewed(itemId(i))}>
+                  {viewed[itemId(i)] ? <icons.CheckSquare size={14} aria-hidden="true" /> : <icons.Square size={14} aria-hidden="true" />}
+                </button>
               </li>
             ))}
+            {listed.length > 0 && <li className={css.item}><span className={css.muted2}>{seen} of {listed.length} viewed</span></li>}
             {formattingLines > 0 && <li className={css.item}><span className={css.badge} data-status="formatting">Format</span><span>{formattingLines} lines, hidden</span></li>}
           </ul>
           <Checkbox label="Hide renames" checked={hideRenames} onCheckedChange={setHideRenames} />

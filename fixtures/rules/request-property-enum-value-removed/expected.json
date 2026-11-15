@@ -8,5 +8,7 @@
       "kind": "removed"
     }
   ],
-  "modelRefs": []
+  "modelRefs": [
+    "request-property-enum-value-removed"
+  ]
 }

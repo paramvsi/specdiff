@@ -30,3 +30,10 @@
 .noticeTitle { margin: 0; font-weight: 600; }
 .noticeBody { margin: 4px 0 0; font-size: 13.5px; }
 @media (max-width: 1023px) { .layout { grid-template-columns: 1fr; } }
+.muted2 { color: var(--sd-muted); font-size: 12.5px; }
+.item[data-current] { box-shadow: inset 3px 0 0 var(--sd-selection-bar); padding-left: 8px; }
+.item { outline: none; }
+.item:focus-visible { box-shadow: var(--sd-shadow-focus); }
+.viewed { margin-left: auto; flex: none; width: 28px; height: 28px; display: grid; place-items: center; border: 1px solid var(--sd-line); border-radius: var(--sd-radius-sm); background: var(--sd-surface); color: var(--sd-muted); cursor: pointer; }
+.viewed[aria-pressed='true'] { color: var(--sd-safe); border-color: var(--sd-safe); }
+.badge[data-status='renamedLocals'] { background: var(--sd-possibly-bg); color: var(--sd-possibly); }

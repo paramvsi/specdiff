@@ -3,12 +3,14 @@
 import { Language, Parser, type Node } from 'web-tree-sitter';
 
 export type CodeLang = 'typescript' | 'tsx' | 'javascript' | 'java' | 'python';
-export type CodeStatus = 'same' | 'formatting' | 'comments' | 'changed' | 'added' | 'removed' | 'renamed' | 'moved';
+export type CodeStatus = 'same' | 'formatting' | 'comments' | 'changed' | 'added' | 'removed' | 'renamed' | 'moved' | 'renamedLocals';
 export interface CodeItem {
   name: string;
   kind: string;
   status: CodeStatus;
   from?: string; // renamed from
+  /** For renamedLocals: identifiers renamed consistently inside the declaration (B-15). */
+  renames?: Array<{ from: string; to: string; uses: number }>;
   lines: { before?: [number, number]; after?: [number, number] };
   beforeText?: string;
   afterText?: string;
@@ -152,12 +154,14 @@ export function diffCode(before: string, after: string, lang: CodeLang, language
     if (!b) { removed.push(a); continue; }
     matched.add(b.name);
     let status: CodeStatus;
-    if (!eq(a.tokens, b.tokens)) status = 'changed';
+    const renames = eq(a.tokens, b.tokens) ? undefined : consistentRenames(a.tokens, b.tokens);
+    if (renames) status = 'renamedLocals';
+    else if (!eq(a.tokens, b.tokens)) status = 'changed';
     else if (a.comments.join('\n') !== b.comments.join('\n')) status = 'comments';
     else if (a.node.text !== b.node.text) status = 'formatting';
     else status = stayed.has(a.name) ? 'same' : 'moved';
     if (status === 'same' || status === 'formatting' || status === 'comments') if (!stayed.has(a.name)) status = status === 'same' ? 'moved' : status;
-    items.push({ name: a.name, kind: a.kind, status, lines: { before: lines(a.node), after: lines(b.node) }, beforeText: a.node.text, afterText: b.node.text });
+    items.push({ name: a.name, kind: a.kind, status, ...(renames ? { renames } : {}), lines: { before: lines(a.node), after: lines(b.node) }, beforeText: a.node.text, afterText: b.node.text });
   }
   const added = B.decls.filter((d) => !matched.has(d.name));
   for (const r of removed) {
@@ -176,10 +180,37 @@ export function diffCode(before: string, after: string, lang: CodeLang, language
   }
   // Nested declarations change their parents' text too; a parent whose only change is in children stays "changed" — fine.
   items.sort((x, y) => (x.lines.after?.[0] ?? x.lines.before?.[0] ?? 1e9) - (y.lines.after?.[0] ?? y.lines.before?.[0] ?? 1e9) || x.name.localeCompare(y.name));
-  const stats = { same: 0, formatting: 0, comments: 0, changed: 0, added: 0, removed: 0, renamed: 0, moved: 0 } as Record<CodeStatus, number>;
+  const stats = { same: 0, formatting: 0, comments: 0, changed: 0, added: 0, removed: 0, renamed: 0, moved: 0, renamedLocals: 0 } as Record<CodeStatus, number>;
   for (const i of items) stats[i.status]++;
   ta.delete(); tb.delete(); parser.delete();
   return { language: lang, items, stats, logicChanged: stats.changed + stats.added + stats.removed > 0 };
+}
+
+const KEYWORDS = new Set(['if', 'else', 'for', 'while', 'do', 'return', 'function', 'class', 'const', 'let', 'var', 'new', 'this', 'super', 'true', 'false', 'null', 'undefined', 'def', 'self', 'None', 'True', 'False', 'import', 'from', 'public', 'private', 'protected', 'static', 'final', 'void', 'int', 'long', 'boolean', 'String', 'throw', 'throws', 'try', 'catch', 'async', 'await', 'export', 'default', 'in', 'of', 'is', 'not', 'and', 'or', 'lambda', 'pass', 'yield']);
+const IDENT = /^[A-Za-z_$][\w$]*$/;
+
+/** Token streams equal except for a consistent, one-to-one renaming of identifiers (e.g. amount → amt).
+ *  Member names (after `.`, `->`, `::`) are not locals: a change there is a logic change. */
+function consistentRenames(a: string[], b: string[]): CodeItem['renames'] | undefined {
+  if (a.length !== b.length) return undefined;
+  const member = (t: string[], i: number) => ['.', '->', '::', '?.'].includes(t[i - 1] ?? '');
+  const fwd = new Map<string, string>(), back = new Map<string, string>(), uses = new Map<string, number>();
+  for (let i = 0; i < a.length; i++) {
+    const x = a[i]!, y = b[i]!;
+    if (x === y) continue;
+    if (member(a, i) || member(b, i)) return undefined;
+    if (!IDENT.test(x) || !IDENT.test(y) || KEYWORDS.has(x) || KEYWORDS.has(y)) return undefined;
+    if ((fwd.get(x) ?? y) !== y || (back.get(y) ?? x) !== x) return undefined;
+    fwd.set(x, y); back.set(y, x);
+    uses.set(x, (uses.get(x) ?? 0) + 1);
+  }
+  if (!fwd.size) return undefined;
+  // A renamed local must not also appear unchanged as a local elsewhere (that would change meaning).
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i] || member(a, i)) continue;
+    if (fwd.has(a[i]!) || back.has(b[i]!)) return undefined;
+  }
+  return [...fwd].map(([from, to]) => ({ from, to, uses: uses.get(from)! })).sort((p, q) => p.from.localeCompare(q.from));
 }
 
 function findError(n: Node): Node | undefined {

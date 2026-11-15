@@ -371,3 +371,5 @@
     padding: var(--sd-space-4) var(--sd-space-6);
   }
 }
+.viewedBtn { float: right; display: inline-flex; align-items: center; gap: 4px; min-height: 28px; margin: 0 0 4px 8px; padding: 0 8px; border: 1px solid var(--sd-line); border-radius: var(--sd-radius-sm); background: var(--sd-surface); color: var(--sd-muted); font-size: 12px; cursor: pointer; }
+.viewedBtn[aria-pressed='true'] { color: var(--sd-safe); border-color: var(--sd-safe); }

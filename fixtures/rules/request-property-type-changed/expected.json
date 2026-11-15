@@ -8,5 +8,7 @@
       "kind": "typeChanged"
     }
   ],
-  "modelRefs": []
+  "modelRefs": [
+    "request-property-type-changed"
+  ]
 }

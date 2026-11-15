@@ -4,6 +4,7 @@ import { Config, type Change, type Kind } from '@specdiff/core';
 import { humanPath, stable } from '@specdiff/core/json';
 import { diffText } from '@specdiff/core/text';
 import {
+  IdenticalState,
   Button,
   Checkbox,
   DiffMarker,
@@ -17,7 +18,7 @@ import {
 import * as icons from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useCommand } from '../../shell/commands';
-import { useNav } from '../../shell/nav';
+import { changeLink, focusChange, readChangeHash, useNav } from '../../shell/nav';
 import { useApp } from '../../state/store';
 import type { JsonResultData } from '../../worker/protocol';
 import { copyText, download } from '../ExportMenu';
@@ -91,6 +92,9 @@ export default function JsonResult() {
   }, [settings.config.json, compare]);
 
   if (!data || !result || !('json' in result)) return null;
+  if (!data.changes.length && !data.duplicates.before.length && !data.duplicates.after.length) {
+    return <IdenticalState ignoredLines={0} />;
+  }
   const names = { before: before?.name ?? 'before', after: after?.name ?? 'after' };
 
   return (
@@ -169,7 +173,7 @@ function DiffTab({
       if (!visible.length) return;
       const n = (i + visible.length) % visible.length;
       const c = visible[n]!;
-      useNav.getState().set({ changeId: c.id });
+      focusChange(c.id); // X-12: #change=<id>
       if (view !== 'tree') {
         memo.view = 'tree';
         setView('tree');
@@ -189,6 +193,22 @@ function DiffTab({
   useCommand(
     'prev-change',
     useCallback(() => go(current - 1), [go, current]),
+  );
+  // X-12: open the change in the URL hash once, on first render.
+  const linked = useRef(false);
+  useEffect(() => {
+    if (linked.current) return;
+    linked.current = true;
+    const id = readChangeHash();
+    const i = id ? visible.findIndex((c) => c.id === id) : -1;
+    if (i >= 0) go(i);
+  }, [visible, go]);
+  useCommand(
+    'copy-link',
+    useCallback(() => {
+      const c = visible[current];
+      if (c) void navigator.clipboard?.writeText(changeLink(c.id)).then(() => toast({ title: 'Link to this change copied' }));
+    }, [visible, current, toast]),
   );
   useCommand(
     'mark-viewed',

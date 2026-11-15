@@ -45,6 +45,16 @@ describe('diffCode', () => {
     const d = run('class S:\n    def a(self):\n        pass\n', 'class S:\n    def a(self):\n        pass\n    def b(self):\n        return 1\n', 'python');
     expect(by(d)).toEqual({ S: 'changed', 'S.a': 'same', 'S.b': 'added' });
   });
+  it('detects a consistent local rename inside a function (B-15)', () => {
+    const d = run('class P {\n  int f(Req req) {\n    var amount = req.amount();\n    if (amount < 1) { return 0; }\n    return amount * 2;\n  }\n}\n', 'class P {\n  int f(Req req) {\n    var amt = req.amount();\n    if (amt < 1) { return 0; }\n    return amt * 2;\n  }\n}\n', 'java');
+    expect(by(d)['P.f']).toBe('renamedLocals');
+    expect(d.items.find((i) => i.name === 'P.f')!.renames).toEqual([{ from: 'amount', to: 'amt', uses: 3 }]);
+    expect(d.logicChanged).toBe(false);
+  });
+  it('a rename that collides with an existing name is a logic change', () => {
+    const d = run('function f(a, b) { return a + b }\n', 'function f(a, b) { return b + b }\n', 'javascript');
+    expect(by(d).f).toBe('changed');
+  });
   it('falls back on parse errors with the line', () => {
     expect(diffCode('function a() {}', 'function a( {\n}\n', 'typescript', langs.typescript)).toMatchObject({ fallback: 'parse-error', side: 'after' });
   });

@@ -8,5 +8,7 @@
       "kind": "added"
     }
   ],
-  "modelRefs": []
+  "modelRefs": [
+    "endpoint-added"
+  ]
 }
