@@ -183,7 +183,7 @@
   letter-spacing: -0.03em;
   line-height: 1.06;
   color: var(--sd-ink);
-  max-width: 20ch;
+  max-width: 490px; /* the frame's 20ch at 44px, as rendered (Geist's ch is wider) */
 }
 .rule-lede {
   font-size: 18px;
@@ -211,6 +211,10 @@
 .yaml-lines {
   padding: 8px 0;
   overflow-x: auto;
+}
+/* Long lines scroll on phones, so the pane takes focus (axe scrollable-region-focusable). */
+.yaml-lines:focus-visible {
+  box-shadow: inset var(--sd-shadow-focus);
 }
 .yl {
   padding: 0 14px;
@@ -243,7 +247,7 @@
   gap: 8px;
   font: 400 16.5px/1.7 var(--sd-font-sans);
   color: var(--sd-ink);
-  max-width: 68ch;
+  max-width: 624px; /* the frames' 68ch at 16.5px, as rendered (Geist's ch is wider) */
 }
 .note-box {
   margin: 0;
@@ -264,7 +268,7 @@
   margin: 0;
   font: 400 16.5px/1.7 var(--sd-font-sans);
   color: var(--sd-ink);
-  max-width: 68ch;
+  max-width: 624px; /* the frames' 68ch at 16.5px, as rendered (Geist's ch is wider) */
 }
 .rule-aside {
   flex: 1 1 340px; /* W04: 340 px aside at 1440 */
@@ -453,7 +457,7 @@
   margin: 0;
   font: 400 18px/1.6 var(--sd-font-sans);
   color: var(--sd-muted);
-  max-width: 62ch;
+  max-width: 620px; /* the frames' 62ch, measured in the face they render with (Geist's ch is wider) */
 }
 .prose {
   display: flex;
@@ -478,7 +482,7 @@
 .prose li {
   font: 400 16.5px/1.7 var(--sd-font-sans);
   color: var(--sd-ink);
-  max-width: 68ch;
+  max-width: 624px; /* the frames' 68ch at 16.5px, as rendered (Geist's ch is wider) */
 }
 .prose ul,
 .prose ol {
@@ -642,17 +646,14 @@
   font: 500 13.5px var(--sd-font-sans);
   color: var(--sd-muted);
 }
+/* W02-Docs-390: the sidebar and "On this page" keep their 250 / 210 px widths when they stack. */
 @media (max-width: 860px) {
   .docs-side,
   .docs-toc-col {
-    max-width: none;
     position: static;
   }
 }
 @media (max-width: 760px) {
-  .docs-main {
-    padding: 24px 24px 56px;
-  }
   .docs-group a,
   .docs-toc a.toc-link,
   .docs-toc .edit {
@@ -664,7 +665,7 @@
 
 /* ---------- Changelog ---------- */
 .log-main {
-  max-width: 1040px;
+  max-width: 1088px; /* 1040 px content + 24 px gutters, as the frames render */
   margin: 0 auto;
   padding: 48px 24px 80px;
   display: flex;
@@ -741,7 +742,7 @@
 
 /* ---------- 404 ---------- */
 .nf-main {
-  max-width: 1040px;
+  max-width: 1088px; /* 1040 px content + 24 px gutters, as the frames render */
   margin: 0 auto;
   padding: 96px 24px;
   display: flex;
@@ -814,9 +815,6 @@
 @media (max-width: 760px) {
   .log-main {
     padding: 32px 24px 56px;
-  }
-  .nf-main {
-    padding: 48px 24px;
   }
   .nf-diff > div:first-child {
     border-right: 0;

@@ -4,7 +4,7 @@
       "ruleId": "request-property-became-required",
       "severity": "breaking",
       "direction": "request",
-      "path": "POST /a › requestBody › name",
+      "path": "POST /v1/payments › requestBody › currency",
       "kind": "changed"
     }
   ],

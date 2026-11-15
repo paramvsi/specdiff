@@ -1,7 +1,7 @@
-// "31 hunks of YAML. Or 3 things that matter." before/after slider (W-01). React island.
+// "31 hunks of YAML. Or 3 things that matter." before/after slider (W-01).
+// Server-rendered only (no React in the browser, B-13): src/scripts/islands.ts moves the split.
 // A real <input type="range"> drives the split; the visible handle follows it and shows its focus ring.
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { useState } from 'react';
 
 type Row = [string, 'hunk' | 'ctx' | 'rem' | 'add'];
 const diff: Row[] = [
@@ -34,7 +34,7 @@ const findings: Finding[] = [
 ];
 
 export default function BeforeAfter() {
-  const [pos, setPos] = useState(46);
+  const pos = 46;
   return (
     <div className="ba">
       <div className="ba-left">
@@ -73,8 +73,7 @@ export default function BeforeAfter() {
         min={0}
         max={100}
         step={1}
-        value={pos}
-        onChange={(e) => setPos(Number(e.target.value))}
+        defaultValue={pos}
         aria-label="Compare git diff with Specdiff"
         aria-valuetext={`${pos}% git diff, ${100 - pos}% Specdiff`}
         className="ba-input"

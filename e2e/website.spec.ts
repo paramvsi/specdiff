@@ -247,9 +247,9 @@ test('no built page shows an unfilled template placeholder (WEB-04)', () => {
 test('rule detail fills who/avoid and the example line from the fixture (WEB-04)', async ({ page }) => {
   await page.goto(WEB + '/rules/request-property-became-required/');
   const body = page.locator('.rule-body');
-  await expect(body.locator('#who + p')).toContainText('POST /a');
+  await expect(body.locator('#who + p')).toContainText('POST /v1/payments');
   await expect(body.locator('#who + p code').first()).toBeVisible();
-  await expect(body.locator('pre').last()).toContainText('`POST /a` now requires `name`');
+  await expect(body.locator('pre').last()).toContainText('`POST /v1/payments` now requires `currency`');
   for (const p of await body.locator('.p-doc').allTextContents()) expect(p).not.toContain('`');
 });
 
@@ -353,7 +353,7 @@ test('W-04 rule detail matches the design copy: headline, intro, who it breaks, 
   await page.goto(WEB + '/rules/request-property-became-required/');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('An optional request property became required');
   await expect(page.locator('.rule-lede')).toHaveText('A property that clients could leave out of the request body is now in the schema’s required list.');
-  await expect(page.locator('#who + p')).toContainText('POST /a');
+  await expect(page.locator('#who + p')).toContainText('POST /v1/payments');
   await expect(page.locator('#who + p')).toContainText('first call after you deploy');
   await expect(page.locator('#fix + ol > li')).toHaveCount(3);
   await expect(page.locator('#fix + ol > li').first()).toContainText('Add a default or keep the field optional');
@@ -362,10 +362,12 @@ test('W-04 rule detail matches the design copy: headline, intro, who it breaks, 
 test('W-04 before/after show a focused excerpt with the changed lines marked − and + in colour', async ({ page }) => {
   await page.goto(WEB + '/rules/request-property-became-required/');
   const [before, after] = [page.locator('.yaml-card').nth(0), page.locator('.yaml-card').nth(1)];
-  // The fixture is 20 lines; the excerpt leaves out the unrelated top (info: …) and bottom (responses: …).
-  await expect(before).not.toContainText('title: Fixture');
-  await expect(after).not.toContainText('description: OK');
-  await expect(after.locator('.yl-add')).toHaveCount(2);
+  // The fixture is the W-04 payments example; the excerpt leaves out the unrelated top (info: …) and bottom (responses: …).
+  await expect(before).not.toContainText('title: Payments');
+  await expect(after).not.toContainText('description: Created');
+  await expect(before.locator('.yl-rem')).toHaveCount(1);
+  await expect(before.locator('.yl-rem')).toContainText('required: [amount]');
+  await expect(after.locator('.yl-add')).toHaveCount(1);
   await expect(after.locator('.yl-add').first()).toContainText('required:');
   await expect(after.locator('.yl-add .yl-mark').first()).toHaveText('+');
   await expect(after.locator('.yl-gap').first()).toBeVisible();

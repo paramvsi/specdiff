@@ -47,7 +47,7 @@
   --w-shadow-demo: none;
   --w-shadow-card: none;
   --w-shadow-term: none;
-  --w-demo-frame: rgb(255 255 255 / 0.03);
+  --w-demo-frame: rgb(255 255 255 / 0.55); /* W01v2-Home-Dark: the demo keeps its light bezel */
   --w-term-bg: var(--sd-surface);
   --w-term-panel: var(--sd-raised);
   color-scheme: dark;
@@ -61,7 +61,7 @@
     --w-shadow-demo: none;
     --w-shadow-card: none;
     --w-shadow-term: none;
-    --w-demo-frame: rgb(255 255 255 / 0.03);
+    --w-demo-frame: rgb(255 255 255 / 0.55); /* W01v2-Home-Dark: the demo keeps its light bezel */
     --w-term-bg: var(--sd-surface);
     --w-term-panel: var(--sd-raised);
     color-scheme: dark;
@@ -592,7 +592,7 @@ code {
   margin: 0;
   font: 400 17px/1.6 var(--sd-font-sans);
   color: var(--sd-muted);
-  max-width: 62ch;
+  max-width: 586px; /* the frames' 62ch at 17px, as rendered (Geist's ch is wider) */
 }
 .crumbs {
   font: 400 13.5px var(--sd-font-sans);

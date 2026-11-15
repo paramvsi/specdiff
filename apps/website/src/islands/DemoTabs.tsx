@@ -1,7 +1,8 @@
-// Home v2 live demo (W-01, WEB-01, WEB-09): OpenAPI / JSON / YAML / Markdown tabs. React island.
+// Home v2 live demo (W-01, WEB-01, WEB-09): OpenAPI / JSON / YAML / Markdown tabs.
+// Server-rendered only (no React in the browser, B-13): the OpenAPI tab is rendered live and the other
+// tabs into <template data-panel>; src/scripts/islands.ts swaps them into the panel and runs the keyboard.
 // The looping animation is CSS only (motion.css). Screen readers get a static summary per tab and the
 // animated pieces are aria-hidden, so nothing is announced on every 9 s loop (no live region).
-import { useRef, useState, type KeyboardEvent } from 'react';
 
 type Mode = 'openapi' | 'json' | 'md';
 const tabs: Array<[Mode, string]> = [
@@ -169,53 +170,45 @@ function Markdown() {
 }
 
 export default function DemoTabs() {
-  const [mode, setMode] = useState<Mode>('openapi');
-  const refs = useRef<Array<HTMLButtonElement | null>>([]);
-
-  const onKey = (e: KeyboardEvent<HTMLButtonElement>, i: number) => {
-    let next = -1;
-    if (e.key === 'ArrowRight') next = (i + 1) % tabs.length;
-    else if (e.key === 'ArrowLeft') next = (i - 1 + tabs.length) % tabs.length;
-    else if (e.key === 'Home') next = 0;
-    else if (e.key === 'End') next = tabs.length - 1;
-    if (next < 0) return;
-    e.preventDefault();
-    setMode(tabs[next]![0]);
-    refs.current[next]?.focus();
-  };
-
+  const mode: Mode = 'openapi';
   return (
-    <div className="demo-inner">
-      <div className="demo-bar">
-        <div role="tablist" aria-label="Demo mode" className="seg">
-          {tabs.map(([id, label], i) => (
-            <button
-              key={id}
-              ref={(el) => {
-                refs.current[i] = el;
-              }}
-              type="button"
-              role="tab"
-              id={`demo-tab-${id}`}
-              aria-selected={mode === id}
-              aria-controls="demo-panel"
-              tabIndex={mode === id ? 0 : -1}
-              className="seg-tab"
-              onClick={() => setMode(id)}
-              onKeyDown={(e) => onKey(e, i)}
-            >
-              {label}
-            </button>
-          ))}
+    <>
+      <div className="demo-inner">
+        <div className="demo-bar">
+          <div role="tablist" aria-label="Demo mode" className="seg">
+            {tabs.map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                id={`demo-tab-${id}`}
+                aria-selected={mode === id}
+                aria-controls="demo-panel"
+                tabIndex={mode === id ? 0 : -1}
+                className="seg-tab"
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <span className="demo-local">
+            <span className="ping-dot" aria-hidden="true" />
+            Running in this tab · nothing uploaded
+          </span>
         </div>
-        <span className="demo-local">
-          <span className="ping-dot" aria-hidden="true" />
-          Running in this tab · nothing uploaded
-        </span>
+        <div role="tabpanel" id="demo-panel" aria-labelledby={`demo-tab-${mode}`} tabIndex={0} className="demo-panel">
+          <Openapi />
+        </div>
       </div>
-      <div role="tabpanel" id="demo-panel" aria-labelledby={`demo-tab-${mode}`} tabIndex={0} className="demo-panel">
-        {mode === 'openapi' ? <Openapi /> : mode === 'json' ? <Json /> : <Markdown />}
-      </div>
-    </div>
+      <template data-panel="openapi">
+        <Openapi />
+      </template>
+      <template data-panel="json">
+        <Json />
+      </template>
+      <template data-panel="md">
+        <Markdown />
+      </template>
+    </>
   );
 }

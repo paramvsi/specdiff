@@ -1,6 +1,8 @@
-// "Runs where you already work." package tabs with a typed terminal (W-01). React island.
+// "Runs where you already work." package tabs with a typed terminal (W-01).
+// Server-rendered only (no React in the browser, B-13): the CLI tab is rendered live and every tab into
+// <template data-panel>; src/scripts/islands.ts swaps them into the panel and runs the keyboard.
 // Commands use `specdiff-cli` (docs/10 B-11) and the example counts from docs/10 B-2.
-import { Fragment, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 type Pkg = 'cli' | 'hook' | 'spring' | 'react' | 'express' | 'script';
 const tabs: Array<[Pkg, string]> = [
@@ -8,7 +10,7 @@ const tabs: Array<[Pkg, string]> = [
   ['hook', 'Pre-commit'],
   ['spring', 'Spring Boot'],
   ['react', 'React'],
-  ['express', 'Express and Fastify'],
+  ['express', 'Express'],
   ['script', 'Script tag'],
 ];
 
@@ -128,55 +130,45 @@ const snippets: Record<Exclude<Pkg, 'cli'>, ReactNode> = {
   ),
 };
 
+const panel = (pkg: Pkg) => (pkg === 'cli' ? <Cli /> : <pre className="term-pre">{snippets[pkg]}</pre>);
+
 export default function PackageTabs() {
-  const [pkg, setPkg] = useState<Pkg>('cli');
-  const refs = useRef<Array<HTMLButtonElement | null>>([]);
-
-  const onKey = (e: KeyboardEvent<HTMLButtonElement>, i: number) => {
-    let next = -1;
-    if (e.key === 'ArrowRight') next = (i + 1) % tabs.length;
-    else if (e.key === 'ArrowLeft') next = (i - 1 + tabs.length) % tabs.length;
-    else if (e.key === 'Home') next = 0;
-    else if (e.key === 'End') next = tabs.length - 1;
-    if (next < 0) return;
-    e.preventDefault();
-    setPkg(tabs[next]![0]);
-    refs.current[next]?.focus();
-  };
-
+  const pkg: Pkg = 'cli';
   return (
-    <div className="pk">
-      <div role="tablist" aria-label="Package" className="seg">
-        {tabs.map(([id, label], i) => (
-          <button
-            key={id}
-            ref={(el) => {
-              refs.current[i] = el;
-            }}
-            type="button"
-            role="tab"
-            id={`pk-tab-${id}`}
-            aria-selected={pkg === id}
-            aria-controls="pk-panel"
-            tabIndex={pkg === id ? 0 : -1}
-            className="seg-tab"
-            onClick={() => setPkg(id)}
-            onKeyDown={(e) => onKey(e, i)}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-      <div className="term">
-        <div className="term-dots" aria-hidden="true">
-          <span />
-          <span />
-          <span />
+    <>
+      <div className="pk">
+        <div role="tablist" aria-label="Package" className="seg">
+          {tabs.map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              id={`pk-tab-${id}`}
+              aria-selected={pkg === id}
+              aria-controls="pk-panel"
+              tabIndex={pkg === id ? 0 : -1}
+              className="seg-tab"
+            >
+              {label}
+            </button>
+          ))}
         </div>
-        <div role="tabpanel" id="pk-panel" aria-labelledby={`pk-tab-${pkg}`} tabIndex={0} className="term-panel">
-          <Fragment key={pkg}>{pkg === 'cli' ? <Cli /> : <pre className="term-pre">{snippets[pkg]}</pre>}</Fragment>
+        <div className="term">
+          <div className="term-dots" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </div>
+          <div role="tabpanel" id="pk-panel" aria-labelledby={`pk-tab-${pkg}`} tabIndex={0} className="term-panel">
+            {panel(pkg)}
+          </div>
         </div>
       </div>
-    </div>
+      {tabs.map(([id]) => (
+        <template key={id} data-panel={id}>
+          {panel(id)}
+        </template>
+      ))}
+    </>
   );
 }

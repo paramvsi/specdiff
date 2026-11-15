@@ -70,7 +70,7 @@
   font: 800 clamp(46px, 7.2vw, 104px) / 0.95 var(--sd-font-sans);
   letter-spacing: -0.055em;
   color: var(--sd-ink);
-  max-width: 12.5ch;
+  max-width: 6.95em; /* the frame's 12.5ch as rendered (12.5 × 0.556 em); Geist's ch is wider */
 }
 .hero-h1 .w {
   display: inline-block;
@@ -296,8 +296,7 @@
 }
 .demo-counter {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+  flex-direction: column; /* children stretch: the severity pill spans the card, as in the frame */
   gap: 8px;
   padding: 14px 16px;
   border-radius: 14px;
@@ -589,10 +588,10 @@
   align-items: flex-end;
 }
 .product-head .h2-big {
-  max-width: 13ch;
+  max-width: calc(13 * 0.556em); /* 13ch as the frames render it */
 }
 .product-head .sec-p {
-  max-width: 44ch;
+  max-width: calc(44 * 0.556em); /* 44ch as the frames render it */
 }
 .ba {
   position: relative;
@@ -732,7 +731,7 @@
   gap: 28px;
 }
 .features .h2-big {
-  max-width: 16ch;
+  max-width: calc(16 * 0.556em); /* 16ch as the frames render it */
 }
 .tiles {
   display: flex;
@@ -774,7 +773,7 @@
   margin: 0;
   font: 400 15px/1.6 var(--sd-font-sans);
   color: var(--sd-muted);
-  max-width: 46ch;
+  max-width: calc(46 * 0.556em); /* 46ch as the frames render it */
 }
 .tile-inverse {
   /* --sd-inverse: graphite in light, the olive brand-tinted surface in dark (W01v2-Home-Dark). */
@@ -1029,13 +1028,13 @@
 }
 .viewer .h2-big {
   color: var(--sd-on-inverse);
-  max-width: 12ch;
+  max-width: 7em; /* 3 lines as in the frame: "API docs that / remember / every version." */
 }
 .viewer-copy > p {
   margin: 0;
   font: 400 17px/1.6 var(--sd-font-sans);
   color: var(--sd-on-inverse-muted);
-  max-width: 46ch;
+  max-width: calc(46 * 0.556em); /* 46ch as the frames render it */
 }
 .vlist {
   list-style: none;
@@ -1213,10 +1212,10 @@
   gap: 18px;
 }
 .packages-copy .h2-big {
-  max-width: 11ch;
+  max-width: calc(11 * 0.556em); /* 11ch as the frames render it */
 }
 .packages-copy .sec-p {
-  max-width: 42ch;
+  max-width: calc(42 * 0.556em); /* 42ch as the frames render it */
 }
 .packages-copy code {
   font-family: var(--sd-font-mono);
@@ -1365,7 +1364,7 @@
   margin: 0 0 22px;
   font: 400 16px/1.65 var(--sd-font-sans);
   color: var(--sd-muted);
-  max-width: 62ch;
+  max-width: calc(62 * 0.556em); /* 62ch as the frames render it */
 }
 
 /* ---------- CTA ---------- */
@@ -1396,7 +1395,7 @@
   font: 800 clamp(38px, 5.4vw, 76px) / 0.98 var(--sd-font-sans);
   letter-spacing: -0.05em;
   color: var(--sd-on-brand);
-  max-width: 13ch;
+  max-width: calc(13 * 0.556em); /* 13ch as the frames render it */
 }
 .cta-dark {
   min-height: 52px;

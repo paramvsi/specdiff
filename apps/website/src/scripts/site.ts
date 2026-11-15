@@ -2,7 +2,7 @@
 // - theme toggle (data-theme on <html>, persisted in localStorage)
 // - copy buttons ([data-copy])
 // - pause looping animations off-screen ([data-loop] → .is-paused)
-// - React islands ([data-island]) hydrated on demand from ./islands
+// - islands ([data-island]) wired up on demand from ./islands (plain TypeScript, B-13)
 // - "/" focuses the docs search
 
 type Theme = 'light' | 'dark';
@@ -78,8 +78,8 @@ if (loops.length && 'IntersectionObserver' in window) {
   loops.forEach((el) => io.observe(el));
 }
 
-// React islands: server-rendered by Astro, hydrated here when they come into view (after the page is idle)
-// or as soon as someone points at, focuses or touches one. React itself loads only then.
+// Islands: server-rendered by Astro, wired up here when they come into view (after the page is idle)
+// or as soon as someone points at, focuses or touches one. Their script loads only then.
 const islands = document.querySelectorAll<HTMLElement>('[data-island]');
 if (islands.length) {
   let mod: Promise<typeof import('./islands')> | undefined;

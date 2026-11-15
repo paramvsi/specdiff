@@ -2,6 +2,13 @@
 import '@specdiff/ui/styles.css';
 import '../styles/motion.css';
 import '../styles/site.css';
+// Preload the weights every page uses so text doesn't reflow when Geist swaps in (CLS on /rules/ and /docs/ was 0.27).
+import sans400 from '../../../../packages/ui/node_modules/@fontsource/geist-sans/files/geist-sans-latin-400-normal.woff2?url';
+import sans500 from '../../../../packages/ui/node_modules/@fontsource/geist-sans/files/geist-sans-latin-500-normal.woff2?url';
+import sans600 from '../../../../packages/ui/node_modules/@fontsource/geist-sans/files/geist-sans-latin-600-normal.woff2?url';
+import sans700 from '../../../../packages/ui/node_modules/@fontsource/geist-sans/files/geist-sans-latin-700-normal.woff2?url';
+import mono400 from '../../../../packages/ui/node_modules/@fontsource/geist-mono/files/geist-mono-latin-400-normal.woff2?url';
+const fonts = [sans400, sans500, sans600, sans700, mono400];
 interface Props {
   title: string;
   description: string;
@@ -27,6 +34,7 @@ const ogImage = new URL('/og.png', site).href;
     <meta name="color-scheme" content="light dark" />
     <meta name="theme-color" media="(prefers-color-scheme: light)" content="#eceee9" />
     <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0b0d0c" />
+    {fonts.map((href) => <link rel="preload" href={href} as="font" type="font/woff2" crossorigin />)}
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="alternate" type="application/rss+xml" title="Specdiff changelog" href="/changelog.xml" />
     <link rel="sitemap" href="/sitemap-index.xml" />

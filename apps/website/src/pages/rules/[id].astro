@@ -21,10 +21,24 @@ const fx = loadFixture(rule.id);
 const pair = fx.before && fx.after ? focusedPair(fx.before, fx.after) : undefined;
 const copy = copyFor(rule);
 
+// Related rules: the ones whose IDs share the most words with this one (W-04 lists the other
+// "…-added-required" / "…-became-required" rules for request-property-became-required), then the longest
+// shared prefix, then catalogue order.
+const own = rule.id.split('-');
+const words = new Set(own);
+const shared = (r: Rule) => r.id.split('-').filter((w) => words.has(w)).length;
+const prefix = (r: Rule) => {
+  const parts = r.id.split('-');
+  let n = 0;
+  while (n < parts.length && parts[n] === own[n]) n++;
+  return n;
+};
 const related = all
-  .filter((r) => r.id !== rule.id && r.area === rule.area)
-  .sort((x, y) => Number(y.direction === rule.direction) - Number(x.direction === rule.direction))
-  .slice(0, 3);
+  .filter((r) => r.id !== rule.id)
+  .map((r, i) => ({ r, i, score: shared(r), prefix: prefix(r) }))
+  .sort((x, y) => y.score - x.score || y.prefix - x.prefix || x.i - y.i)
+  .slice(0, 3)
+  .map((x) => x.r);
 
 // "How to change its severity": suggest the next step down (or up for safe/docs rules).
 const alt = rule.severity === 'breaking' ? 'possibly' : rule.severity === 'possibly' ? 'breaking' : rule.severity ? 'possibly' : null;
@@ -55,7 +69,7 @@ const description = `${sevText}: ${copy.intro.replace(/`/g, '').replace(/\.$/, '
           {([['before.yaml', pair.before], ['after.yaml', pair.after]] as const).map(([name, rows]) => (
             <div class="yaml-card">
               <p class="yaml-name">{name}</p>
-              <div class="yaml-lines">
+              <div class="yaml-lines" role="region" aria-label={name} tabindex="0">
                 {rows.map((r) =>
                   r.kind === 'gap' ? (
                     <div class="yl yl-gap"><span class="yl-mark" aria-hidden="true"> </span><span aria-hidden="true">⋯</span><span class="sr-only">lines left out</span></div>

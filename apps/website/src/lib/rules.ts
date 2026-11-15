@@ -95,7 +95,7 @@ export function parseDocsTables(markdown: string): Rule[] {
         severity: sevCode[sev] ?? null,
         direction: directionOf(id),
         preset: preset.startsWith('K') ? 'K' : 'W',
-        area: docs ? 'Descriptions and examples' : area,
+        area: siteArea(id, docs ? 'Descriptions and examples' : area),
         source: 'docs',
       });
     }
@@ -131,7 +131,7 @@ function fromCore(docsRules: Map<string, Rule>): Rule[] | undefined {
     severity: r.severity,
     direction: r.direction,
     preset: r.preset.startsWith('K') ? 'K' : 'W',
-    area: r.area,
+    area: siteArea(r.id, r.area),
     ...(r.explanation ? { explanation: r.explanation } : {}),
     ...(r.changelog ? { changelog: r.changelog } : {}),
     source: 'core' as const,
@@ -146,8 +146,22 @@ export function loadRules(): Rule[] {
   return cache;
 }
 
+// W-03 area chips use the frame's short labels and order (Schemas, Servers, Deprecation, Webhooks, Docs);
+// core's "Servers, webhooks, other" group is split by rule, and its extension rule (docs only) is a Docs rule.
+const AREA_ORDER = ['Endpoints', 'Parameters', 'Request bodies', 'Responses', 'Schemas', 'Security', 'Servers', 'Deprecation', 'Webhooks', 'Docs'];
+const AREA_LABEL: Record<string, string> = {
+  'Shared schemas': 'Schemas',
+  'Deprecation and versioning': 'Deprecation',
+  'Descriptions and examples': 'Docs',
+};
+export function siteArea(id: string, area: string): string {
+  if (area === 'Servers, webhooks, other') return id.startsWith('server-') ? 'Servers' : /^(webhook|callback)-/.test(id) ? 'Webhooks' : 'Docs';
+  return AREA_LABEL[area] ?? area;
+}
+
 export function areasOf(rules: Rule[]): string[] {
-  return [...new Set(rules.map((r) => r.area))];
+  const rank = (a: string) => (AREA_ORDER.includes(a) ? AREA_ORDER.indexOf(a) : AREA_ORDER.length);
+  return [...new Set(rules.map((r) => r.area))].sort((a, b) => rank(a) - rank(b));
 }
 
 // ---------------------------------------------------------------- fixtures

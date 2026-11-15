@@ -5,7 +5,7 @@ import sitemap from '@astrojs/sitemap';
 
 // CSP forbids inline scripts (docs/04): never inline scripts or styles into HTML.
 // No `client:*` directives anywhere: Astro inlines its island runtime as a classic <script>.
-// React islands are server-rendered here and hydrated by src/scripts/islands.ts instead.
+// Islands are server-rendered here (React on the server only) and wired up by src/scripts/islands.ts in plain TypeScript (B-13).
 // Fenced code with title="…" (```json title=".specdiff/decisions.json") renders as the W-02 code card:
 // a file-name header with a copy button above the block.
 const el = (tagName, properties, children = []) => ({ type: 'element', tagName, properties, children });

@@ -1,7 +1,8 @@
-// Phone nav menu (W-01 phone): a disclosure button that opens the site links. React island.
+// Phone nav menu (W-01 phone): a disclosure button that opens the site links.
+// Server-rendered only (no React in the browser, B-13): src/scripts/islands.ts opens and closes it and
+// swaps the button icon from the two <template data-icon>s.
 // The theme button inside carries [data-theme-toggle]; src/scripts/site.ts owns its state and aria-pressed.
 import { Menu, Moon, Sun, X } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
 
 const links: Array<[string, string]> = [
   ['Product', '#product'],
@@ -14,42 +15,17 @@ const links: Array<[string, string]> = [
 ];
 
 export default function PhoneMenu() {
-  const [open, setOpen] = useState(false);
-  const button = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setOpen(false);
-        button.current?.focus();
-      }
-    };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [open]);
-
   return (
     <>
-      <button
-        ref={button}
-        type="button"
-        className="icon-btn"
-        aria-label={open ? 'Close menu' : 'Open menu'}
-        aria-expanded={open}
-        aria-controls="phone-menu"
-        onClick={() => setOpen((o) => !o)}
-      >
-        {open ? <X size={18} aria-hidden="true" /> : <Menu size={18} aria-hidden="true" />}
+      <button type="button" className="icon-btn" aria-label="Open menu" aria-expanded={false} aria-controls="phone-menu">
+        <Menu size={18} aria-hidden="true" />
       </button>
-      <div id="phone-menu" className="pmenu-panel" hidden={!open}>
+      <div id="phone-menu" className="pmenu-panel" hidden>
         <nav aria-label="Main">
           <ul>
             {links.map(([label, href]) => (
               <li key={href}>
-                <a href={href} onClick={() => setOpen(false)}>
-                  {label}
-                </a>
+                <a href={href}>{label}</a>
               </li>
             ))}
             <li>
@@ -62,6 +38,12 @@ export default function PhoneMenu() {
           </ul>
         </nav>
       </div>
+      <template data-icon="open">
+        <Menu size={18} aria-hidden="true" />
+      </template>
+      <template data-icon="close">
+        <X size={18} aria-hidden="true" />
+      </template>
     </>
   );
 }
