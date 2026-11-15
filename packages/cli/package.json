@@ -10,7 +10,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsup src/cli.ts --format esm --clean",
+    "build": "tsup",
     "typecheck": "tsc -p ."
   },
   "dependencies": {
@@ -23,5 +23,9 @@
   },
   "devDependencies": {
     "@types/node": "26.6.6"
-  }
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "description": "See what changed between two OpenAPI specs: breaking changes, explanations, version check. Runs locally; nothing is uploaded."
 }
