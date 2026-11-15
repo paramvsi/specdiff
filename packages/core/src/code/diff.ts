@@ -11,10 +11,18 @@ export interface CodeItem {
   from?: string; // renamed from
   /** For renamedLocals: identifiers renamed consistently inside the declaration (B-15). */
   renames?: Array<{ from: string; to: string; uses: number }>;
+  /** For renamedLocals: the comments changed too (CD-06). */
+  commentsChanged?: true;
+  /**
+   * For formatting: what kind of meaning-preserving edit was hidden (CD-06). `whitespace` is layout
+   * only; the others are token edits that do not change meaning.
+   */
+  hiddenEdits?: HiddenEdit[];
   lines: { before?: [number, number]; after?: [number, number] };
   beforeText?: string;
   afterText?: string;
 }
+export type HiddenEdit = 'whitespace' | 'number-literal' | 'trailing-comma' | 'semicolon' | 'keyword-argument-order';
 export interface CodeDiff {
   language: CodeLang;
   items: CodeItem[];
@@ -46,7 +54,7 @@ const DECL: Record<CodeLang, Record<string, string>> = {
 DECL.tsx = DECL.typescript;
 const CONTAINERS = new Set(['class_body', 'block', 'declaration_list', 'interface_body', 'enum_body', 'export_statement', 'decorated_definition', 'program', 'module']);
 
-interface Decl { name: string; kind: string; node: Node; index: number; tokens: string[]; bodyTokens: string[]; comments: string[] }
+interface Decl { name: string; simple: string; kind: string; node: Node; index: number; tokens: string[]; raw: string[]; bodyTokens: string[]; comments: string[] }
 
 function nameOf(n: Node): string | undefined {
   const named = n.childForFieldName('name');
@@ -71,9 +79,14 @@ function normNumber(t: string): string {
   return Number.isFinite(v) ? `#${v}` : t;
 }
 
-/** Leaf tokens in order, comments separated; meaning-preserving edits normalised (CD-06). */
-function tokens(n: Node, lang: CodeLang, out: string[], comments: string[]): void {
+/** Leaf tokens in order, comments separated; meaning-preserving edits normalised (CD-06) unless `raw`. */
+function tokens(n: Node, lang: CodeLang, out: string[], comments: string[], raw = false): void {
   if (/comment/.test(n.type)) { comments.push(n.text.trim()); return; }
+  if (raw) {
+    if (n.childCount === 0) out.push(n.text);
+    else for (const c of n.children) if (c) tokens(c, lang, out, comments, true);
+    return;
+  }
   // Python: keyword arguments can be reordered without changing meaning.
   if (lang === 'python' && n.type === 'argument_list' && n.namedChildren.length > 1 && n.namedChildren.every((c) => c?.type === 'keyword_argument')) {
     out.push('(');
@@ -94,10 +107,10 @@ function dropOptional(t: string[], lang: CodeLang): string[] {
   return t.filter((tok, i) => !(tok === ',' && [')', ']', '}'].includes(t[i + 1] ?? '')) && !(js && tok === ';'));
 }
 
-function collect(root: Node, lang: CodeLang): { decls: Decl[]; module: { tokens: string[]; comments: string[]; text: string; lines: [number, number] } } {
+function collect(root: Node, lang: CodeLang): { decls: Decl[]; module: { tokens: string[]; raw: string[]; comments: string[]; text: string; lines: [number, number] } } {
   const decls: Decl[] = [];
   const kinds = DECL[lang];
-  const moduleTokens: string[] = [], moduleComments: string[] = [], moduleText: string[] = [];
+  const moduleTokens: string[] = [], moduleRaw: string[] = [], moduleComments: string[] = [], moduleText: string[] = [];
   const walk = (n: Node, prefix: string, top: boolean) => {
     for (const c of n.namedChildren) {
       if (!c) continue;
@@ -107,22 +120,23 @@ function collect(root: Node, lang: CodeLang): { decls: Decl[]; module: { tokens:
         const name = nameOf(arrow ?? c);
         if (name) {
           const full = prefix ? `${prefix}.${name}` : name;
-          const t: string[] = [], cm: string[] = [];
+          const t: string[] = [], cm: string[] = [], raw: string[] = [];
           tokens(c, lang, t, cm);
+          tokens(c, lang, raw, [], true);
           const toks = dropOptional(t, lang);
           const nameTok = name;
-          decls.push({ name: full, kind, node: c, index: decls.length, tokens: toks, bodyTokens: toks.map((x) => (x === nameTok ? '\u0000name' : x)), comments: cm });
+          decls.push({ name: full, simple: name, kind, node: c, index: decls.length, tokens: toks, raw, bodyTokens: toks.map((x) => (x === nameTok ? '\u0000name' : x)), comments: cm });
           const body = c.childForFieldName('body');
           if (body) walk(body, full, false);
           continue;
         }
       }
       if (CONTAINERS.has(c.type)) { walk(c, prefix, top); continue; }
-      if (top) { tokens(c, lang, moduleTokens, moduleComments); moduleText.push(c.text); }
+      if (top) { tokens(c, lang, moduleTokens, moduleComments); tokens(c, lang, moduleRaw, [], true); moduleText.push(c.text); }
     }
   };
   walk(root, '', true);
-  return { decls, module: { tokens: dropOptional(moduleTokens, lang), comments: moduleComments, text: moduleText.join('\n'), lines: [root.startPosition.row + 1, root.endPosition.row + 1] } };
+  return { decls, module: { tokens: dropOptional(moduleTokens, lang), raw: moduleRaw, comments: moduleComments, text: moduleText.join('\n'), lines: [root.startPosition.row + 1, root.endPosition.row + 1] } };
 }
 
 const eq = (a: string[], b: string[]) => a.length === b.length && a.every((x, i) => x === b[i]);
@@ -149,23 +163,43 @@ export function diffCode(before: string, after: string, lang: CodeLang, language
   const sharedAfter = B.decls.filter((d) => A.decls.some((x) => x.name === d.name)).map((d) => d.name);
   const stayed = lcs(shared, sharedAfter);
 
+  // Declaration renames first (a removed declaration whose body equals an added one's), so a
+  // parent's tokens can discount them: renaming method `g` → `gee` is one rename, not also a
+  // "local rename" on the class that contains it (CD-03).
+  const unmatchedB = B.decls.filter((d) => !A.decls.some((x) => x.name === d.name));
+  const twins = new Map<Decl, Decl>();
+  for (const r of A.decls) {
+    if (byName.has(r.name)) continue;
+    const twin = unmatchedB.find((x) => x.kind === r.kind && eq(x.bodyTokens, r.bodyTokens));
+    if (twin) { unmatchedB.splice(unmatchedB.indexOf(twin), 1); twins.set(r, twin); }
+  }
+  const within = (d: Decl, parent: Decl) => d.name.startsWith(`${parent.name}.`) || (d.node.startIndex >= parent.node.startIndex && d.node.endIndex <= parent.node.endIndex && d !== parent);
+
   for (const a of A.decls) {
     const b = byName.get(a.name);
     if (!b) { removed.push(a); continue; }
     matched.add(b.name);
+    // Rename the identifiers of renamed declarations nested in this one, then compare.
+    const sub = new Map<string, string>();
+    for (const [r, t] of twins) if (within(r, a) && within(t, b) && r.simple !== t.simple) sub.set(r.simple, t.simple);
+    const subst = (toks: string[]) => (sub.size ? toks.map((x) => sub.get(x) ?? x) : toks);
+    const aTokens = subst(a.tokens);
     let status: CodeStatus;
-    const renames = eq(a.tokens, b.tokens) ? undefined : consistentRenames(a.tokens, b.tokens);
+    const renames = eq(aTokens, b.tokens) ? undefined : consistentRenames(aTokens, b.tokens);
+    const commentsDiffer = a.comments.join('\n') !== b.comments.join('\n');
+    let hidden: HiddenEdit[] | undefined;
     if (renames) status = 'renamedLocals';
-    else if (!eq(a.tokens, b.tokens)) status = 'changed';
-    else if (a.comments.join('\n') !== b.comments.join('\n')) status = 'comments';
-    else if (a.node.text !== b.node.text) status = 'formatting';
+    else if (!eq(aTokens, b.tokens)) status = 'changed';
+    else if (commentsDiffer) status = 'comments';
+    else if (!eq(subst(a.raw), b.raw)) { status = 'formatting'; hidden = hiddenEdits(subst(a.raw), b.raw, lang); }
+    else if (renameText(a.node.text, sub) !== b.node.text) { status = 'formatting'; hidden = ['whitespace']; }
     else status = stayed.has(a.name) ? 'same' : 'moved';
     if (status === 'same' || status === 'formatting' || status === 'comments') if (!stayed.has(a.name)) status = status === 'same' ? 'moved' : status;
-    items.push({ name: a.name, kind: a.kind, status, ...(renames ? { renames } : {}), lines: { before: lines(a.node), after: lines(b.node) }, beforeText: a.node.text, afterText: b.node.text });
+    items.push({ name: a.name, kind: a.kind, status, ...(renames ? { renames } : {}), ...(renames && commentsDiffer ? { commentsChanged: true as const } : {}), ...(hidden ? { hiddenEdits: hidden } : {}), lines: { before: lines(a.node), after: lines(b.node) }, beforeText: a.node.text, afterText: b.node.text });
   }
   const added = B.decls.filter((d) => !matched.has(d.name));
   for (const r of removed) {
-    const twin = added.find((x) => x.kind === r.kind && eq(x.bodyTokens, r.bodyTokens));
+    const twin = twins.get(r);
     if (twin) {
       added.splice(added.indexOf(twin), 1);
       items.push({ name: twin.name, kind: r.kind, status: 'renamed', from: r.name, lines: { before: lines(r.node), after: lines(twin.node) }, beforeText: r.node.text, afterText: twin.node.text });
@@ -176,7 +210,7 @@ export function diffCode(before: string, after: string, lang: CodeLang, language
   // Everything outside declarations (imports, top-level statements).
   if (!eq(A.module.tokens, B.module.tokens) || A.module.text !== B.module.text) {
     const status: CodeStatus = !eq(A.module.tokens, B.module.tokens) ? 'changed' : A.module.comments.join() !== B.module.comments.join() ? 'comments' : 'formatting';
-    items.push({ name: '(top level)', kind: 'module', status, lines: {}, beforeText: A.module.text, afterText: B.module.text });
+    items.push({ name: '(top level)', kind: 'module', status, ...(status === 'formatting' ? { hiddenEdits: hiddenEdits(A.module.raw, B.module.raw, lang) } : {}), lines: {}, beforeText: A.module.text, afterText: B.module.text });
   }
   // Nested declarations change their parents' text too; a parent whose only change is in children stays "changed" — fine.
   items.sort((x, y) => (x.lines.after?.[0] ?? x.lines.before?.[0] ?? 1e9) - (y.lines.after?.[0] ?? y.lines.before?.[0] ?? 1e9) || x.name.localeCompare(y.name));
@@ -184,6 +218,26 @@ export function diffCode(before: string, after: string, lang: CodeLang, language
   for (const i of items) stats[i.status]++;
   ta.delete(); tb.delete(); parser.delete();
   return { language: lang, items, stats, logicChanged: stats.changed + stats.added + stats.removed > 0 };
+}
+
+/** Whole-word replacement of renamed declaration names in source text. */
+function renameText(text: string, sub: Map<string, string>): string {
+  if (!sub.size) return text;
+  return text.replace(/[A-Za-z_$][\w$]*/g, (w) => sub.get(w) ?? w);
+}
+
+/** Which meaning-preserving edits explain two token streams that normalise to the same thing (CD-06). */
+function hiddenEdits(a: string[], b: string[], lang: CodeLang): HiddenEdit[] {
+  if (eq(a, b)) return ['whitespace'];
+  const out: HiddenEdit[] = [];
+  const nums = (t: string[]) => t.filter((x) => /^[\d.]/.test(x) && NUM.test(x)).sort().join(' ');
+  const trailing = (t: string[]) => t.filter((x, i) => x === ',' && [')', ']', '}'].includes(t[i + 1] ?? '')).length;
+  const semis = (t: string[]) => t.filter((x) => x === ';').length;
+  if (nums(a) !== nums(b)) out.push('number-literal');
+  if (trailing(a) !== trailing(b)) out.push('trailing-comma');
+  if (lang !== 'java' && lang !== 'python' && semis(a) !== semis(b)) out.push('semicolon');
+  if (lang === 'python' && !out.length) out.push('keyword-argument-order');
+  return out.length ? out : ['whitespace'];
 }
 
 const KEYWORDS = new Set(['if', 'else', 'for', 'while', 'do', 'return', 'function', 'class', 'const', 'let', 'var', 'new', 'this', 'super', 'true', 'false', 'null', 'undefined', 'def', 'self', 'None', 'True', 'False', 'import', 'from', 'public', 'private', 'protected', 'static', 'final', 'void', 'int', 'long', 'boolean', 'String', 'throw', 'throws', 'try', 'catch', 'async', 'await', 'export', 'default', 'in', 'of', 'is', 'not', 'and', 'or', 'lambda', 'pass', 'yield']);

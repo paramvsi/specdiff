@@ -23,7 +23,7 @@ describe('X-13 determinism', () => {
   it('identical files give no changes', () => {
     const r = compareOpenApi(read('payments-v1.yaml'), read('payments-v1.yaml'));
     expect(r.summary.total).toBe(0);
-    expect(r.versionCheck).toMatchObject({ suggested: '1.5.1', bump: 'patch', verdict: 'ok' });
+    expect(r.versionCheck).toMatchObject({ suggested: '1.5.0', bump: 'none', verdict: 'ok' }); // X-08
   });
 });
 

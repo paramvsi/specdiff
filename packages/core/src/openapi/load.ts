@@ -58,6 +58,8 @@ export interface Resolved {
 
 export interface LoadedSpec {
   rootFile: string;
+  /** `$ref`s that could not be resolved so far (filled while the comparison derefs), sorted. */
+  unresolved(): string[];
   root: Record<string, unknown>;
   format: 'yaml' | 'json';
   size: number;
@@ -75,15 +77,19 @@ function dirname(p: string): string {
   const i = p.lastIndexOf('/');
   return i < 0 ? '' : p.slice(0, i + 1);
 }
+/** `a/./b/../c` → `a/c`, backslashes as `/`. Leading `..` segments are kept (`../x` stays `../x`). */
 function normalisePath(p: string): string {
   const out: string[] = [];
-  for (const seg of p.split('/')) {
+  for (const seg of p.replace(/\\/g, '/').split('/')) {
     if (seg === '' || seg === '.') continue;
-    if (seg === '..') out.pop();
+    if (seg === '..' && out.length > 0 && out[out.length - 1] !== '..') out.pop();
     else out.push(seg);
   }
   return out.join('/');
 }
+
+// A scheme followed by `//` (https://, file://). `main:openapi.yaml` (a git rev:path name) is not a URL.
+const isUrl = (s: string) => /^[a-z][a-z0-9+.-]*:\/\//i.test(s);
 
 function decodePointer(fragment: string): string[] | undefined {
   if (fragment === '' || fragment === '/') return fragment === '' ? [] : [''];
@@ -147,9 +153,10 @@ export function detectVersion(root: unknown): { kind: 'swagger2' | 'openapi3' | 
   return { kind: 'unknown' };
 }
 
-export function loadSpec(input: Input, opts: { autoUpgrade: boolean }): LoadedSpec {
+export function loadSpec(input: Input, opts: { autoUpgrade: boolean; onStage?: (stage: 'parse' | 'normalise') => void }): LoadedSpec {
   const rootFile = input.name;
   const parsed = new Map<string, ParsedDocument>();
+  opts.onStage?.('parse');
   const main = parseDocument(input.content, rootFile);
   if (main.errors.length > 0) throw new OpenApiParseError(rootFile, main.errors);
   parsed.set(rootFile, main);
@@ -158,6 +165,7 @@ export function loadSpec(input: Input, opts: { autoUpgrade: boolean }): LoadedSp
   const det = detectVersion(raw);
   if (det.kind === 'unknown')
     throw new OpenApiParseError(rootFile, [{ line: 1, column: 1, message: 'No `openapi` or `swagger` version field', hint: 'Add `openapi: 3.1.0` (or `swagger: "2.0"`) at the top of the file.' }]);
+  opts.onStage?.('normalise');
   let root: Record<string, unknown> = raw;
   const isSwagger2 = det.kind === 'swagger2';
   const is30 = det.kind === 'openapi3' && /^3\.0(\.|$)/.test(det.version ?? '');
@@ -178,13 +186,43 @@ export function loadSpec(input: Input, opts: { autoUpgrade: boolean }): LoadedSp
     return doc.value;
   };
 
+  // IN-04 / OA-02: `name` and the `files` keys may use different roots. The app names a dropped
+  // folder's entry `pay/openapi.yaml` with keys relative to the folder (`openapi.yaml`,
+  // `schemas/card.yaml`); the CLI names it as typed (`specs/v1/openapi.yaml`, `../v1/openapi.yaml`)
+  // with keys relative to the spec's own folder. Find the prefix that maps the entry name onto
+  // its key, then look a path up as written, with that prefix removed, and relative to each
+  // ancestor folder of the entry.
+  const keyByNorm = new Map<string, string>();
+  for (const k of Object.keys(input.files ?? {}).sort()) if (!isUrl(k) && !keyByNorm.has(normalisePath(k))) keyByNorm.set(normalisePath(k), k);
+  const rootNorm = normalisePath(rootFile);
+  let entryKey: string | undefined;
+  for (const n of keyByNorm.keys()) {
+    const fits = rootNorm === n || rootNorm.endsWith(`/${n}`) || rootNorm.endsWith(`:${n}`);
+    if (fits && (entryKey === undefined || n.length > entryKey.length)) entryKey = n;
+  }
+  const prefixes: string[] = [];
+  if (entryKey !== undefined) prefixes.push(rootNorm.slice(0, rootNorm.length - entryKey.length));
+  for (let d = dirname(rootNorm); d; d = dirname(d.slice(0, -1))) if (!prefixes.includes(d)) prefixes.push(d);
+  const lookup = (path: string): string | undefined => {
+    const n = normalisePath(path);
+    const tries = [n];
+    for (const p of prefixes) if (p && n.startsWith(p)) tries.push(n.slice(p.length));
+    for (const t of tries) {
+      if (t === rootNorm || (entryKey !== undefined && t === entryKey)) return rootFile;
+      const k = keyByNorm.get(t);
+      if (k !== undefined) return k;
+    }
+    return undefined;
+  };
+
+  const unresolved = new Set<string>();
+
   const resolveRef = (ref: string, fromFile: string): { value: unknown; loc: Loc } | undefined => {
     const hash = ref.indexOf('#');
     const filePart = hash < 0 ? ref : ref.slice(0, hash);
     const fragment = hash < 0 ? '' : ref.slice(hash + 1);
     // Remote URLs are never fetched here. A caller that was allowed to fetch them (the CLI's
     // --allow-external-refs) passes their content in `files`, keyed by absolute URL.
-    const isUrl = (s: string) => /^[a-z][a-z0-9+.-]*:/i.test(s);
     let file = fromFile;
     if (filePart !== '' && (isUrl(filePart) || isUrl(fromFile))) {
       let abs: string;
@@ -192,12 +230,9 @@ export function loadSpec(input: Input, opts: { autoUpgrade: boolean }): LoadedSp
       if (input.files?.[abs] === undefined) return undefined;
       file = abs;
     } else if (filePart !== '') {
-      file = normalisePath(dirname(fromFile) + filePart);
-      if (fileValue(file) === undefined) {
-        const alt = Object.keys(input.files ?? {}).find((k) => normalisePath(k) === file);
-        if (!alt) return undefined;
-        file = alt;
-      }
+      const found = lookup(dirname(fromFile) + filePart);
+      if (found === undefined) return undefined;
+      file = found;
     }
     const segs = decodePointer(fragment);
     if (!segs) return undefined;
@@ -218,7 +253,11 @@ export function loadSpec(input: Input, opts: { autoUpgrade: boolean }): LoadedSp
       if (visited.has(key) || visited.size > 64) break; // a $ref chain that loops on itself
       visited.add(key);
       const target = resolveRef(v.$ref, l.file);
-      if (!target) break; // unresolved: compared as the $ref string
+      if (!target) {
+        // Unresolved: compared as the $ref string. The report says so (Report.warnings).
+        unresolved.add(`${v.$ref} (from ${l.file})`);
+        break;
+      }
       const { $ref: _ref, ...rest } = v;
       void _ref;
       if (Object.keys(rest).length > 0) siblings = { ...rest, ...siblings };
@@ -258,7 +297,7 @@ export function loadSpec(input: Input, opts: { autoUpgrade: boolean }): LoadedSp
   };
 
   const info = isObj(root.info) ? root.info : undefined;
-  const out: LoadedSpec = { rootFile, root, format: main.format, size: utf8Length(input.content), deref, position, jsonPath };
+  const out: LoadedSpec = { rootFile, unresolved: () => [...unresolved].sort(), root, format: main.format, size: utf8Length(input.content), deref, position, jsonPath };
   if (det.version !== undefined) out.specVersion = det.version;
   const iv = info?.version;
   if (typeof iv === 'string' || typeof iv === 'number') out.infoVersion = String(iv);

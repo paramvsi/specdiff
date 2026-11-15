@@ -1,0 +1,21 @@
+openapi: 3.1.0
+info:
+  title: Cards
+  version: 1.0.0
+paths:
+  /cards/{id}:
+    get:
+      operationId: getCard
+      tags: [cards]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: The card
+          content:
+            application/json:
+              schema:
+                $ref: './schemas/card.yaml#/Card'

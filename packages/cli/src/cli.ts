@@ -5,13 +5,15 @@ import pc from 'picocolors';
 import { reportJsonSchema } from '@specdiff/core';
 import { buildHistory } from './history';
 import { readInput } from './inputs';
-import { gitDiffDriver, runCi } from './run';
+import { gitDiffDriver, runChangelog, runCi, type ChangelogCliOptions } from './run';
 import { serveLocal } from './serve';
 
 const io = { out: (s: string) => process.stdout.write(s), err: (s: string) => process.stderr.write(s.endsWith('\n') ? s : s + '\n') };
 const program = new Command();
 
 program
+  // Options after a subcommand name belong to it (`specdiff changelog … --format atom`).
+  .enablePositionalOptions()
   .name('specdiff')
   .description('See what changed between two API specs, configs or documents. Nothing is uploaded.')
   .version(process.env.SPECDIFF_VERSION ?? '0.0.0')
@@ -54,6 +56,22 @@ program
       writeFileSync(o.out, JSON.stringify(set, null, 2) + '\n');
       io.err(`Wrote ${set.versions.length} versions of ${file} to ${o.out} (current ${set.current}).`);
     } catch (e) { io.err(pc.red((e as Error).message)); process.exitCode = 2; }
+  });
+
+program
+  .command('changelog <before> <after>')
+  .description('write the changelog of two OpenAPI specs: release notes, Keep a Changelog, Slack, PR comment, or an Atom feed')
+  .addOption(new Option('--format <format>', 'changelog format').choices(['md', 'atom', 'keep-a-changelog', 'slack', 'pr-comment']).default('md'))
+  .option('--feed-url <url>', 'with --format atom: the URL the feed is published at (required)')
+  .option('--site-url <url>', 'with --format atom: the site the feed links to')
+  .option('--title <title>', 'title (Atom: feed title, default "API changelog"; md/slack: heading)')
+  .option('--release <version>', 'version for the heading (default: the suggested version)')
+  .option('--date <date>', 'release date, ISO 8601 (Keep a Changelog heading; Atom updated time, default now)')
+  .option('--config <file>', 'path to .specdiff.yaml')
+  .option('--out <file>', 'write to a file instead of stdout')
+  .action((before: string, after: string, o: ChangelogCliOptions) => {
+    try { process.exitCode = runChangelog(before, after, o, io); }
+    catch (e) { io.err(pc.red((e as Error).message ?? String(e))); process.exitCode = 2; }
   });
 
 program

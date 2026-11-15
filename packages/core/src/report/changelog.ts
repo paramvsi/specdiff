@@ -1,6 +1,7 @@
 // OUT-01/OUT-02 changelog templates. Lines come from each change's `changelogLine`; the user can
 // edit the result in the app.
 import type { Change, Report, Severity } from '../schemas';
+import { bumpLabel } from './version';
 
 export type ChangelogTemplate = 'release-notes' | 'keep-a-changelog' | 'slack' | 'pr-comment';
 
@@ -89,7 +90,7 @@ export function buildChangelog(report: Report, template: ChangelogTemplate, opts
   } else {
     out.push(`### Specdiff: ${counts(report, includeDocs)}`, '');
     const vc = report.versionCheck;
-    if (vc) out.push(`Suggested version: **${vc.suggested}** (${vc.bump}). ${vc.message}`, '');
+    if (vc) out.push(`Suggested version: **${vc.suggested}** (${bumpLabel(vc.bump)}). ${vc.message}`, '');
     if (changes.length) {
       const cell = (s: string) => s.replace(/\|/g, '\\|').replace(/\n/g, ' ');
       const rows = group ? [...bySeverity(changes).values()].flat() : changes;

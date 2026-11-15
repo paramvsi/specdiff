@@ -26,7 +26,7 @@ export const Change = z.object({
   ruleId: z.string().optional(),
   severity: Severity.optional(),
   direction: Direction.optional(),
-  operation: z.object({ method: z.string(), path: z.string(), operationId: z.string().optional() }).optional(),
+  operation: z.object({ method: z.string(), path: z.string(), operationId: z.string().optional(), tags: z.array(z.string()).optional() }).optional(),
   sharedSchema: z.object({ name: z.string(), usages: z.array(z.string()), usageCount: z.number().int() }).optional(),
   sourceBlock: z.string().optional(),
   explanation: z.object({ who: z.string(), see: z.string(), avoid: z.string() }).optional(),
@@ -58,7 +58,7 @@ export const VersionCheck = z.object({
   from: z.string().optional(),
   to: z.string().optional(),
   suggested: z.string(),
-  bump: z.enum(['major', 'minor', 'patch']),
+  bump: z.enum(['major', 'minor', 'patch', 'none']),
   verdict: z.enum(['ok', 'missing-major', 'decreased', 'unparseable']),
   message: z.string(),
 });
@@ -73,6 +73,8 @@ export const Report = z.object({
   summary: Summary,
   versionCheck: VersionCheck.optional(),
   changes: z.array(Change),
+  /** Problems that may hide changes, e.g. a `$ref` that could not be resolved (IN-04, OA-02). */
+  warnings: z.array(z.string()).optional(),
   decisions: z.object({ accepted: z.number().int(), rejected: z.number().int(), open: z.number().int() }).optional(),
 });
 export type Report = z.infer<typeof Report>;

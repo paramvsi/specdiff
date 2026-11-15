@@ -1,5 +1,5 @@
 export * from './schemas';
-export { compareOpenApi, type CompareOptions } from './report/build';
+export { compareOpenApi, type CompareOptions, type CompareStep } from './report/build';
 export { parseDocument, type ParsedDocument, type ParseError } from './openapi/parse';
 export { detectOpenApi } from './openapi/detect';
 export { OpenApiParseError, type Input } from './openapi/load';
@@ -7,7 +7,7 @@ export { rules, type RuleMeta, type RuleArea } from './rules/catalogue';
 export { applyDecisions, type DecisionsResult } from './report/decisions';
 export { buildChangelog, type ChangelogTemplate, type ChangelogOptions } from './report/changelog';
 export { reportToMarkdown, reportToHtml } from './report/export';
-export { suggestVersion } from './report/version';
+export { suggestVersion, bumpLabel, type Bump } from './report/version';
 export { changelogFeed, type FeedOptions } from './report/feed';
 export { reportJsonSchema } from './report/schema';
 export { upgradeSpec } from './openapi/upgrade';

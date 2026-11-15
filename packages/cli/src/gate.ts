@@ -1,5 +1,5 @@
 // --fail-on gate (PK-04) with review decisions (OA-21): accepted breaking changes do not fail; rejected ones always do.
-import type { Change, Config, DecisionsFile, Report } from '@specdiff/core';
+import { bumpLabel, type Change, type Config, type DecisionsFile, type Report } from '@specdiff/core';
 import pc from 'picocolors';
 
 export type FailOn = Config['failOn'];
@@ -30,7 +30,8 @@ export function summaryLines(report: Report, from: string, to: string, g: Gate, 
     `Comparing ${from} → ${to}…`,
     `${c.red(`✖ ${s.breaking} breaking`)}  ${c.yellow(`? ${s.possibly} possibly`)}  ${c.green(`+ ${s.safe} safe`)}  ${c.dim(`¶ ${s.docs} docs only`)}`,
   ];
-  if (report.versionCheck) out.push(`Suggested version: ${report.versionCheck.suggested} (${report.versionCheck.bump})`);
+  if (report.versionCheck) out.push(`Suggested version: ${report.versionCheck.suggested} (${bumpLabel(report.versionCheck.bump)})`);
+  for (const w of report.warnings ?? []) out.push(c.yellow(`⚠ ${w}`));
   for (const f of g.failing.slice(0, 20)) out.push(`  ${c.red('!')} ${f.path}${f.ruleId ? c.dim(`  ${f.ruleId}`) : ''}`);
   if (g.failing.length > 20) out.push(c.dim(`  … and ${g.failing.length - 20} more`));
   if (g.stale.length) out.push(c.dim(`${g.stale.length} stale decision${g.stale.length > 1 ? 's' : ''} ignored (fingerprint no longer present)`));

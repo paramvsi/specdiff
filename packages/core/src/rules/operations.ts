@@ -107,6 +107,10 @@ function opCtx(path: string, method: string, op: SNode, other?: SNode): Ctx {
   const id = asObj(op.v).operationId ?? asObj(other?.v).operationId;
   const ref: OperationRef = { method, path };
   if (typeof id === 'string') ref.operationId = id;
+  // OA-09: group by the operation's own OpenAPI tags (After's, else Before's).
+  const tagsOf = (n?: SNode) => { const t = asObj(n?.v).tags; return Array.isArray(t) ? t.filter((x): x is string => typeof x === 'string') : []; };
+  const tags = tagsOf(op).length ? tagsOf(op) : tagsOf(other);
+  if (tags.length) ref.tags = tags;
   return baseCtx(key, key, [key], { op: ref });
 }
 

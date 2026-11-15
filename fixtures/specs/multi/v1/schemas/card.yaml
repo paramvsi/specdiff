@@ -1,0 +1,7 @@
+Card:
+  type: object
+  required: [id, last4]
+  properties:
+    id: { type: string }
+    last4: { type: string }
+    holder: { type: string }

@@ -24,6 +24,27 @@ Inputs are file paths or git `rev:path` (`main:openapi.yaml`, `v1.5.0:api/openap
 
 Exit codes: `0` passed, `1` the gate failed, `2` usage or input error.
 
+External `$ref`s (`$ref: './schemas/card.yaml#/Card'`) are resolved from the spec's folder and its subfolders, wherever you run the command from. A `$ref` that cannot be resolved is compared as written and listed under **Warnings** in the report (and on stderr), because changes behind it are not seen. With no changes at all, the suggested version is the current one (`no change`).
+
+## Changelogs and feeds
+
+```sh
+specdiff changelog v1.yaml v2.yaml                          # release notes (Markdown)
+specdiff changelog main:openapi.yaml openapi.yaml --format keep-a-changelog --date 2026-11-15
+specdiff changelog v1.yaml v2.yaml --format atom \
+  --feed-url https://api.example.org/changelog.xml --title "Payments API" --out public/changelog.xml
+```
+
+| Option | |
+|---|---|
+| `--format md\|atom\|keep-a-changelog\|slack\|pr-comment` | `md` (default) is release notes; `atom` is an Atom feed for a static site |
+| `--feed-url <url>` | Required with `atom`: where the feed is published (its id and `rel="self"` link) |
+| `--site-url <url>` | With `atom`: the site the feed links to |
+| `--title <title>` | Feed title (default `API changelog`), or the heading for `md` and `slack` |
+| `--release <version>` | Version in the heading (default: the suggested version) |
+| `--date <date>` | ISO date: the Keep a Changelog heading date, and the Atom `updated` time (default now) |
+| `--out <file>` | Write to a file instead of stdout |
+
 ## Review decisions
 
 Accept or reject changes in the app, save `.specdiff/decisions.json` in your repo, and the CLI respects them: an accepted breaking change no longer fails the check; a rejected one always does. Decisions whose change no longer exists are reported as stale and ignored.
@@ -71,6 +92,18 @@ repos:
 ```
 
 Given one file, the CLI compares `HEAD:<file>` with your working copy. A new file passes.
+
+This repository is also a pre-commit hook repo (`.pre-commit-hooks.yaml`, hook id `specdiff`, `language: node`). Once `specdiff-cli` is published:
+
+```yaml
+repos:
+  - repo: https://github.com/paramvsi/specdiff
+    rev: v0.1.0
+    hooks:
+      - id: specdiff
+```
+
+It runs `specdiff --ci --fail-on breaking <file>` on staged files whose names match `(openapi|swagger).*\.(ya?ml|json)$`. Keep one matching spec per commit: pre-commit passes every matching file in one call, and two file names are read as `<before> <after>`.
 
 ## git diff driver
 

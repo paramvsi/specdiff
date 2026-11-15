@@ -3,6 +3,7 @@
 // by colour alone.
 import type { Change, Report, Severity } from '../schemas';
 import { SEVERITY_LABEL, SEVERITY_SYMBOL } from './changelog';
+import { bumpLabel } from './version';
 
 const ORDER: Severity[] = ['breaking', 'possibly', 'safe', 'docs'];
 const sev = (c: Change): Severity => c.severity ?? 'docs';
@@ -31,7 +32,8 @@ export function reportToMarkdown(report: Report): string {
     '',
   ];
   const vc = report.versionCheck;
-  if (vc) out.push(`**Suggested version:** ${mdText(vc.suggested)} (${vc.bump}). ${mdText(vc.message)}`, '');
+  if (vc) out.push(`**Suggested version:** ${mdText(vc.suggested)} (${bumpLabel(vc.bump)}). ${mdText(vc.message)}`, '');
+  if (report.warnings?.length) out.push('**Warnings:**', '', ...report.warnings.map((w) => `- ⚠ ${mdText(w)}`), '');
   if (report.decisions) out.push(`**Review:** ${report.decisions.accepted} accepted, ${report.decisions.rejected} rejected, ${report.decisions.open} open.`, '');
   for (const level of ORDER) {
     const list = report.changes.filter((c) => sev(c) === level);
@@ -100,7 +102,8 @@ export function reportToHtml(report: Report): string {
     '</ul>',
   ];
   const vc = report.versionCheck;
-  if (vc) parts.push(`<p><strong>Suggested version: ${esc(vc.suggested)}</strong> (${esc(vc.bump)}). ${esc(vc.message)}</p>`);
+  if (vc) parts.push(`<p><strong>Suggested version: ${esc(vc.suggested)}</strong> (${esc(bumpLabel(vc.bump))}). ${esc(vc.message)}</p>`);
+  if (report.warnings?.length) parts.push('<h2>Warnings</h2>', '<ul class="warnings">', ...report.warnings.map((w) => `<li><span aria-hidden="true">⚠ </span>${esc(w)}</li>`), '</ul>');
   for (const level of ORDER) {
     const list = report.changes.filter((c) => sev(c) === level);
     if (!list.length) continue;

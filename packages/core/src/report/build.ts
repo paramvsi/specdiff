@@ -13,9 +13,18 @@ import { versionCheck } from './version';
 
 export const GENERATOR_VERSION = '0.0.0';
 
+export type CompareStep = 'parse' | 'resolve' | 'normalise' | 'compare';
+
 export interface CompareOptions {
   /** "Today" for sunset rules (OA-17); defaults to the current date. ISO date string or Date. */
   today?: string | Date;
+  /**
+   * IN-08: called as each real stage starts. Per side: `parse` (detail: the file name), then
+   * `normalise` (version upgrade to 3.1). Then `resolve` once, when the walk over both documents
+   * starts (`$ref`s are resolved lazily during that walk, so resolving and rule checks interleave),
+   * and `compare` once, when the findings are deduplicated, ranked and sorted into the report.
+   */
+  onProgress?: (step: CompareStep, detail?: string) => void;
 }
 
 const SEVERITY_ORDER: Severity[] = ['breaking', 'possibly', 'safe', 'docs'];
@@ -87,10 +96,14 @@ function isIgnored(f: Finding, matchers: Array<{ glob: string; test: (s: string)
 
 export function compareOpenApi(before: Input, after: Input, config?: ConfigInput, opts: CompareOptions = {}): Report {
   const cfg = Config.parse(config ?? {});
-  const b = loadSpec(before, { autoUpgrade: cfg.openapi.autoUpgrade });
-  const a = loadSpec(after, { autoUpgrade: cfg.openapi.autoUpgrade });
+  const progress = opts.onProgress;
+  const load = (input: Input) => loadSpec(input, { autoUpgrade: cfg.openapi.autoUpgrade, ...(progress ? { onStage: (st: 'parse' | 'normalise') => progress(st, input.name) } : {}) });
+  const b = load(before);
+  const a = load(after);
   const engine = new Engine(b, a, { openapi: cfg.openapi, ignoreExtensions: cfg.ignore.extensions, today: parseToday(opts.today) });
+  progress?.('resolve');
   compareDocument(engine);
+  progress?.('compare');
 
   const matchers = cfg.ignore.paths.map((glob) => ({ glob, test: picomatch(glob, { dot: true }) }));
   const groups = new Map<string, Group>();
@@ -149,6 +162,13 @@ export function compareOpenApi(before: Input, after: Input, config?: ConfigInput
     ...(s.infoVersion !== undefined ? { infoVersion: s.infoVersion } : {}),
   });
 
+  // IN-04 / OA-02: an unresolved `$ref` is compared as its string, so changes behind it are not
+  // seen. Say so instead of dropping them silently.
+  const warnings = [
+    ...b.unresolved().map((r) => `Before: could not resolve $ref ${r}. It is compared as written, so changes inside it are not reported.`),
+    ...a.unresolved().map((r) => `After: could not resolve $ref ${r}. It is compared as written, so changes inside it are not reported.`),
+  ];
+
   return {
     version: 1,
     generator: { name: 'specdiff', version: GENERATOR_VERSION },
@@ -158,6 +178,7 @@ export function compareOpenApi(before: Input, after: Input, config?: ConfigInput
     summary: { ...counts, total: changes.length, byArea: sortedArea },
     versionCheck: versionCheck(b.infoVersion, a.infoVersion, counts),
     changes,
+    ...(warnings.length ? { warnings } : {}),
   };
 }
 

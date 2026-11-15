@@ -3,11 +3,11 @@
 import { diffArrays, diffWordsWithSpace } from 'diff';
 import GithubSlugger from 'github-slugger';
 import type { ElementContent, Root as HastRoot } from 'hast';
-import type { Link, Nodes, Parent, Root, RootContent, Text } from 'mdast';
+import type { Blockquote, Link, Nodes, Paragraph, Parent, Root, RootContent, Text } from 'mdast';
 import remarkGfm from 'remark-gfm';
 import remarkParse from 'remark-parse';
 import remarkRehype from 'remark-rehype';
-import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
+import rehypeSanitize, { defaultSchema, type Options as SanitizeSchema } from 'rehype-sanitize';
 import rehypeStringify from 'rehype-stringify';
 import { unified } from 'unified';
 
@@ -23,6 +23,8 @@ export interface MdBlock {
   heading?: { depth: number; text: string; slug: string; beforeText?: string };
   code?: { lang?: string; before: string; after: string };
   links?: Array<{ text: string; before: string; after: string }>;
+  /** MD-07: a GitHub alert blockquote (`> [!NOTE]`), rendered as `div.markdown-alert.markdown-alert-<kind>`. */
+  callout?: CalloutKind;
 }
 export interface MdDiff {
   blocks: MdBlock[];
@@ -32,7 +34,48 @@ export interface MdDiff {
 }
 
 const parser = unified().use(remarkParse).use(remarkGfm);
-const schema = { ...defaultSchema, tagNames: [...(defaultSchema.tagNames ?? []), 'ins', 'del'] };
+
+// MD-07: GitHub alerts. `> [!NOTE]` … become
+// `<div class="markdown-alert markdown-alert-note"><p class="markdown-alert-title">Note</p>…</div>`.
+export type CalloutKind = 'note' | 'tip' | 'important' | 'warning' | 'caution';
+const CALLOUTS: Record<CalloutKind, string> = { note: 'Note', tip: 'Tip', important: 'Important', warning: 'Warning', caution: 'Caution' };
+const CALLOUT_RE = /^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\][ \t]*(?:\r?\n|$)/i;
+
+const co = (n: RootContent): { callout?: CalloutKind } => { const k = calloutOf(n); return k ? { callout: k } : {}; };
+
+function calloutOf(n: RootContent): CalloutKind | undefined {
+  if (n.type !== 'blockquote') return undefined;
+  const first = n.children[0];
+  const t = first?.type === 'paragraph' ? first.children[0] : undefined;
+  const m = t?.type === 'text' ? CALLOUT_RE.exec(t.value) : null;
+  return m ? (m[1]!.toLowerCase() as CalloutKind) : undefined;
+}
+
+/** A copy of the block with alert blockquotes turned into callout elements (for rendering only). */
+function withCallouts(n: RootContent): RootContent {
+  const kind = calloutOf(n);
+  if (!kind) return n;
+  const q = structuredClone(n) as Blockquote;
+  const first = q.children[0] as Paragraph;
+  const t = first.children[0] as Text;
+  t.value = t.value.replace(CALLOUT_RE, '');
+  if (t.value === '') first.children.shift();
+  if (first.children.length === 0) q.children.shift();
+  const title: Paragraph = { type: 'paragraph', children: [{ type: 'text', value: CALLOUTS[kind] }], data: { hProperties: { className: ['markdown-alert-title'] } } };
+  q.children.unshift(title);
+  q.data = { hName: 'div', hProperties: { className: ['markdown-alert', `markdown-alert-${kind}`] } };
+  return q;
+}
+
+const schema: SanitizeSchema = {
+  ...defaultSchema,
+  tagNames: [...(defaultSchema.tagNames ?? []), 'ins', 'del'],
+  attributes: {
+    ...defaultSchema.attributes,
+    div: [...(defaultSchema.attributes?.div ?? []), ['className', 'markdown-alert', ...Object.keys(CALLOUTS).map((k) => `markdown-alert-${k}`)]],
+    p: [...(defaultSchema.attributes?.p ?? []), ['className', 'markdown-alert-title']],
+  },
+};
 const toHtml = unified()
   .use(remarkRehype, {
     handlers: {
@@ -45,7 +88,7 @@ const toHtml = unified()
   .use(rehypeStringify);
 
 function render(nodes: RootContent[]): string {
-  const root: Root = { type: 'root', children: nodes };
+  const root: Root = { type: 'root', children: nodes.map(withCallouts) };
   const hast = toHtml.runSync(root) as HastRoot;
   return String(toHtml.stringify(hast));
 }
@@ -112,9 +155,23 @@ function markWords(before: RootContent, after: RootContent): RootContent {
   return clone;
 }
 
+/** Dice coefficient of character bigrams, case-insensitive: 1 = same, 0 = nothing shared. */
+function bigramSimilarity(x: string, y: string): number {
+  const grams = (s: string) => { const m = new Map<string, number>(); const t = s.toLowerCase().replace(/\s+/g, ' ').trim(); for (let i = 0; i < t.length - 1; i++) { const g = t.slice(i, i + 2); m.set(g, (m.get(g) ?? 0) + 1); } return m; };
+  const gx = grams(x), gy = grams(y);
+  let nx = 0, ny = 0, both = 0;
+  for (const v of gx.values()) nx += v;
+  for (const [g, v] of gy) { ny += v; both += Math.min(v, gx.get(g) ?? 0); }
+  if (nx + ny === 0) return x.trim().toLowerCase() === y.trim().toLowerCase() ? 1 : 0;
+  return (2 * both) / (nx + ny);
+}
+
 function similar(a: RootContent, b: RootContent): boolean {
   if (a.type !== b.type) return false;
-  if (a.type === 'heading' || a.type === 'code' || a.type === 'table' || a.type === 'list') return true;
+  // A heading pairs as "edited" (renamed) only when the titles are alike ("Errors" → "Error codes");
+  // an unrelated heading is a removed section plus an added one, never one merged heading.
+  if (a.type === 'heading') return bigramSimilarity(plain(a), plain(b)) >= 0.4;
+  if (a.type === 'code' || a.type === 'table' || a.type === 'list') return true;
   const parts = diffWordsWithSpace(plain(a), plain(b));
   const same = parts.filter((p) => !p.added && !p.removed).reduce((n, p) => n + p.value.length, 0);
   return same >= Math.max(plain(a).length, plain(b).length) * 0.4;
@@ -140,7 +197,7 @@ export function diffMarkdown(before: string, after: string): MdDiff {
         const hb = headingOf(x, sa), h = headingOf(y, sb);
         if (hb) beforeSlugs.push(hb.slug);
         if (h) afterSlugs.push(h.slug);
-        blocks.push({ status: 'same', type: y.type, html: render([y]), lines: { before: lines(x), after: lines(y) }, ...(h ? { heading: h } : {}) });
+        blocks.push({ status: 'same', type: y.type, html: render([y]), lines: { before: lines(x), after: lines(y) }, ...(h ? { heading: h } : {}), ...co(y) });
       }
       continue;
     }
@@ -167,17 +224,18 @@ export function diffMarkdown(before: string, after: string): MdDiff {
           ...(h ? { heading: { ...h, beforeText: hb?.text ?? '' } } : {}),
           ...(x.type === 'code' && y.type === 'code' ? { code: { ...(y.lang ? { lang: y.lang } : {}), before: x.value, after: y.value } } : {}),
           ...(changedLinks.length ? { links: changedLinks } : {}),
+          ...co(y),
         });
         stats.edited++; r++; s++; i++; j++;
       } else if (x && (!y || removed.length - r >= added.length - s)) {
         const hb = headingOf(x, sa);
         if (hb) beforeSlugs.push(hb.slug);
-        blocks.push({ status: 'removed', type: x.type, html: render([x]), lines: { before: lines(x) }, ...(hb ? { heading: hb } : {}) });
+        blocks.push({ status: 'removed', type: x.type, html: render([x]), lines: { before: lines(x) }, ...(hb ? { heading: hb } : {}), ...co(x) });
         stats.removed++; r++; i++;
       } else if (y) {
         const h = headingOf(y, sb);
         if (h) afterSlugs.push(h.slug);
-        blocks.push({ status: 'added', type: y.type, html: render([y]), lines: { after: lines(y) }, ...(h ? { heading: h } : {}) });
+        blocks.push({ status: 'added', type: y.type, html: render([y]), lines: { after: lines(y) }, ...(h ? { heading: h } : {}), ...co(y) });
         stats.added++; s++; j++;
       }
     }

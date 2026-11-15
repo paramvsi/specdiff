@@ -35,3 +35,40 @@ describe('diffMarkdown', () => {
     expect(diffMarkdown(before, before).stats).toEqual({ added: 0, removed: 0, edited: 0 });
   });
 });
+
+describe('MD-03 heading pairing', () => {
+  it('a removed section and an unrelated added one are removed + added, not one garbled heading', () => {
+    const x = diffMarkdown('# API\n\n## Rate limits\n\nTen per second.\n', '# API\n\n## Migrating to v2\n\nTen per second.\n');
+    expect(x.blocks.map((b) => [b.status, b.heading?.text ?? b.type])).toEqual([
+      ['same', 'API'],
+      ['removed', 'Rate limits'],
+      ['added', 'Migrating to v2'],
+      ['same', 'paragraph'],
+    ]);
+    expect(x.blocks.map((b) => b.html).join('')).not.toMatch(/<ins>|<del>/);
+  });
+  it('a renamed heading with a similar title still pairs as edited', () => {
+    const x = diffMarkdown('## Errors\n', '## Error codes\n');
+    expect(x.blocks.map((b) => b.status)).toEqual(['edited']);
+  });
+});
+
+describe('MD-07 GitHub callouts', () => {
+  it.each(['NOTE', 'TIP', 'IMPORTANT', 'WARNING', 'CAUTION'])('renders > [!%s] as a callout block with a title', (k) => {
+    const x = diffMarkdown('', `> [!${k}]\n> Read this.\n`);
+    const title = k[0] + k.slice(1).toLowerCase();
+    expect(x.blocks[0]!.html).toBe(`<div class="markdown-alert markdown-alert-${k.toLowerCase()}">\n<p class="markdown-alert-title">${title}</p>\n<p>Read this.</p>\n</div>`);
+    expect(x.blocks[0]!.callout).toBe(k.toLowerCase());
+  });
+  it('marks words inside an edited callout and keeps plain blockquotes plain', () => {
+    const x = diffMarkdown('> [!NOTE]\n> Old note\n', '> [!NOTE]\n> New note\n');
+    expect(x.blocks[0]!.html).toContain('class="markdown-alert-title">Note</p>');
+    expect(x.blocks[0]!.html).toMatch(/<del>Old<\/del><ins>New<\/ins>/);
+    expect(x.blocks[0]!.html).not.toContain('[!NOTE]');
+    expect(diffMarkdown('', '> just a quote\n').blocks[0]!.html).toBe('<blockquote>\n<p>just a quote</p>\n</blockquote>');
+  });
+  it('stays sanitised: other classes on raw HTML are still stripped', () => {
+    const x = diffMarkdown('', '<div class="evil markdown-alert" onclick="x()">hi</div>\n');
+    expect(x.blocks[0]!.html).not.toMatch(/evil|onclick/);
+  });
+});

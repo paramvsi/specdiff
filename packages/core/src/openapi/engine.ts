@@ -9,6 +9,8 @@ export interface OperationRef {
   method: string;
   path: string;
   operationId?: string;
+  /** The operation's OpenAPI `tags` (OA-09). */
+  tags?: string[];
 }
 
 export interface Ctx {

@@ -1,6 +1,6 @@
 // The `specdiff` command (PK-04, IN-12, PK-09, PK-10). Exit codes: 0 ok, 1 gate failed, 2 usage or input error.
 import { existsSync, writeFileSync } from 'node:fs';
-import { compareOpenApi, reportToHtml, reportToMarkdown, type Report } from '@specdiff/core';
+import { buildChangelog, changelogFeed, compareOpenApi, reportToHtml, reportToMarkdown, type ChangelogTemplate, type Report } from '@specdiff/core';
 import { detectMode } from '@specdiff/core/detect';
 import { diffJson, parseWithPositions } from '@specdiff/core/json';
 import { diffText } from '@specdiff/core/text';
@@ -38,6 +38,30 @@ export async function runCi(beforeArg: string, afterArg: string, o: CiOptions, i
   else if (o.format !== 'md' || !o.quiet) io.out(output);
   for (const line of summaryLines(report, describeSide(beforeArg), describeSide(afterArg), g)) io.err(line);
   return g.code;
+}
+
+export type ChangelogFormat = 'md' | 'atom' | 'keep-a-changelog' | 'slack' | 'pr-comment';
+export interface ChangelogCliOptions { format: ChangelogFormat; feedUrl?: string; siteUrl?: string; title?: string; release?: string; date?: string; config?: string; out?: string }
+
+/** `specdiff changelog` (OUT-01, OUT-02, OUT-10): the changelog of two OpenAPI specs, or an Atom feed. */
+export function runChangelog(beforeArg: string, afterArg: string, o: ChangelogCliOptions, io: Io): number {
+  if (o.format === 'atom' && !o.feedUrl) { io.err('--format atom needs --feed-url <url>: the URL the feed will be published at (its Atom id and self link).'); return 2; }
+  const { config } = loadConfig(o.config);
+  const before = readInput(beforeArg);
+  const after = readInput(afterArg);
+  if (detectMode(after.name, after.content).mode !== 'openapi') { io.err(`${afterArg} is not an OpenAPI spec; changelogs are made from OpenAPI specs.`); return 2; }
+  const report = compareOpenApi(before, after, config);
+  for (const w of report.warnings ?? []) io.err(`⚠ ${w}`);
+  let output: string;
+  if (o.format === 'atom') {
+    output = changelogFeed(report, { title: o.title ?? 'API changelog', feedUrl: o.feedUrl!, ...(o.siteUrl ? { siteUrl: o.siteUrl } : {}), ...(o.release ? { version: o.release } : {}), ...(o.date ? { date: o.date } : {}) });
+  } else {
+    const template: ChangelogTemplate = o.format === 'md' ? 'release-notes' : o.format;
+    output = buildChangelog(report, template, { ...(o.title ? { title: o.title } : {}), ...(o.release ? { version: o.release } : {}), ...(o.date ? { date: o.date.slice(0, 10) } : {}) });
+  }
+  if (o.out) writeFileSync(o.out, output);
+  else io.out(output);
+  return 0;
 }
 
 function nonOpenApi(before: Input, after: Input, io: Io, o: CiOptions): number {

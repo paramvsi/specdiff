@@ -10,12 +10,18 @@ export interface JsonChange {
   jsonPath: string;
   before?: unknown;
   after?: unknown;
-  /** For moves: JSONPath on the other side. */
+  /** For moves: JSONPath on the Before side (by index for array items). */
   from?: string;
+  /** For moves of keyed array items: the item's index JSONPath on the After side (`jsonPath` is by key). */
+  to?: string;
 }
 export interface JsonDiff {
   changes: JsonChange[];
-  stats: { added: number; removed: number; changed: number; moved: number; typeChanged: number };
+  /**
+   * Counts by kind. `nullVsMissing` counts a key that is `null` on one side and absent on the
+   * other (JS-04); those are listed with kind `removed`/`added` but not counted there.
+   */
+  stats: { added: number; removed: number; changed: number; moved: number; typeChanged: number; nullVsMissing: number };
   matchKeys: Record<string, string>; // array JSONPath (with [*]) → key used
 }
 
@@ -43,6 +49,8 @@ export function detectMatchKey(a: unknown[], b: unknown[], preferred: string): s
 
 export function diffJson(a: unknown, b: unknown, o: JsonOptions): JsonDiff {
   const changes: JsonChange[] = [];
+  const nullMissing = new Set<JsonChange>();
+  const push = (c: JsonChange, isNullMissing: boolean) => { changes.push(c); if (isNullMissing) nullMissing.add(c); };
   const matchKeys: Record<string, string> = {};
   const ignore = new Set(o.ignoreKeys);
   const eqNum = (x: number, y: number) => Math.abs(x - y) <= o.numberTolerance;
@@ -54,11 +62,21 @@ export function diffJson(a: unknown, b: unknown, o: JsonOptions): JsonDiff {
     if (isObj(x)) return stableIgnoring(x) === stableIgnoring(y);
     return x === y;
   };
-  const stableIgnoring = (v: unknown): string => {
-    if (Array.isArray(v)) return `[${v.map(stableIgnoring).join(',')}]`;
-    if (isObj(v)) return `{${Object.keys(v).filter((k) => !ignore.has(k)).sort().map((k) => `${JSON.stringify(k)}:${stableIgnoring(v[k])}`).join(',')}}`;
-    return JSON.stringify(v) ?? 'undefined';
+  // `canon` ignores key order (used to pool array items by value); `stableIgnoring` respects key
+  // order unless ignoreKeyOrder is on (JS-01), so equality sees reordered keys as different.
+  const hashWith = (sortKeys: boolean) => {
+    const h = (v: unknown): string => {
+      if (Array.isArray(v)) return `[${v.map(h).join(',')}]`;
+      if (isObj(v)) {
+        const keys = Object.keys(v).filter((k) => !ignore.has(k));
+        return `{${(sortKeys ? keys.sort() : keys).map((k) => `${JSON.stringify(k)}:${h(v[k])}`).join(',')}}`;
+      }
+      return JSON.stringify(v) ?? 'undefined';
+    };
+    return h;
   };
+  const canon = hashWith(true);
+  const stableIgnoring = hashWith(o.ignoreKeyOrder);
 
   const walk = (x: unknown, y: unknown, path: string, shape: string) => {
     if (equal(x, y)) return;
@@ -73,9 +91,16 @@ export function diffJson(a: unknown, b: unknown, o: JsonOptions): JsonDiff {
       for (const k of keys) {
         const p = jsonPathKey(path, k), s = jsonPathKey(shape, k);
         const inX = Object.hasOwn(x, k), inY = Object.hasOwn(y, k);
-        if (inX && !inY) { if (!(o.nullEqualsMissing && x[k] === null)) changes.push({ kind: 'removed', jsonPath: p, before: x[k] }); }
-        else if (!inX && inY) { if (!(o.nullEqualsMissing && y[k] === null)) changes.push({ kind: 'added', jsonPath: p, after: y[k] }); }
+        if (inX && !inY) { if (!(o.nullEqualsMissing && x[k] === null)) push({ kind: 'removed', jsonPath: p, before: x[k] }, x[k] === null); }
+        else if (!inX && inY) { if (!(o.nullEqualsMissing && y[k] === null)) push({ kind: 'added', jsonPath: p, after: y[k] }, y[k] === null); }
         else walk(x[k], y[k], p, s);
+      }
+      if (!o.ignoreKeyOrder) {
+        // JS-01: keys whose position changed among the keys both sides share (LIS: the fewest moves).
+        const common = (obj: Record<string, Json>, other: Record<string, Json>) => Object.keys(obj).filter((k) => !ignore.has(k) && Object.hasOwn(other, k));
+        const cx = common(x, y), cy = common(y, x);
+        const keep = stayed(cx, cy);
+        for (const k of cx) if (!keep.has(k)) changes.push({ kind: 'moved', jsonPath: jsonPathKey(path, k), before: cx.indexOf(k), after: cy.indexOf(k) });
       }
       return;
     }
@@ -98,7 +123,8 @@ export function diffJson(a: unknown, b: unknown, o: JsonOptions): JsonDiff {
         const p = `${path}[?(@.${key}==${JSON.stringify((x[i] as Record<string, Json>)[key])})]`;
         const j = iy.get(k);
         if (j === undefined) { changes.push({ kind: 'removed', jsonPath: p, before: x[i] }); continue; }
-        if (!o.ignoreArrayOrder && !lis.has(k)) changes.push({ kind: 'moved', jsonPath: jsonPathKey(path, j), from: jsonPathKey(path, i), before: i, after: j });
+        // Reported by key (`flags[key=new_pricing]`, index i → j), not by index.
+        if (!o.ignoreArrayOrder && !lis.has(k)) changes.push({ kind: 'moved', jsonPath: p, from: jsonPathKey(path, i), to: jsonPathKey(path, j), before: i, after: j });
         walk(x[i], y[j], p, s);
       }
       for (const [k, j] of iy) if (!ix.has(k)) changes.push({ kind: 'added', jsonPath: `${path}[?(@.${key}==${JSON.stringify((y[j] as Record<string, Json>)[key])})]`, after: y[j] });
@@ -107,17 +133,19 @@ export function diffJson(a: unknown, b: unknown, o: JsonOptions): JsonDiff {
     if (o.ignoreArrayOrder || x.every((v) => typeof v !== 'object' || v === null)) {
       // Multiset match by value; scalars that only moved are moves (or nothing when order is ignored).
       const pool = new Map<string, number[]>();
-      y.forEach((v, j) => { const h = stableIgnoring(v); pool.set(h, [...(pool.get(h) ?? []), j]); });
+      y.forEach((v, j) => { const h = canon(v); pool.set(h, [...(pool.get(h) ?? []), j]); });
       const usedY = new Set<number>();
       const pairs: Array<[number, number]> = [];
       const removed: number[] = [];
-      x.forEach((v, i) => { const js = pool.get(stableIgnoring(v)); const j = js?.shift(); if (j === undefined) removed.push(i); else { usedY.add(j); pairs.push([i, j]); } });
+      x.forEach((v, i) => { const js = pool.get(canon(v)); const j = js?.shift(); if (j === undefined) removed.push(i); else { usedY.add(j); pairs.push([i, j]); } });
       const added = y.map((_, j) => j).filter((j) => !usedY.has(j));
       // Pair a removed with an added at the same index as a change (e.g. "refunds" → "disputes" in place).
       if (!o.ignoreArrayOrder) {
         const keep = stayed(pairs.map(([i]) => String(i)), [...pairs].sort((p, q) => p[1] - q[1]).map(([i]) => String(i)));
         for (const [i, j] of pairs) if (!keep.has(String(i))) changes.push({ kind: 'moved', jsonPath: jsonPathKey(path, j), from: jsonPathKey(path, i), before: i, after: j });
       }
+      // Same value but keys in another order (only possible with ignoreKeyOrder off).
+      for (const [i, j] of pairs) walk(x[i], y[j], jsonPathKey(path, j), s);
       for (const i of removed) changes.push({ kind: 'removed', jsonPath: jsonPathKey(path, i), before: x[i] });
       for (const j of added) changes.push({ kind: 'added', jsonPath: jsonPathKey(path, j), after: y[j] });
       return;
@@ -132,8 +160,11 @@ export function diffJson(a: unknown, b: unknown, o: JsonOptions): JsonDiff {
   };
 
   walk(a, b, '$', '$');
-  const stats = { added: 0, removed: 0, changed: 0, moved: 0, typeChanged: 0 };
-  for (const c of changes) stats[c.kind === 'renamed' ? 'changed' : c.kind]++;
+  const stats = { added: 0, removed: 0, changed: 0, moved: 0, typeChanged: 0, nullVsMissing: 0 };
+  for (const c of changes) {
+    if (nullMissing.has(c)) stats.nullVsMissing++;
+    else stats[c.kind === 'renamed' ? 'changed' : c.kind]++;
+  }
   return { changes, stats, matchKeys };
 }
 
@@ -156,7 +187,7 @@ function stayed(xs: string[], ys: string[]): Set<string> {
 export function toChanges(d: JsonDiff, before: Parsed, after: Parsed, files: { before: string; after: string }, mode: 'json' | 'yaml'): Change[] {
   const out: Change[] = d.changes.map((c) => {
     const bp = before.positions.get(c.from ?? c.jsonPath) ?? nearest(before.positions, c.jsonPath);
-    const ap = after.positions.get(c.jsonPath) ?? nearest(after.positions, c.jsonPath);
+    const ap = after.positions.get(c.to ?? c.jsonPath) ?? nearest(after.positions, c.jsonPath);
     return {
       id: '', fingerprint: fnv(`${c.kind}|${c.jsonPath}|${stable(c.before)}|${stable(c.after)}`), mode, kind: c.kind,
       path: humanPath(c.jsonPath), jsonPath: c.jsonPath,

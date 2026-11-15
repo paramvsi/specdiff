@@ -1,5 +1,6 @@
 // OA-08 version check and bump suggestion. docs/04: any breaking → major (minor below 1.0.0);
-// any safe change → minor; otherwise patch. B-8: possibly-breaking only → minor.
+// any safe change → minor; docs-only changes → patch; no changes at all → none (X-08: the same
+// version). B-8: possibly-breaking only → minor.
 import coerce from 'semver/functions/coerce.js';
 import inc from 'semver/functions/inc.js';
 import lt from 'semver/functions/lt.js';
@@ -16,8 +17,14 @@ export interface SeverityCounts {
 
 const clean = (v: string | undefined): string | undefined => (v === undefined ? undefined : (coerce(v)?.version ?? undefined));
 
-export function suggestVersion(current: string | undefined, counts: SeverityCounts): { suggested: string; bump: 'major' | 'minor' | 'patch' } {
+export type Bump = VersionCheck['bump'];
+
+/** How a bump reads in text: `major`, `minor`, `patch`, or `no change`. */
+export const bumpLabel = (b: Bump): string => (b === 'none' ? 'no change' : b);
+
+export function suggestVersion(current: string | undefined, counts: SeverityCounts): { suggested: string; bump: Bump } {
   const base = clean(current) ?? '0.0.0';
+  if (counts.breaking + counts.possibly + counts.safe + counts.docs === 0) return { suggested: clean(current) ?? current ?? base, bump: 'none' };
   let bump: 'major' | 'minor' | 'patch' = 'patch';
   if (counts.breaking > 0) bump = major(base) === 0 ? 'minor' : 'major';
   else if (counts.possibly > 0 || counts.safe > 0) bump = 'minor';
@@ -50,6 +57,10 @@ export function versionCheck(from: string | undefined, to: string | undefined, c
       return out;
     }
     out.message = `info.version goes from ${from} to ${to}. Breaking changes need ${major(vf) === 0 ? 'a minor bump below 1.0.0' : 'a major bump'}, and this is one.`;
+    return out;
+  }
+  if (bump === 'none') {
+    out.message = from === to ? `info.version stays at ${to}. No changes, so no bump is needed.` : `info.version goes from ${from} to ${to}. There are no changes, so ${from} could stay.`;
     return out;
   }
   out.message = from === to ? `info.version stays at ${to}. Suggested: ${suggested} (${bump}).` : `info.version goes from ${from} to ${to}. Suggested: ${suggested} (${bump}).`;

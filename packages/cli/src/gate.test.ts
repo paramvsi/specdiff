@@ -39,4 +39,10 @@ describe('gate', () => {
     expect(lines[1]).toBe('✖ 1 breaking  ? 0 possibly  + 0 safe  ¶ 0 docs only');
     expect(lines.at(-1)).toBe('Exit code 1 · breaking changes found');
   });
+  it('X-08: no changes prints "no change", not a patch bump; warnings are shown', () => {
+    const r: Report = { ...report([]), versionCheck: { suggested: '1.5.0', bump: 'none', verdict: 'ok', from: '1.5.0', to: '1.5.0', message: '' }, warnings: ['After: could not resolve $ref x.yaml (from b).'] };
+    const lines = summaryLines(r, 'main', 'working tree', gate(r, 'breaking'), false);
+    expect(lines).toContain('Suggested version: 1.5.0 (no change)');
+    expect(lines).toContain('⚠ After: could not resolve $ref x.yaml (from b).');
+  });
 });
