@@ -13,7 +13,7 @@ function compile(ops: Operation[]) {
   return ops
     .map((o) => {
       const segs = o.path.split('/').filter(Boolean);
-      const re = new RegExp('^/' + segs.map((s) => (/^\{[^}]+\}$/.test(s) ? '[^/]+' : s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))).join('/') + '/?$');
+      const re = new RegExp('^/' + segs.map((s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\\\{[^}]+?\\\}/g, '[^/]+')).join('/') + '/?$');
       const literal = segs.filter((s) => !s.startsWith('{')).length;
       return { op: o, re, literal, len: segs.length };
     })
@@ -24,8 +24,12 @@ function compile(ops: Operation[]) {
 function bases(servers: string[]): Array<{ origin?: string; prefix: string }> {
   if (!servers.length) return [{ prefix: '' }];
   return servers.map((s) => {
-    try { const u = new URL(s); return { origin: u.origin, prefix: u.pathname.replace(/\/$/, '') }; }
-    catch { return { prefix: s.replace(/\/$/, '') }; } // relative server URL: any origin
+    if (!s.includes('{')) {
+      try { const u = new URL(s); return { origin: u.origin, prefix: u.pathname.replace(/\/$/, '') }; }
+      catch { /* relative: below */ }
+    }
+    // Relative server URL, or a host with {variables}: any origin, keep the base path.
+    return { prefix: s.replace(/^[a-z][a-z0-9+.-]*:\/\/[^/]*/i, '').replace(/\/$/, '') };
   });
 }
 
@@ -42,7 +46,7 @@ export function matchHar(har: unknown, ops: Operation[], servers: string[]): Har
     if (!method || !raw) continue;
     let u: URL;
     try { u = new URL(raw); } catch { continue; }
-    const base = bs.find((b) => (!b.origin || b.origin === u.origin) && u.pathname.startsWith(b.prefix));
+    const base = bs.find((b) => (!b.origin || b.origin === u.origin) && (u.pathname === b.prefix || u.pathname.startsWith(b.prefix + '/') || !b.prefix));
     if (!base) { ignoredOrigin++; continue; }
     const path = u.pathname.slice(base.prefix.length) || '/';
     const hit = compiled.find((c) => c.op.method.toUpperCase() === method && c.re.test(path));
