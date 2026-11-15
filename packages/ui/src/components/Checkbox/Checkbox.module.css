@@ -1,0 +1,46 @@
+.row {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  font-size: 14px;
+  color: var(--sd-ink);
+}
+.box {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid var(--sd-muted);
+  border-radius: var(--sd-radius-xs);
+  background: var(--sd-surface);
+  cursor: pointer;
+}
+.box[data-state='checked'] {
+  background: var(--sd-inverse);
+  border-color: var(--sd-inverse);
+  color: var(--sd-on-inverse);
+}
+.box:focus-visible {
+  outline: none;
+  box-shadow: var(--sd-shadow-focus);
+}
+.indicator {
+  display: inline-flex;
+}
+.indicator svg {
+  width: 13px;
+  height: 13px;
+  stroke-width: 3;
+}
+.label {
+  cursor: pointer;
+}
+@media (pointer: coarse) {
+  .row {
+    min-height: 44px;
+  }
+}

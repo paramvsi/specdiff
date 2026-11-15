@@ -1,0 +1,61 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sd-space-2);
+  min-width: 0;
+}
+.label {
+  font-size: 13.5px;
+  font-weight: 500;
+}
+.row {
+  display: flex;
+  gap: var(--sd-space-2);
+}
+.input {
+  flex: 1;
+  min-width: 0;
+  min-height: 42px;
+  padding: 0 12px;
+  border-radius: var(--sd-radius-md);
+  border: 1px solid var(--sd-line);
+  background: var(--sd-surface);
+  color: var(--sd-ink);
+  font-family: var(--sd-font-mono);
+  font-size: 13.5px;
+  font-variant-ligatures: none;
+}
+.input:focus-visible {
+  outline: none;
+  box-shadow: var(--sd-shadow-focus);
+}
+.meter {
+  display: flex;
+  gap: 3px;
+  height: 6px;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.segment {
+  flex: 1;
+  background: var(--sd-line);
+}
+.weak {
+  background: var(--sd-breaking);
+}
+.fair {
+  background: var(--sd-possibly);
+}
+.good {
+  background: var(--sd-safe);
+}
+.strength {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--sd-muted);
+}
+@media (pointer: coarse) {
+  .input {
+    min-height: 44px;
+  }
+}

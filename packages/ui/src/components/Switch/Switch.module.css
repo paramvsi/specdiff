@@ -1,0 +1,56 @@
+.row {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  font-size: 14px;
+  color: var(--sd-ink);
+}
+.track {
+  position: relative;
+  flex: none;
+  width: 36px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 11px;
+  background: var(--sd-line);
+  cursor: pointer;
+  transition: background-color var(--sd-motion-fast) var(--sd-ease);
+}
+.track[data-state='checked'] {
+  background: var(--sd-inverse);
+}
+.track:focus-visible {
+  outline: none;
+  box-shadow: var(--sd-shadow-focus);
+}
+.track:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+.thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 8px;
+  background: var(--sd-surface);
+  /* Keeps the off thumb distinguishable from the track (3:1 non-text contrast). */
+  box-shadow: 0 0 0 1px var(--sd-muted);
+  transition: transform var(--sd-motion-fast) var(--sd-ease);
+}
+.thumb[data-state='checked'] {
+  transform: translateX(14px);
+  background: var(--sd-brand);
+  box-shadow: none;
+}
+.label {
+  cursor: pointer;
+}
+@media (pointer: coarse) {
+  .row {
+    min-height: 44px;
+  }
+}

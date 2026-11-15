@@ -1,0 +1,150 @@
+.viewport {
+  position: fixed;
+  z-index: 80;
+  left: 50%;
+  bottom: var(--sd-space-6);
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sd-space-2);
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  pointer-events: none;
+}
+.viewport > * {
+  pointer-events: auto;
+  animation: rise var(--sd-motion-overlay) var(--sd-ease);
+}
+.toast {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-family: var(--sd-font-sans);
+  font-size: 14px;
+  line-height: 1.4;
+}
+.success,
+.info,
+.warning {
+  background: var(--sd-inverse);
+  color: var(--sd-on-inverse);
+  box-shadow: var(--sd-shadow-popover);
+}
+.error {
+  background: var(--sd-breaking-bg);
+  color: var(--sd-breaking);
+  font-weight: 500;
+}
+.icon {
+  display: inline-flex;
+  flex: none;
+  align-self: flex-start;
+  padding-top: 1px;
+}
+.disc {
+  width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  background: var(--sd-brand);
+  color: var(--sd-on-brand);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.disc svg {
+  width: 12px;
+  height: 12px;
+}
+.glyph {
+  width: 16px;
+  height: 16px;
+}
+.bang {
+  font-weight: 700;
+}
+.text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.title {
+  font-weight: inherit;
+}
+.success .title,
+.info .title,
+.warning .title {
+  font-weight: 600;
+}
+.description {
+  font-size: 13px;
+  font-weight: 400;
+  opacity: 1;
+}
+.success .description,
+.info .description,
+.warning .description {
+  color: var(--sd-on-inverse-muted);
+}
+.action,
+.dismiss {
+  flex: none;
+  min-height: 32px;
+  border-radius: var(--sd-radius-sm);
+  border: 1px solid currentColor;
+  background: transparent;
+  color: inherit;
+  font-family: var(--sd-font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.action {
+  margin-left: var(--sd-space-3);
+  padding: 0 10px;
+}
+.dismiss {
+  width: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border-color: transparent;
+}
+.dismiss svg {
+  width: 15px;
+  height: 15px;
+}
+.action:focus-visible,
+.dismiss:focus-visible {
+  outline: none;
+  box-shadow: var(--sd-shadow-focus);
+}
+@media (pointer: coarse) {
+  .action,
+  .dismiss {
+    min-height: 44px;
+  }
+  .dismiss {
+    width: 44px;
+  }
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+/* On the inverse surface the focus blue is too dark to see; use the brand ring instead. */
+.success .action:focus-visible,
+.info .action:focus-visible,
+.warning .action:focus-visible,
+.success .dismiss:focus-visible,
+.info .dismiss:focus-visible,
+.warning .dismiss:focus-visible {
+  box-shadow: 0 0 0 3px var(--sd-brand);
+}

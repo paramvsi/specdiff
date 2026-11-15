@@ -1,0 +1,26 @@
+// Lucide icons used across Specdiff, re-exported so apps get them through @specdiff/ui
+// (one pinned lucide-react version, no extra dependency in each app).
+export {
+  ArrowRight,
+  ArrowUpDown,
+  Check,
+  ChevronDown,
+  ChevronRight,
+  Copy,
+  Download,
+  Eye,
+  EyeOff,
+  FileText,
+  Info,
+  ListTree,
+  Lock,
+  MoreHorizontal,
+  RefreshCw,
+  Search,
+  Share,
+  TriangleAlert,
+  Upload,
+  X,
+  type LucideIcon,
+  type LucideProps,
+} from 'lucide-react';

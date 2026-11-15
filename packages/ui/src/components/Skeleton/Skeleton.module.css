@@ -1,0 +1,5 @@
+.skeleton {
+  display: block;
+  background: var(--sd-raised);
+  box-shadow: inset 0 0 0 1px var(--sd-line);
+}

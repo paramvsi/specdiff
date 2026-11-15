@@ -1,0 +1,36 @@
+.chip {
+  display: inline-block;
+  min-width: 46px;
+  padding: 3px 6px;
+  border-radius: var(--sd-radius-xs);
+  font-family: var(--sd-font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+  font-variant-ligatures: none;
+}
+.get {
+  color: var(--sd-method-get);
+  background: var(--sd-method-get-bg);
+}
+.post {
+  color: var(--sd-method-post);
+  background: var(--sd-method-post-bg);
+}
+.put {
+  color: var(--sd-method-put);
+  background: var(--sd-method-put-bg);
+}
+.patch {
+  color: var(--sd-method-patch);
+  background: var(--sd-method-patch-bg);
+}
+.delete {
+  color: var(--sd-method-delete);
+  background: var(--sd-method-delete-bg);
+}
+.all {
+  color: var(--sd-docs);
+  background: var(--sd-docs-bg);
+}

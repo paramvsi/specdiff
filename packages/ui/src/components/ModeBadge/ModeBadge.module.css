@@ -1,0 +1,13 @@
+.badge {
+  display: inline-block;
+  padding: 5px 10px;
+  border-radius: var(--sd-radius-pill);
+  background: var(--sd-brand-tint);
+  color: var(--sd-brand-ink);
+  font-family: var(--sd-font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  font-variant-ligatures: none;
+}

@@ -1,0 +1,59 @@
+.root {
+  background: var(--sd-surface);
+  color: var(--sd-ink);
+  border: 1px solid var(--sd-line);
+  border-radius: var(--sd-radius-xl);
+  overflow: hidden;
+}
+.banner {
+  margin: 0;
+  padding: 14px 16px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  background: var(--sd-breaking-bg);
+  color: var(--sd-breaking);
+  font-size: 14px;
+  font-weight: 600;
+}
+.code {
+  overflow-x: auto;
+}
+.line {
+  display: grid;
+  grid-template-columns: 28px 14px minmax(0, 1fr);
+  font-family: var(--sd-font-mono);
+  font-size: 12.5px;
+  line-height: 22px;
+  font-variant-ligatures: none;
+  font-variant-numeric: tabular-nums;
+}
+.number {
+  text-align: right;
+  padding-right: 6px;
+  color: var(--sd-muted);
+}
+.marker {
+  font-weight: 700;
+  color: var(--sd-muted);
+}
+.text {
+  white-space: pre;
+}
+.failing {
+  background: var(--sd-removed-bg);
+}
+.failing .marker,
+.failing .text {
+  color: var(--sd-removed);
+}
+.pointer .text {
+  color: var(--sd-breaking);
+  font-weight: 700;
+}
+.hint {
+  margin: 0;
+  padding: 12px 16px;
+  font-size: 13.5px;
+  color: var(--sd-muted);
+}

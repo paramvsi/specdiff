@@ -1,0 +1,27 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sd-space-3);
+  min-width: 0;
+  padding: 18px;
+  background: var(--sd-surface);
+  color: var(--sd-ink);
+  border: 1px solid var(--sd-line);
+  border-radius: var(--sd-radius-lg);
+}
+.panel {
+  border-radius: var(--sd-radius-xl);
+}
+.flush {
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
+}
+.title {
+  margin: 0;
+  font-family: var(--sd-font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--sd-muted);
+}

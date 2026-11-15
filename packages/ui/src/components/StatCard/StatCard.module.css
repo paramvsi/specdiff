@@ -1,0 +1,48 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+  padding: var(--sd-space-4);
+  background: var(--sd-surface);
+  color: var(--sd-ink);
+  border: 1px solid var(--sd-line);
+  border-radius: var(--sd-radius-lg);
+}
+.badge > span {
+  font-size: 12px;
+}
+.value {
+  font-family: var(--sd-font-sans);
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -1.2px;
+  font-variant-numeric: tabular-nums;
+}
+.inverse {
+  background: var(--sd-inverse);
+  color: var(--sd-on-inverse);
+  border-color: var(--sd-inverse);
+}
+.eyebrow {
+  font-family: var(--sd-font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--sd-on-inverse-muted);
+}
+.row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sd-space-2);
+}
+.bump {
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--sd-brand);
+  color: var(--sd-on-brand);
+  font-family: var(--sd-font-mono);
+  font-size: 12px;
+  font-weight: 600;
+}

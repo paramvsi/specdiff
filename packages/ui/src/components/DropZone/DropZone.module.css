@@ -1,0 +1,30 @@
+.zone {
+  min-height: 140px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sd-space-2);
+  padding: var(--sd-space-4);
+  border: 2px dashed var(--sd-line);
+  border-radius: var(--sd-radius-xl);
+  background: var(--sd-surface);
+  color: var(--sd-ink);
+  font-size: 14px;
+  text-align: center;
+}
+.dragging {
+  border-color: var(--sd-ink);
+  background: var(--sd-brand-tint);
+}
+.icon {
+  width: 22px;
+  height: 22px;
+}
+.title {
+  font-weight: 600;
+}
+.detail {
+  font-size: 13px;
+  color: var(--sd-muted);
+}

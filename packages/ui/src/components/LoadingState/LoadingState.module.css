@@ -1,0 +1,44 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sd-space-3);
+  padding: 20px;
+  background: var(--sd-surface);
+  color: var(--sd-ink);
+  border: 1px solid var(--sd-line);
+  border-radius: var(--sd-radius-xl);
+}
+.title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+.body,
+.note {
+  margin: 0;
+  font-size: 14px;
+  color: var(--sd-muted);
+}
+.note {
+  font-size: 12.5px;
+}
+.sides {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--sd-space-4);
+}
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sd-space-3);
+}
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 10px;
+}
+.panes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}

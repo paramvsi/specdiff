@@ -1,0 +1,79 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.label {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--sd-ink);
+}
+.hiddenLabel {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.control {
+  display: flex;
+  align-items: center;
+  gap: var(--sd-space-2);
+  min-height: 42px;
+  padding: 0 12px;
+  border-radius: var(--sd-radius-md);
+  border: 1px solid var(--sd-line);
+  background: var(--sd-surface);
+  color: var(--sd-ink);
+}
+.control:focus-within {
+  box-shadow: var(--sd-shadow-focus);
+}
+.invalid {
+  border-color: var(--sd-breaking);
+}
+.icon {
+  display: inline-flex;
+  color: var(--sd-muted);
+}
+.icon svg {
+  width: 15px;
+  height: 15px;
+}
+.input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font-family: var(--sd-font-sans);
+  font-size: 13.5px;
+}
+.input:focus-visible {
+  box-shadow: none;
+}
+.input::placeholder {
+  color: var(--sd-muted);
+}
+.mono {
+  font-family: var(--sd-font-mono);
+  font-variant-ligatures: none;
+}
+.hint {
+  font-size: 12.5px;
+  color: var(--sd-muted);
+}
+.error {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--sd-breaking);
+}
+@media (pointer: coarse) {
+  .control {
+    min-height: 44px;
+  }
+}

@@ -1,0 +1,36 @@
+.logo {
+  display: inline-flex;
+  align-items: center;
+  color: var(--sd-ink);
+}
+.wordmark {
+  font-family: var(--sd-font-sans);
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  line-height: 1;
+}
+.mark {
+  flex: none;
+  display: inline-block;
+}
+.before {
+  stroke: var(--sd-ink);
+}
+.after {
+  fill: var(--sd-brand);
+}
+.plus {
+  stroke: var(--sd-on-brand);
+}
+.onBrand {
+  color: var(--sd-on-brand);
+}
+.onBrand .before {
+  stroke: var(--sd-on-brand);
+}
+.onBrand .after {
+  fill: var(--sd-on-brand);
+}
+.onBrand .plus {
+  stroke: var(--sd-brand);
+}
