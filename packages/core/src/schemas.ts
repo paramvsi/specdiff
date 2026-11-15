@@ -80,7 +80,10 @@ export const Report = z.object({
 export type Report = z.infer<typeof Report>;
 
 // .specdiff.yaml (docs/07 §3)
-export const TextFilter = z.object({ name: z.string(), pattern: z.string(), replace: z.string() });
+const validRegex = (p: string) => { try { new RegExp(p, 'g'); return true; } catch { return false; } };
+// An invalid pattern is refused here, so a .specdiff.yaml with one fails on import (app) or load (CLI)
+// with this message, instead of every later text comparison failing.
+export const TextFilter = z.object({ name: z.string(), pattern: z.string().refine(validRegex, 'Not a valid regular expression'), replace: z.string() });
 export type TextFilter = z.infer<typeof TextFilter>;
 
 export const Config = z.object({
