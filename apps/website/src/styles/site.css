@@ -670,3 +670,33 @@ code {
 .astro-code:focus-visible {
   box-shadow: inset var(--sd-shadow-focus);
 }
+
+/* Touch screens: 44 px tap areas (CLAUDE.md rule 4). Text links get padding with an equal negative
+   margin; controls with a visible box get an invisible ::after hit area. Nothing moves. */
+@media (pointer: coarse) {
+  .crumbs a,
+  .rule-id,
+  .mono-link {
+    padding-block: 15px;
+    margin-block: -15px;
+  }
+  .search-box,
+  .docs-side label.search-box {
+    min-height: 44px;
+  }
+  .search-box input {
+    align-self: stretch;
+  }
+  .copy-btn,
+  .cmd button,
+  .pill-new {
+    position: relative;
+  }
+  .copy-btn::after,
+  .cmd button::after,
+  .pill-new::after {
+    content: '';
+    position: absolute;
+    inset: -6px 0;
+  }
+}
