@@ -32,6 +32,8 @@ class SpecdiffAutoConfigurationTest {
   void servesTheViewerPage() throws Exception {
     mvc.perform(get("/specdiff/index.html")).andExpect(status().isOk());
     mvc.perform(get("/specdiff/boot.js")).andExpect(status().isOk());
+    mvc.perform(get("/specdiff/assets/specdiff-embed.js")).andExpect(status().isOk());
+    mvc.perform(get("/specdiff/assets/specdiff-compare.js")).andExpect(status().isOk());
   }
 
   @Test

@@ -48,6 +48,17 @@
     </dependency>
   </dependencies>
 
+  <build>
+    <resources>
+      <resource><directory>src/main/resources</directory></resource>
+      <!-- The built Viewer from packages/embed (build it first), served from /specdiff/assets/. -->
+      <resource>
+        <directory>../embed/dist</directory>
+        <targetPath>META-INF/specdiff/assets</targetPath>
+      </resource>
+    </resources>
+  </build>
+
   <profiles>
     <!-- mvn -Prelease deploy: only when the owner says so (CLAUDE.md rule 10). -->
     <profile>
