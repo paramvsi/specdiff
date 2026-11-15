@@ -69,3 +69,20 @@ test('A-10 changelog templates and A-12 settings', async ({ page }) => {
   // Browsers drop the leading dot of a downloaded name; the UI says to rename it.
   expect((await dl).suggestedFilename()).toBe('specdiff.yaml');
 });
+
+test('A-05 SDK impact (Beta) and changes that affect me', async ({ page }) => {
+  await page.goto('/app/?sample=openapi');
+  await page.getByRole('tab', { name: 'Workspace' }).click();
+  await page.getByRole('radio', { name: 'SDK calls' }).click();
+  await expect(page.getByText('payments.create({ currency })')).toBeVisible();
+  await page.getByRole('radio', { name: 'Python' }).click();
+  await expect(page.getByText('client.payments.create(currency=…)')).toBeVisible();
+  await expectAxeClean(page);
+  await page.getByRole('button', { name: 'Affects me' }).click();
+  await page.getByLabel(/operationIds or METHOD/).fill('createPayment\nGET /v1/payments/{id}');
+  await page.getByRole('button', { name: 'Filter' }).click();
+  await expect(page.getByText(/Only changes to the 2 endpoints in your list/)).toBeVisible();
+  await expectAxeClean(page);
+  await page.getByRole('button', { name: 'Clear filter' }).click();
+  await expect(page.getByText('Only changes to')).toHaveCount(0);
+});

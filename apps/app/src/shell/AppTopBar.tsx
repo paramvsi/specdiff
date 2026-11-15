@@ -6,6 +6,7 @@ import { modeLabel } from './labels';
 import { openPalette } from './palette';
 import { ShareDialog } from '../screens/ShareDialog';
 import { ExportMenu } from '../screens/ExportMenu';
+import { CopyLlmMenu } from './CopyLlm';
 import css from './AppTopBar.module.css';
 
 export function AppTopBar() {
@@ -45,6 +46,7 @@ export function AppTopBar() {
           { label: 'Rules and settings', onSelect: () => setScreen('settings') },
         ]}
       />
+      {hasResult && result.mode === 'openapi' && <CopyLlmMenu />}
       <Button
         variant="secondary"
         icon={<icons.Share size={15} />}

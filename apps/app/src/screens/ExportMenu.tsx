@@ -6,7 +6,7 @@ import * as icons from 'lucide-react';
 import { useApp } from '../state/store';
 import { JSON_EXPORTS, jsonExport } from './json/exports';
 import { mdSummary } from './markdown/summary';
-import { exportOpenApi, OPENAPI_EXPORTS } from './openapi/exports';
+import { exportOpenApi, OPENAPI_EXPORTS, printReport } from './openapi/exports';
 import { comparisonFile } from './ShareDialog';
 
 export function download(name: string, content: string, type = 'text/plain') {
@@ -134,6 +134,7 @@ export function ExportMenu({ disabled }: { disabled: boolean }) {
           else toast({ title: 'This export isn’t available yet', tone: 'info' });
         },
       });
+    items.push({ label: 'Print report', onSelect: printReport });
   }
   if (!('json' in result) && !('markdown' in result) && result.mode !== 'openapi') {
     const patch = () => textPatch(result.text.rows, names);

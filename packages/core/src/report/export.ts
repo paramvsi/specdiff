@@ -77,7 +77,7 @@ code{font:13px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;font-variant-liga
 .change dt{color:var(--muted)}.change dd{margin:0}
 .visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .sev{display:inline-block;min-width:1.5em;font-weight:700}.breaking .sev{color:var(--b)}.possibly .sev{color:var(--p)}.safe .sev{color:var(--s)}.docs .sev{color:var(--d)}
-`;
+ @media print{:root{--bg:#fff}body{background:#fff}main{max-width:none}section,article,li{break-inside:avoid}a{color:inherit}}`;
 
 export function reportToHtml(report: Report): string {
   const s = report.summary;

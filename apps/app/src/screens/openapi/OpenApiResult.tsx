@@ -5,6 +5,7 @@ import { useCommand } from '../../shell/commands';
 import { readChangeHash, useNav } from '../../shell/nav';
 import { useApp } from '../../state/store';
 import { Changelog } from './Changelog';
+import { AffectsMeDialog, AffectsMeView, ConsumerControls, SdkView, useConsumer } from './Consumer';
 import { Explain } from './Explain';
 import { RawDiff } from './RawDiff';
 import { Summary } from './Summary';
@@ -30,6 +31,7 @@ export default function OpenApiResult() {
   useCommand('tab-2', useCallback(() => set({ tab: 'workspace' }), [set]));
   useCommand('tab-3', useCallback(() => set({ tab: 'raw' }), [set]));
   useCommand('tab-4', useCallback(() => set({ tab: 'changelog' }), [set]));
+  const consumer = useConsumer();
   if (!result || !('report' in result)) return null;
   const r = reviewCounts(result.report.changes, decisions);
   return (
@@ -50,15 +52,17 @@ export default function OpenApiResult() {
             </button>
           ))}
         </div>
+        {tab === 'workspace' && <ConsumerControls />}
         {r.total > 0 && <ReviewProgress accepted={r.accepted} rejected={r.rejected} total={r.total} className={css.progress} />}
       </div>
       <div id={`panel-${tab}`} role="tabpanel" aria-labelledby={`tab-${tab}`} className={css.panel}>
         {tab === 'summary' && <Summary />}
-        {tab === 'workspace' && <Workspace />}
+        {tab === 'workspace' && (consumer.filter ? <AffectsMeView changes={result.report.changes} /> : consumer.view === 'sdk' ? <SdkView changes={result.report.changes} /> : <Workspace />)}
         {tab === 'raw' && <RawDiff />}
         {tab === 'changelog' && <Changelog />}
       </div>
       <Explain />
+      <AffectsMeDialog />
     </div>
   );
 }

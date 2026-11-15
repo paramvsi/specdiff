@@ -2,6 +2,7 @@
 import { writeFileSync } from 'node:fs';
 import { Command, Option } from 'commander';
 import pc from 'picocolors';
+import { reportJsonSchema } from '@specdiff/core';
 import { buildHistory } from './history';
 import { readInput } from './inputs';
 import { gitDiffDriver, runCi } from './run';
@@ -60,5 +61,10 @@ program
   .description('external diff for git: shows the semantic changelog of spec files')
   .allowExcessArguments()
   .action((_o: unknown, cmd: Command) => { process.exitCode = gitDiffDriver(cmd.args, io); });
+
+program
+  .command('schema')
+  .description('print the JSON Schema of the --format json report')
+  .action(() => { io.out(JSON.stringify(reportJsonSchema(), null, 2) + '\n'); });
 
 await program.parseAsync();
