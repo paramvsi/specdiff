@@ -21,5 +21,24 @@
   "scripts": {
     "build": "tsup src/index.ts --format esm --dts --clean",
     "typecheck": "tsc -p ."
+  },
+  "peerDependencies": {
+    "express": ">=4",
+    "fastify": ">=4"
+  },
+  "peerDependenciesMeta": {
+    "express": {
+      "optional": true
+    },
+    "fastify": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "@specdiff/embed": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.6",
+    "fastify": "5.12.7"
   }
 }
