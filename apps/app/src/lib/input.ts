@@ -59,6 +59,24 @@ export type LoadError = {
   status?: number;
 };
 
+/** Read a response body as text, stopping at the same cap as a ZIP: a URL can stream without end. */
+async function readCapped(res: Response, host: string): Promise<string> {
+  const tooLarge = (): LoadError => ({ kind: 'invalid', message: `The file at ${host} is larger than ${ZIP_MAX_TOTAL_BYTES / 1024 / 1024} MB.` });
+  if (Number(res.headers.get('content-length')) > ZIP_MAX_TOTAL_BYTES) throw tooLarge();
+  if (!res.body) return res.text();
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let text = '';
+  let bytes = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) return text + decoder.decode();
+    bytes += value.byteLength;
+    if (bytes > ZIP_MAX_TOTAL_BYTES) { void reader.cancel(); throw tooLarge(); }
+    text += decoder.decode(value, { stream: true });
+  }
+}
+
 export async function loadUrl(url: string, signal?: AbortSignal): Promise<Source> {
   const raw = toRawUrl(url);
   let parsed: URL;
@@ -93,8 +111,10 @@ export async function loadUrl(url: string, signal?: AbortSignal): Promise<Source
       status: res.status,
       message: `The server answered ${res.status} ${res.statusText}.`.replace(/ \.$/, '.'),
     } satisfies LoadError;
-  const content = await res.text();
-  const name = decodeURIComponent(parsed.pathname.split('/').filter(Boolean).pop() ?? parsed.host);
+  const content = await readCapped(res, parsed.host);
+  const last = parsed.pathname.split('/').filter(Boolean).pop() ?? parsed.host;
+  let name = last;
+  try { name = decodeURIComponent(last); } catch { /* a malformed escape: keep the name as written */ }
   return { name, content, size: new Blob([content]).size, origin: { kind: 'url', url } };
 }
 

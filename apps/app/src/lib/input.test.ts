@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { zipSync, strToU8 } from 'fflate';
-import { formatBytes, fromZip, pickEntry, sizeVerdict, toRawUrl } from './input';
+import { formatBytes, fromZip, loadUrl, pickEntry, sizeVerdict, toRawUrl, ZIP_MAX_TOTAL_BYTES } from './input';
 
 describe('input', () => {
   it('converts GitHub blob and gist links to raw', () => {
@@ -68,5 +68,21 @@ describe('toRawUrl: code hosts (IN-03)', () => {
   });
   it('leaves other URLs alone', () => {
     expect(toRawUrl('https://example.com/openapi.yaml')).toBe('https://example.com/openapi.yaml');
+  });
+});
+
+describe('loadUrl limits (IN-03)', () => {
+  afterEach(() => vi.unstubAllGlobals());
+  it('stops reading a response past the size limit instead of buffering all of it', async () => {
+    let sent = 0;
+    const chunk = new Uint8Array(1024 * 1024);
+    const body = new ReadableStream<Uint8Array>({ pull(c) { sent += chunk.length; c.enqueue(chunk); } }); // endless
+    vi.stubGlobal('fetch', async () => new Response(body));
+    await expect(loadUrl('https://example.com/huge.yaml')).rejects.toMatchObject({ kind: 'invalid', message: expect.stringMatching(/larger than/) });
+    expect(sent).toBeLessThan(ZIP_MAX_TOTAL_BYTES + 4 * chunk.length);
+  });
+  it('keeps a malformed escape in the file name instead of throwing', async () => {
+    vi.stubGlobal('fetch', async () => new Response('openapi: 3.1.0\n'));
+    await expect(loadUrl('https://example.com/a%E0%A4%A.yaml')).resolves.toMatchObject({ name: 'a%E0%A4%A.yaml' });
   });
 });
