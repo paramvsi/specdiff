@@ -1,12 +1,13 @@
 import { Button, FileChip, Kbd, Menu, ModeBadge, TopBar } from '@specdiff/ui';
 import * as icons from 'lucide-react';
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { useApp } from '../state/store';
 import { modeLabel } from './labels';
 import { openPalette } from './palette';
-import { ShareDialog } from '../screens/ShareDialog';
-import { ExportMenu } from '../screens/ExportMenu';
-import { CopyLlmMenu } from './CopyLlm';
+// Loaded on demand so report builders and the schema library stay out of the start-up bundle.
+const ShareDialog = lazy(() => import('../screens/ShareDialog').then((m) => ({ default: m.ShareDialog })));
+const ExportMenu = lazy(() => import('../screens/ExportMenu').then((m) => ({ default: m.ExportMenu })));
+const CopyLlmMenu = lazy(() => import('./CopyLlm').then((m) => ({ default: m.CopyLlmMenu })));
 import css from './AppTopBar.module.css';
 
 export function AppTopBar() {
@@ -52,7 +53,9 @@ export function AppTopBar() {
       {hasResult && result.mode === 'openapi' && (
         // Phones are read-only (M-01): Copy for LLM is a review tool and doesn't fit the compact bar.
         <span className={css.llm}>
-          <CopyLlmMenu />
+          <Suspense fallback={null}>
+            <CopyLlmMenu />
+          </Suspense>
         </span>
       )}
       <Button
@@ -63,8 +66,14 @@ export function AppTopBar() {
       >
         Share
       </Button>
-      <ExportMenu disabled={!hasResult} />
-      {share && <ShareDialog open onOpenChange={setShare} />}
+      <Suspense fallback={<Button variant="brand" icon={<icons.Download size={15} />} disabled>Export</Button>}>
+        <ExportMenu disabled={!hasResult} />
+      </Suspense>
+      {share && (
+        <Suspense fallback={null}>
+          <ShareDialog open onOpenChange={setShare} />
+        </Suspense>
+      )}
     </div>
   );
   return <TopBar start={start} end={end} homeHref="/app/" />;

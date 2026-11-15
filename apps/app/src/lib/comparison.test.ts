@@ -8,14 +8,14 @@ describe('comparison files (OUT-06)', () => {
     mode: 'json',
     view: { changeId: 'c-0001', tab: 'workspace' },
   };
-  it('reads a valid .specdiff.json payload', () => {
-    expect(readComparisonFile(JSON.stringify(payload))).toEqual(payload);
+  it('reads a valid .specdiff.json payload', async () => {
+    expect(await readComparisonFile(JSON.stringify(payload))).toEqual(payload);
     expect(isComparisonName('comparison.specdiff.json')).toBe(true);
     expect(isComparisonName('config.json')).toBe(false);
   });
-  it('rejects JSON that is not a comparison', () => {
-    expect(readComparisonFile('{"region":"x"}')).toBeNull();
-    expect(readComparisonFile('not json')).toBeNull();
-    expect(readComparisonFile(JSON.stringify({ ...payload, mode: 'pdf' }))).toBeNull();
+  it('rejects JSON that is not a comparison', async () => {
+    expect(await readComparisonFile('{"region":"x"}')).toBeNull();
+    expect(await readComparisonFile('not json')).toBeNull();
+    expect(await readComparisonFile(JSON.stringify({ ...payload, mode: 'pdf' }))).toBeNull();
   });
 });

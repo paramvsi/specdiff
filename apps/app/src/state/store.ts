@@ -1,5 +1,5 @@
 // App state (zustand). Settings and history persist in IndexedDB (idb-keyval); content never leaves the browser.
-import { Config, type ConfigInput, type DecisionsFile, type Mode } from '@specdiff/core';
+import type { ConfigInput, DecisionsFile, Mode } from '@specdiff/core';
 import { create } from 'zustand';
 import type { Source } from '../lib/input';
 import { startCompare, type Job } from '../worker/client';
@@ -100,7 +100,7 @@ export const useApp = create<State>((set, get) => ({
     if (!before || !after) return;
     get().job?.cancel();
     const background = !!opts.background && get().screen === 'result';
-    const job = startCompare({ before, after, mode, config: Config.parse(settings.config) }, (p) =>
+    const job = startCompare({ before, after, mode, config: settings.config }, (p) =>
       background ? undefined : set((s) => ({ progress: { ...s.progress, [p.step]: p } })),
     );
     if (background) set({ job, comparedConfig: settings.config });

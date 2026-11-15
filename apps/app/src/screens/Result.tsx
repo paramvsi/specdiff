@@ -2,7 +2,7 @@ import { IdenticalState } from '@specdiff/ui';
 import { lazy } from 'react';
 import { useApp } from '../state/store';
 import { useDecisionToast, useQueuedToasts } from '../state/toasts';
-import { TextResult } from './text/TextResult';
+const TextResult = lazy(() => import('./text/TextResult').then((m) => ({ default: m.TextResult })));
 
 const OpenApiResult = lazy(() => import('./openapi/OpenApiResult'));
 const JsonResult = lazy(() => import('./json/JsonResult'));

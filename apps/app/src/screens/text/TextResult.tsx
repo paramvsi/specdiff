@@ -298,6 +298,9 @@ export function TextResult() {
               <span>{masked} masked</span>
             </>
           ) : null}
+          {text.approximate ? (
+            <span> · The files differ almost everywhere, so lines are paired by position.</span>
+          ) : null}
           {total ? (
             <>
               <span className={css.progress} data-testid="viewed-progress">

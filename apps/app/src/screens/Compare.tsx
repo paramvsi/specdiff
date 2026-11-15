@@ -81,10 +81,10 @@ export function Compare() {
   const fileSide = useRef<Side>('before');
 
   const accept = useCallback(
-    (side: Side, s: Source) => {
+    async (side: Side, s: Source) => {
       // OUT-06: a comparison file (.specdiff.json) opens the comparison it carries, on either side.
       if (isComparisonName(s.name) || (/\.json$/i.test(s.name) && /^\s*\{\s*"left"\s*:/.test(s.content.slice(0, 200)))) {
-        const payload = readComparisonFile(s.content);
+        const payload = await readComparisonFile(s.content);
         if (payload) {
           void openPayload(payload);
           return;

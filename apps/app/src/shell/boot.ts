@@ -151,7 +151,7 @@ function consumeLaunchedFiles() {
   lq?.setConsumer(async ({ files }) => {
     const handle = files.find((f) => isComparisonName(f.name));
     if (!handle) return;
-    const payload = readComparisonFile(await (await handle.getFile()).text());
+    const payload = await readComparisonFile(await (await handle.getFile()).text());
     if (payload) await openPayload(payload);
     else useApp.setState({ error: `${handle.name} isn’t a Specdiff comparison file.` });
   });
