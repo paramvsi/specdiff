@@ -126,3 +126,18 @@ describe('large, mostly different inputs (X-02)', () => {
 it('B-52: whitespace is ignored by default (ACompare)', () => {
   expect(Config.parse({}).text.ignoreWhitespace).toBe(true);
 });
+
+describe('TX-02 a missing final newline', () => {
+  const strict = { ignoreWhitespace: false, ignoreCase: false, ignoreLineEndings: false, precision: 'smart' as const, filters: [], transforms: [] };
+  it('is a difference when line endings are compared', () => {
+    const r = diffText('a\nb\n', 'a\nb', strict);
+    expect(r.identical).toBe(false);
+    expect(r.stats.removed).toBe(1);
+  });
+  it('is ignored with "Ignore line endings", like CRLF vs LF', () => {
+    expect(diffText('a\nb\n', 'a\nb', { ...strict, ignoreLineEndings: true }).identical).toBe(true);
+  });
+  it('leaves files that both end with a newline identical', () => {
+    expect(diffText('a\nb\n', 'a\nb\n', strict).identical).toBe(true);
+  });
+});

@@ -141,6 +141,9 @@ export function diffText(before: string, after: string, opts: TextOptions, extra
     return t;
   };
   const la = splitLines(a), lb = splitLines(b);
+  // TX-02: with line endings compared, a missing final newline is a difference (git's "No newline at
+  // end of file"): the side that ends with one keeps its final empty line. "Ignore line endings" covers it.
+  if (!opts.ignoreLineEndings && a.endsWith('\n') !== b.endsWith('\n')) (a.endsWith('\n') ? la : lb).push('');
   // Normalise each line once: a comparator that normalises runs O(N·D) times (3× slower on 20,000 lines).
   const na = la.map(norm), nb = lb.map(norm);
   const same = (l: string, r: string) => norm(l) === norm(r);
