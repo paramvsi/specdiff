@@ -31,6 +31,18 @@ describe('X-13 determinism', () => {
   });
 });
 
+describe('OA-09 unquoted info.version', () => {
+  const spec = (v: string, json = false) => ({ name: json ? 'o.json' : 'o.yaml', content: json ? `{"openapi":"3.1.0","info":{"title":"T","version":${v}},"paths":{}}` : `openapi: 3.1.0\ninfo:\n  title: T\n  version: ${v}\npaths: {}\n` });
+  it('reads 1.10 as written, so 1.9 → 1.10 is not a decrease (YAML)', () => {
+    const r = compareOpenApi(spec('1.9'), spec('1.10'));
+    expect(r.versionCheck).toMatchObject({ from: '1.9', to: '1.10' });
+    expect(r.versionCheck?.verdict).not.toBe('decreased');
+  });
+  it('does the same for JSON', () => {
+    expect(compareOpenApi(spec('1.9', true), spec('1.10', true)).versionCheck).toMatchObject({ from: '1.9', to: '1.10' });
+  });
+});
+
 describe('rules catalogue', () => {
   it('has every row of docs/06 (74 rows, 76 rule ids) with templates', () => {
     expect(rules).toHaveLength(76);

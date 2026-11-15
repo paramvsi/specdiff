@@ -88,6 +88,15 @@ function normalisePath(p: string): string {
   return out.join('/');
 }
 
+/**
+ * An unquoted `version: 1.10` parses as the number 1.1. Versions are compared as written, so read the
+ * literal back from the source line (position points at the key).
+ */
+function writtenNumber(content: string, pos: SourcePos): string | undefined {
+  const line = content.split(/\r?\n/)[pos.line - 1]?.slice(Math.max(0, pos.column - 1));
+  return line ? /^["']?version["']?\s*:\s*([0-9][^\s#,}\]]*)/.exec(line)?.[1] : undefined;
+}
+
 // A scheme followed by `//` (https://, file://). `main:openapi.yaml` (a git rev:path name) is not a URL.
 const isUrl = (s: string) => /^[a-z][a-z0-9+.-]*:\/\//i.test(s);
 
@@ -300,6 +309,7 @@ export function loadSpec(input: Input, opts: { autoUpgrade: boolean; onStage?: (
   const out: LoadedSpec = { rootFile, unresolved: () => [...unresolved].sort(), root, format: main.format, size: utf8Length(input.content), deref, position, jsonPath };
   if (det.version !== undefined) out.specVersion = det.version;
   const iv = info?.version;
-  if (typeof iv === 'string' || typeof iv === 'number') out.infoVersion = String(iv);
+  if (typeof iv === 'string') out.infoVersion = iv;
+  else if (typeof iv === 'number') out.infoVersion = writtenNumber(input.content, position({ file: rootFile, ptr: arrayToChain(['info', 'version']) })) ?? String(iv);
   return out;
 }
