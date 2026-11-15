@@ -32,3 +32,20 @@ textarea {
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+.sd-link {
+  /* Text-style button: no ButtonFace fill (it gave 1.05:1 under dark ink). */
+  display: inline;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--sd-ink);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  border-radius: var(--sd-radius-xs);
+}
+.sd-link:hover {
+  text-decoration-thickness: 2px;
+}

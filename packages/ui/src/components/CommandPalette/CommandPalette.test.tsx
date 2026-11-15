@@ -40,4 +40,39 @@ describe('CommandPalette', () => {
     await user.keyboard('{Enter}');
     expect(onToggle).toHaveBeenCalledTimes(1);
   });
+
+  it('matches words, not scattered letters, and keeps same-label items apart', async () => {
+    const user = userEvent.setup();
+    const first = vi.fn();
+    const second = vi.fn();
+    const groups: CommandGroup[] = [
+      {
+        heading: 'Changes',
+        items: [
+          { label: 'Endpoint removed', kind: 'change', keywords: ['/v1/refunds'], onSelect: first },
+          { label: 'Endpoint removed', kind: 'change', keywords: ['/v1/payouts'], onSelect: second },
+          { label: 'Descriptions updated', kind: 'docs' },
+        ],
+      },
+      { heading: 'Settings', items: [{ label: 'Diff colours: high contrast', kind: 'setting' }] },
+    ];
+    render(<CommandPalette open onOpenChange={() => {}} groups={groups} />);
+    expect(screen.getAllByRole('option')).toHaveLength(4);
+    const input = screen.getByRole('combobox');
+    // Fuzzy subsequences ("dcs" is in "Diff colours: high contrast") must not match.
+    await user.type(input, 'descr');
+    expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual([
+      expect.stringContaining('Descriptions updated'),
+    ]);
+    await user.clear(input);
+    await user.type(input, 'dcs');
+    expect(screen.queryAllByRole('option')).toHaveLength(0);
+    // Keywords match too, and two items with one label stay separate.
+    await user.clear(input);
+    await user.type(input, 'payouts');
+    expect(screen.getAllByRole('option')).toHaveLength(1);
+    await user.keyboard('{Enter}');
+    expect(second).toHaveBeenCalledTimes(1);
+    expect(first).not.toHaveBeenCalled();
+  });
 });

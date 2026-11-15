@@ -42,3 +42,34 @@
     display: none;
   }
 }
+.llm {
+  display: contents;
+}
+/* Compact top bar on phones (M-01 / M-02): logo + icon-only actions, 44 px targets, one row. */
+@media (max-width: 639px) {
+  .actions {
+    gap: var(--sd-space-1);
+  }
+  .llm,
+  .kbd {
+    display: none;
+  }
+  /* Labelled buttons (Share, Export) become icon-only: the label stays as the accessible name. */
+  .actions button {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0;
+    gap: 0;
+    justify-content: center;
+    font-size: 0;
+  }
+  .search {
+    height: 44px;
+    border-radius: var(--sd-radius-md);
+  }
+}
+@media (pointer: coarse) {
+  .search {
+    height: 44px;
+  }
+}

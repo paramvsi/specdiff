@@ -19,7 +19,8 @@
   transition: background-color var(--sd-motion-fast) var(--sd-ease);
 }
 .track[data-state='checked'] {
-  background: var(--sd-inverse);
+  /* Ink, not inverse: inverse is a dark tint in dark mode and vanishes on surface (A-12 dark). */
+  background: var(--sd-ink);
 }
 .track:focus-visible {
   outline: none;
@@ -49,8 +50,20 @@
 .label {
   cursor: pointer;
 }
-@media (pointer: coarse) {
+@media (pointer: coarse), (max-width: 639px) {
   .row {
     min-height: 44px;
+  }
+  /* 44 × 44 hit area around the same 36 × 22 track: padding is clipped out of the paint
+     and cancelled by negative margins, so layout and look don't change. */
+  .track {
+    box-sizing: content-box;
+    padding: 11px 4px;
+    margin: -11px -4px;
+    background-clip: content-box;
+  }
+  .thumb {
+    top: 14px;
+    left: 7px;
   }
 }

@@ -11,21 +11,33 @@
   width: 18px;
   height: 18px;
   padding: 0;
+  display: inline-grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--sd-radius-xs);
+  background: none;
+  cursor: pointer;
+}
+.mark {
+  width: 18px;
+  height: 18px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border: 1.5px solid var(--sd-muted);
   border-radius: var(--sd-radius-xs);
   background: var(--sd-surface);
-  cursor: pointer;
 }
-.box[data-state='checked'] {
-  background: var(--sd-inverse);
-  border-color: var(--sd-inverse);
-  color: var(--sd-on-inverse);
+/* Ink fill + surface tick: dark box in light mode, light box in dark mode (A-03 / A-05 dark). */
+.box[data-state='checked'] .mark {
+  background: var(--sd-ink);
+  border-color: var(--sd-ink);
+  color: var(--sd-surface);
 }
 .box:focus-visible {
   outline: none;
+}
+.box:focus-visible .mark {
   box-shadow: var(--sd-shadow-focus);
 }
 .indicator {
@@ -39,8 +51,14 @@
 .label {
   cursor: pointer;
 }
-@media (pointer: coarse) {
+@media (pointer: coarse), (max-width: 639px) {
   .row {
     min-height: 44px;
+  }
+  /* 44 × 44 hit area; negative margins keep the 18 px box where it was. */
+  .box {
+    width: 44px;
+    height: 44px;
+    margin: -13px;
   }
 }

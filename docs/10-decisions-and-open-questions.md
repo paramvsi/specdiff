@@ -66,4 +66,5 @@ Claude Code adds rows here when it takes a default without the owner.
 | B-26 | The diff driver is used by `git diff` by default; `git log -p` needs `--ext-diff` (verified in a scratch repo) | P4 | git behaviour |
 | B-27 | SET-06: two diff colour themes. The default (cobalt/ember) *is* the colour-blind-safe palette (PDF p. 06/08); "High contrast" is the second. There is no separate third palette in the tokens | Audit | tokens.css defines exactly these two |
 | B-28 | M-04 phone Viewer endpoint: read-only, no Try it, although the frame shows the button | Audit | docs/02 X-07 ("read-only") wins over a prototype on behaviour (CLAUDE.md rule 2) |
+| B-29 | Phone (<640 px): one-row top bar with icon-only Search, More, Share, Export (44 px); Copy for LLM hidden (read-only, as in M-01). Menus are non-modal so the page isn't aria-hidden while open | Audit fix | X-07, axe aria-hidden-focus |
 

@@ -5,6 +5,8 @@ import css from './Switch.module.css';
 
 export interface SwitchProps {
   label: string;
+  /** Render only the control; `label` stays the accessible name (rule tables, share dialog). */
+  hideLabel?: boolean | undefined;
   checked?: boolean | undefined;
   defaultChecked?: boolean | undefined;
   onCheckedChange?: ((checked: boolean) => void) | undefined;
@@ -15,6 +17,7 @@ export interface SwitchProps {
 /** On/off switch with a visible label. On = ink track, chartreuse thumb. */
 export function Switch({
   label,
+  hideLabel,
   checked,
   defaultChecked,
   onCheckedChange,
@@ -27,6 +30,7 @@ export function Switch({
       <RadixSwitch.Root
         id={id}
         className={css.track}
+        {...(hideLabel ? { 'aria-label': label } : {})}
         {...(checked !== undefined ? { checked } : {})}
         {...(defaultChecked !== undefined ? { defaultChecked } : {})}
         {...(onCheckedChange ? { onCheckedChange } : {})}
@@ -34,9 +38,11 @@ export function Switch({
       >
         <RadixSwitch.Thumb className={css.thumb} />
       </RadixSwitch.Root>
-      <label htmlFor={id} className={css.label}>
-        {label}
-      </label>
+      {hideLabel ? null : (
+        <label htmlFor={id} className={css.label}>
+          {label}
+        </label>
+      )}
     </span>
   );
 }

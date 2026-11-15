@@ -51,7 +51,7 @@
   margin: 4px 0;
   background: var(--sd-line);
 }
-@media (pointer: coarse) {
+@media (pointer: coarse), (max-width: 639px) {
   .item {
     min-height: 44px;
   }

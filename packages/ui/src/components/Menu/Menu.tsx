@@ -19,11 +19,16 @@ export interface MenuProps {
   align?: 'start' | 'center' | 'end' | undefined;
 }
 
-/** Popover menu (Radix dropdown-menu): arrow keys, Enter, Esc, typeahead. */
+/**
+ * Popover menu (Radix dropdown-menu): arrow keys, Enter, Esc, typeahead.
+ * Non-modal: a modal menu sets aria-hidden on the app root while its trigger and the page stay
+ * focusable, which axe reports as aria-hidden-focus. Focus still moves into the menu and Esc /
+ * outside click close it.
+ */
 export function Menu({ trigger, items, align = 'start' }: MenuProps) {
   const container = usePortalContainer();
   return (
-    <DropdownMenu.Root>
+    <DropdownMenu.Root modal={false}>
       <DropdownMenu.Trigger asChild>{trigger}</DropdownMenu.Trigger>
       <DropdownMenu.Portal container={container}>
         <DropdownMenu.Content className={css.content} align={align} sideOffset={6}>

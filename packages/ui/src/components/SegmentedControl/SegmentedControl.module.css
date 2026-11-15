@@ -23,8 +23,9 @@
   color: var(--sd-ink);
 }
 .item[data-state='on'] {
-  background: var(--sd-inverse);
-  color: var(--sd-on-inverse);
+  /* Ink fill + surface text: dark on light in light mode, light on dark in dark mode (A-03 dark). */
+  background: var(--sd-ink);
+  color: var(--sd-surface);
 }
 .item:focus-visible {
   outline: none;

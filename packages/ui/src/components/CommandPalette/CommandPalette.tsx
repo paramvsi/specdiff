@@ -9,7 +9,9 @@ import { SeverityBadge } from '../SeverityBadge/SeverityBadge';
 import css from './CommandPalette.module.css';
 
 export interface CommandItem {
-  /** Visible label; also the search value, so keep it unique within the palette. */
+  /** Stable id; defaults to the item's position. Labels may repeat ("Endpoint removed"). */
+  id?: string | undefined;
+  /** Visible label; searched together with `kind` and `keywords`. */
   label: string;
   /** Right-hand mono meta: change, path, action, setting. */
   kind?: string | undefined;
@@ -33,6 +35,24 @@ export interface CommandMenuProps {
   className?: string | undefined;
 }
 
+/**
+ * Word filter for cmdk. cmdk's default is a fuzzy subsequence score, so "dcs" matched
+ * "Diff colours: high contrast". Here every typed word must appear in the label, kind or keywords;
+ * label hits rank first. `keywords[0]` is the label (see CommandMenu).
+ */
+export function filterCommand(_value: string, search: string, keywords: string[] = []): number {
+  const q = search.trim().toLowerCase();
+  if (!q) return 1;
+  const [label = '', ...rest] = keywords.map((k) => k.toLowerCase());
+  const words = q.split(/\s+/);
+  const all = `${label} ${rest.join(' ')}`;
+  if (!words.every((w) => all.includes(w))) return 0;
+  if (label.startsWith(q)) return 1;
+  if (label.includes(q)) return 0.9;
+  if (words.every((w) => label.includes(w))) return 0.7;
+  return 0.4;
+}
+
 /** The palette panel itself (search input + grouped results). Usable inline. */
 export function CommandMenu({
   groups,
@@ -41,7 +61,7 @@ export function CommandMenu({
   className,
 }: CommandMenuProps) {
   return (
-    <Command label={label} loop className={cx(css.panel, className)}>
+    <Command label={label} loop filter={filterCommand} className={cx(css.panel, className)}>
       <div className={css.inputRow}>
         <Search className={css.searchIcon} aria-hidden="true" />
         <Command.Input
@@ -55,11 +75,11 @@ export function CommandMenu({
         <Command.Empty className={css.empty}>No results</Command.Empty>
         {groups.map((g) => (
           <Command.Group key={g.heading} heading={g.heading} className={css.group}>
-            {g.items.map((item) => (
+            {g.items.map((item, i) => (
               <Command.Item
-                key={item.label}
-                value={item.label}
-                {...(item.keywords ? { keywords: item.keywords } : {})}
+                key={item.id ?? i}
+                value={`${g.heading}:${item.id ?? i}`}
+                keywords={[item.label, item.kind ?? '', ...(item.keywords ?? [])]}
                 {...(item.onSelect ? { onSelect: item.onSelect } : {})}
                 className={css.item}
               >

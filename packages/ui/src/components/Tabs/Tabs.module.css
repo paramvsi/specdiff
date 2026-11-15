@@ -28,8 +28,8 @@
   color: var(--sd-ink);
 }
 .trigger[data-state='active'] {
-  background: var(--sd-inverse);
-  color: var(--sd-on-inverse);
+  background: var(--sd-ink);
+  color: var(--sd-surface);
 }
 .trigger:focus-visible,
 .content:focus-visible {

@@ -42,7 +42,18 @@
   box-shadow: var(--sd-shadow-focus);
 }
 @media (max-width: 639px) {
+  /* Compact: one row, logo + actions; context (file chips) is hidden by the app. */
   .inner {
+    flex-wrap: nowrap;
     padding: var(--sd-space-3) var(--sd-space-4);
+  }
+  .divider {
+    display: none;
+  }
+}
+@media (pointer: coarse), (max-width: 639px) {
+  .home {
+    min-height: 44px;
+    align-items: center;
   }
 }

@@ -25,6 +25,13 @@
 .skip:focus {
   left: var(--sd-space-2);
 }
+@media (pointer: coarse), (max-width: 639px) {
+  .skip {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+}
 @media (max-width: 639px) {
   .main {
     padding: var(--sd-space-4);

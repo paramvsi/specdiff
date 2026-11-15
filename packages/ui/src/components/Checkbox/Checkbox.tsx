@@ -13,7 +13,7 @@ export interface CheckboxProps {
   className?: string | undefined;
 }
 
-/** Labelled checkbox. */
+/** Labelled checkbox. The button is the hit area (44 px on phones); `.mark` is the 18 px box. */
 export function Checkbox({
   label,
   checked,
@@ -33,9 +33,11 @@ export function Checkbox({
         {...(onCheckedChange ? { onCheckedChange: (c) => onCheckedChange(c === true) } : {})}
         {...(disabled !== undefined ? { disabled } : {})}
       >
-        <RadixCheckbox.Indicator className={css.indicator}>
-          <Check aria-hidden="true" />
-        </RadixCheckbox.Indicator>
+        <span className={css.mark} data-mark="">
+          <RadixCheckbox.Indicator className={css.indicator}>
+            <Check aria-hidden="true" />
+          </RadixCheckbox.Indicator>
+        </span>
       </RadixCheckbox.Root>
       <label htmlFor={id} className={css.label}>
         {label}

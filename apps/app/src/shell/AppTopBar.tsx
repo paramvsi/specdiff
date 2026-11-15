@@ -28,11 +28,13 @@ export function AppTopBar() {
         type="button"
         className={css.search}
         onClick={openPalette}
+        // The visible label is hidden below 1024 px; keep the name.
+        aria-label={screen === 'result' ? 'Search changes' : 'Search'}
         aria-keyshortcuts="Meta+K Control+K"
       >
         <icons.Search size={15} aria-hidden="true" />
         <span className={css.searchLabel}>{screen === 'result' ? 'Search changes' : 'Search'}</span>
-        <Kbd>⌘K</Kbd>
+        <Kbd className={css.kbd}>⌘K</Kbd>
       </button>
       <Menu
         align="end"
@@ -47,7 +49,12 @@ export function AppTopBar() {
           { label: 'Rules and settings', onSelect: () => setScreen('settings') },
         ]}
       />
-      {hasResult && result.mode === 'openapi' && <CopyLlmMenu />}
+      {hasResult && result.mode === 'openapi' && (
+        // Phones are read-only (M-01): Copy for LLM is a review tool and doesn't fit the compact bar.
+        <span className={css.llm}>
+          <CopyLlmMenu />
+        </span>
+      )}
       <Button
         variant="secondary"
         icon={<icons.Share size={15} />}
