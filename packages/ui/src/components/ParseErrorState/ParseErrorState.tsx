@@ -27,7 +27,10 @@ export function ParseErrorState({ title, lines, errorLine, column, hint, classNa
   return (
     <div className={cx(css.root, className)}>
       <p className={css.banner}>{title}</p>
-      <div className={css.code}>
+      {/* Scrolls sideways for long lines (minified JSON): a named, focusable region so keyboard users can scroll it
+          (axe scrollable-region-focusable; the pattern jsx-a11y's docs allow for scroll containers). */}
+      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex */}
+      <div className={css.code} role="region" aria-label="Source near the error" tabIndex={0}>
         {shown.map((l) => {
           const failing = l.number === errorLine;
           return (
