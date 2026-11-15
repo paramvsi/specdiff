@@ -1,6 +1,9 @@
 import { expect, test } from '@playwright/test';
 import { expectAxeClean } from './a11y';
 
+// Run against the production build: the dev server can reload mid-test while it optimises dependencies.
+test.use({ baseURL: 'http://localhost:4173' });
+
 for (const scheme of ['light', 'dark'] as const) {
   test(`A-04 summary shows the payments numbers (${scheme})`, async ({ page }) => {
     await page.emulateMedia({ colorScheme: scheme });

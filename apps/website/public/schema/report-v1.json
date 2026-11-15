@@ -1,0 +1,473 @@
+{
+  "$id": "https://specdiff.netlify.app/schema/report-v1.json",
+  "title": "Specdiff report",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": "number",
+      "const": 1
+    },
+    "generator": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "const": "specdiff"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ],
+      "additionalProperties": false
+    },
+    "inputs": {
+      "type": "object",
+      "properties": {
+        "before": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "size": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            "format": {
+              "type": "string",
+              "enum": [
+                "yaml",
+                "json",
+                "markdown",
+                "text",
+                "code"
+              ]
+            },
+            "specVersion": {
+              "type": "string"
+            },
+            "infoVersion": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "name",
+            "size",
+            "format"
+          ],
+          "additionalProperties": false
+        },
+        "after": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "size": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            "format": {
+              "type": "string",
+              "enum": [
+                "yaml",
+                "json",
+                "markdown",
+                "text",
+                "code"
+              ]
+            },
+            "specVersion": {
+              "type": "string"
+            },
+            "infoVersion": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "name",
+            "size",
+            "format"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "before",
+        "after"
+      ],
+      "additionalProperties": false
+    },
+    "mode": {
+      "type": "string",
+      "enum": [
+        "openapi",
+        "json",
+        "yaml",
+        "markdown",
+        "code",
+        "text"
+      ]
+    },
+    "options": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {}
+    },
+    "summary": {
+      "type": "object",
+      "properties": {
+        "breaking": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
+        "possibly": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
+        "safe": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
+        "docs": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
+        "total": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
+        "byArea": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          }
+        }
+      },
+      "required": [
+        "breaking",
+        "possibly",
+        "safe",
+        "docs",
+        "total",
+        "byArea"
+      ],
+      "additionalProperties": false
+    },
+    "versionCheck": {
+      "type": "object",
+      "properties": {
+        "from": {
+          "type": "string"
+        },
+        "to": {
+          "type": "string"
+        },
+        "suggested": {
+          "type": "string"
+        },
+        "bump": {
+          "type": "string",
+          "enum": [
+            "major",
+            "minor",
+            "patch"
+          ]
+        },
+        "verdict": {
+          "type": "string",
+          "enum": [
+            "ok",
+            "missing-major",
+            "decreased",
+            "unparseable"
+          ]
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "suggested",
+        "bump",
+        "verdict",
+        "message"
+      ],
+      "additionalProperties": false
+    },
+    "changes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "fingerprint": {
+            "type": "string"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "openapi",
+              "json",
+              "yaml",
+              "markdown",
+              "code",
+              "text"
+            ]
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "added",
+              "removed",
+              "changed",
+              "moved",
+              "typeChanged",
+              "renamed"
+            ]
+          },
+          "path": {
+            "type": "string"
+          },
+          "jsonPath": {
+            "type": "string"
+          },
+          "location": {
+            "type": "object",
+            "properties": {
+              "before": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string"
+                  },
+                  "line": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "column": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": [
+                  "file",
+                  "line",
+                  "column"
+                ],
+                "additionalProperties": false
+              },
+              "after": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string"
+                  },
+                  "line": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "column": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": [
+                  "file",
+                  "line",
+                  "column"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          "before": {},
+          "after": {},
+          "ruleId": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "breaking",
+              "possibly",
+              "safe",
+              "docs"
+            ]
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "request",
+              "response",
+              "both"
+            ]
+          },
+          "operation": {
+            "type": "object",
+            "properties": {
+              "method": {
+                "type": "string"
+              },
+              "path": {
+                "type": "string"
+              },
+              "operationId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "method",
+              "path"
+            ],
+            "additionalProperties": false
+          },
+          "sharedSchema": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "usages": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "usageCount": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "name",
+              "usages",
+              "usageCount"
+            ],
+            "additionalProperties": false
+          },
+          "sourceBlock": {
+            "type": "string"
+          },
+          "explanation": {
+            "type": "object",
+            "properties": {
+              "who": {
+                "type": "string"
+              },
+              "see": {
+                "type": "string"
+              },
+              "avoid": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "who",
+              "see",
+              "avoid"
+            ],
+            "additionalProperties": false
+          },
+          "changelogLine": {
+            "type": "string"
+          },
+          "sdk": {
+            "type": "object",
+            "properties": {
+              "call": {
+                "type": "string"
+              },
+              "language": {
+                "type": "string",
+                "enum": [
+                  "ts",
+                  "python",
+                  "java",
+                  "go"
+                ]
+              }
+            },
+            "required": [
+              "call",
+              "language"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "id",
+          "fingerprint",
+          "mode",
+          "kind",
+          "path",
+          "location"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "decisions": {
+      "type": "object",
+      "properties": {
+        "accepted": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
+        "rejected": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
+        "open": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "accepted",
+        "rejected",
+        "open"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "version",
+    "generator",
+    "inputs",
+    "mode",
+    "options",
+    "summary",
+    "changes"
+  ],
+  "additionalProperties": false
+}

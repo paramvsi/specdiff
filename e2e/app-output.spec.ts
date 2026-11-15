@@ -2,6 +2,9 @@
 import { expect, test, type Page } from '@playwright/test';
 import { expectAxeClean as axe } from './a11y';
 
+// Run against the production build: the dev server can reload mid-test while it optimises dependencies.
+test.use({ baseURL: 'http://localhost:4173' });
+
 // Overlays fade in; axe measures contrast mid-fade otherwise.
 const expectAxeClean = async (page: Page) => {
   await page.waitForFunction(() =>
