@@ -8,6 +8,7 @@ import { useCommand } from '../../shell/commands';
 import { changeLink, focusChange, readChangeHash, useNav } from '../../shell/nav';
 import { useApp } from '../../state/store';
 import { TextResult } from '../text/TextResult';
+import { VirtualList } from '../../lib/VirtualList';
 import css from './CodeResult.module.css';
 import { structuralRows } from './rows';
 
@@ -138,6 +139,7 @@ function Structural({ diff }: { diff: CodeDiff }) {
     const id = readChangeHash();
     if (id) document.getElementById(id)?.focus();
   }, []);
+  const items = useMemo(() => views.flatMap((v) => (v.kind === 'fold' && open.has(v.id) ? v.rows.map((row) => ({ kind: 'row' as const, row })) : [v])), [views, open]);
   const seen = listed.filter((i) => viewed[itemId(i)]).length;
 
   return (
@@ -150,23 +152,27 @@ function Structural({ diff }: { diff: CodeDiff }) {
  <SegmentedControl className={css.viewSwitch} label="View" size="sm" value={view} onValueChange={setView} options={[{ value: 'structural', label: 'Structural' }, { value: 'text', label: 'Text' }]} />
           </header>
           {view === 'text' ? <TextResult /> : (
-            <div
+            // X-02: one item per visible line (opened folds expand), windowed above VIRTUAL_THRESHOLD rows.
+            <VirtualList
+              count={items.length}
+              estimate={22}
+              // Always the windowed form: it is the focusable "Code" region at every size.
+              threshold={0}
+              label="Code"
               className={css.code}
-              role="region"
-              // Scrollable content must be reachable by keyboard (axe scrollable-region-focusable).
-              // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
-              tabIndex={0}
-              aria-label="Code"
-            >
-              {views.map((v, i) =>
-                v.kind === 'row' ? <Line key={i} row={v.row} /> : v.kind === 'moved' ? <MovedLine key={i} n={v.n} from={v.from} segs={v.segs} first={v.first} /> : open.has(v.id) ? v.rows.map((r, j) => <Line key={`${i}-${j}`} row={r} />) : (
-                  <div key={i} className={css.fold}>
-                    <icons.Check size={14} aria-hidden="true" className={css.ok} /> {v.reason}
-                    <button type="button" className={css.show} onClick={() => setOpen(new Set(open).add(v.id))}>Show</button>
-                  </div>
-                ),
-              )}
-            </div>
+              height="min(70vh, 720px)"
+              render={(i, slot) => {
+                const v = items[i]!;
+                const body =
+                  v.kind === 'row' ? <Line row={v.row} /> : v.kind === 'moved' ? <MovedLine n={v.n} from={v.from} segs={v.segs} first={v.first} /> : (
+                    <div className={css.fold}>
+                      <icons.Check size={14} aria-hidden="true" className={css.ok} /> {v.reason}
+                      <button type="button" className={css.show} onClick={() => setOpen(new Set(open).add(v.id))}>Show</button>
+                    </div>
+                  );
+                return slot ? <div key={i} data-index={slot['data-index']} style={slot.style} ref={slot.measure}>{body}</div> : <div key={i}>{body}</div>;
+              }}
+            />
           )}
         </section>
         <aside className={css.panel} aria-labelledby="what-changed">

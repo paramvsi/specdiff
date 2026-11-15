@@ -72,3 +72,9 @@ describe('MD-07 GitHub callouts', () => {
     expect(x.blocks[0]!.html).not.toMatch(/evil|onclick/);
   });
 });
+
+describe('whitespace that renders the same', () => {
+  it('a paragraph whose only change is runs of spaces is not reported as edited', () => {
+    expect(diffMarkdown('Some   text here.\n', 'Some text here.\n').stats).toEqual(expect.objectContaining({ added: 0, removed: 0, edited: 0 }));
+  });
+});

@@ -311,3 +311,16 @@ test('the empty Compare screen does not load the Export menu chunk', async ({ pa
   await expect(page.getByRole('button', { name: 'Export', exact: true })).toBeDisabled();
   expect(scripts.filter((s) => /ExportMenu|CopyLlm/.test(s))).toEqual([]);
 });
+
+test('after a palette pick, focus is not left on the page body (JSON and OpenAPI)', async ({ page }) => {
+  for (const sample of ['json', 'openapi']) {
+    await page.goto(`/app/?sample=${sample}`);
+    await expect(page.locator('main h1, main h2').first()).toBeVisible();
+    await page.keyboard.press('Control+k');
+    const dialog = page.getByRole('dialog', { name: 'Command palette' });
+    await dialog.getByRole('group', { name: 'Changes' }).getByRole('option').first().click();
+    await expect(dialog).toBeHidden();
+    await page.waitForTimeout(150);
+    expect(await page.evaluate(() => document.activeElement?.tagName)).not.toBe('BODY');
+  }
+});

@@ -48,6 +48,6 @@ createRoot(document.getElementById('root')!).render(
     theme,
     parseSpec: parse,
     onRetry: () => undefined,
-    ...(q.get('brand') ? { brand: { name: 'Acme', color: '#1f55c4' } } : {}),
+    ...(q.get('brand') ? { brand: { name: 'Acme', color: '#1f55c4', ...(q.get('logo') ? { logo: 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 20 20%22%3E%3Crect width=%2220%22 height=%2220%22 rx=%224%22 fill=%22%231f55c4%22/%3E%3C/svg%3E' } : {}) } } : {}),
   }),
 );

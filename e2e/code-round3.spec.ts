@@ -129,3 +129,22 @@ for (const scheme of ['light', 'dark'] as const) {
     await expectAxeClean(page);
   });
 }
+
+test('X-02: a 20,000-line code diff renders only the rows near the viewport', async ({ page }) => {
+  test.skip(test.info().project.name !== 'desktop');
+  const fn = (i: number, v: string) => `function f${i}(a: number) {\n  return a + ${v};\n}\n`;
+  const before = Array.from({ length: 5000 }, (_, i) => fn(i, '1')).join('');
+  const after = Array.from({ length: 5000 }, (_, i) => fn(i, i % 2 ? '2' : '1')).join('');
+  test.setTimeout(120_000);
+  await page.goto('/app/');
+  for (const [side, name, content] of [[0, 'a.ts', before], [1, 'b.ts', after]] as const) {
+    const chooser = page.waitForEvent('filechooser');
+    await page.getByRole('button', { name: 'Open file' }).nth(side).click();
+    await (await chooser).setFiles({ name, mimeType: 'text/plain', buffer: Buffer.from(content) });
+  }
+  await page.getByRole('combobox', { name: 'Compare as' }).selectOption('code');
+  await page.getByRole('button', { name: 'Compare', exact: true }).click();
+  await expect(page.getByRole('region', { name: 'Code', exact: true }).or(page.getByText(/Showing a text diff/)).first()).toBeVisible({ timeout: 60_000 });
+  const nodes = await page.evaluate(() => document.querySelectorAll('main *').length);
+  expect(nodes).toBeLessThan(20_000);
+});

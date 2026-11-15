@@ -223,7 +223,15 @@ export function Palette() {
   return (
     <CommandPalette
       open={open}
-      onOpenChange={(o) => set({ palette: o })}
+      onOpenChange={(o) => {
+        set({ palette: o });
+        // After a pick the target may not be focusable (or render later): never leave focus on <body>.
+        if (!o) setTimeout(() => {
+          if (document.activeElement && document.activeElement !== document.body) return;
+          const el = document.querySelector<HTMLElement>('main [aria-current="true"]') ?? document.getElementById('main');
+          el?.focus({ preventScroll: true });
+        }, 50);
+      }}
       groups={groups}
       placeholder="Search files, changes, paths, actions"
       label="Command palette"

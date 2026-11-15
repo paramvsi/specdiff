@@ -267,3 +267,202 @@ All 15 are still Done (scripts in `/tmp/sd-audit2/c/`). Targeted vitest: 17 file
 - **`rename.test.ts:28`** is titled as covering the caller, but it never asserts `A.h`, which is in fact falsely reported.
 - **OUT-10** is "fixed" for the CLI only. The app still exports an example.com feed.
 - **OUT-06** e2e uses a hand-made payload, not an exported file. The behaviour is correct by my own run.
+
+# Round 3 (independent re-audit, 2026-11-15)
+
+Scope: the 9 round-2 Partial IDs, the round-2 new defects (same-tab share links, IN-03), a one-line re-check of all 136 IDs, and the cross-cutting checks. No product code, tests or config were changed. Scratch scripts and outputs are in `/tmp/sd-audit3/` (`d/` drives the app, `cc/` cross-cutting, `cd/` code engine, `cli/`, `files/`). `pnpm build`: 9/9 tasks (cached, clean tree at `c4b1e3c`). Tests run (explicit files, not the full suites): vitest 52 files, **476 passed**; Playwright, all 20 e2e files in 3 runs, **237 passed, 0 failed** (28 skipped by project). A test counts as evidence only after its assertions were read.
+
+**Totals over all 136:** Done 135 (4 Later, absent as required) · Partial 1 (X-02) · Missing 0 · Not verifiable here 0 as whole IDs. Parts that still can't be checked here: PK-07 Maven Central publishing, PK-10 under the real pre-commit framework, OUT-11 live schema URL, WEB-01 by-eye visual parity (B-3).
+
+## Round-2 Partial IDs and new defects
+
+| ID | Verdict | Evidence | Remaining gap |
+|---|---|---|---|
+| CD-03 | Done | `rename.test.ts` now asserts `{A:'same','A.gee':'renamed','A.h':'same'}`, `logicChanged false` for Java, TS and Python callers, and that a real call-target change stays `changed`. Own engine run (`cd/run.ts`): caller in another class (`a.g(2)`), `this.f()` in a TS class, a Python free function: all callers `same`. A rename plus a real caller edit gives `h changed`, correctly | — |
+| CD-06 | Done | `rows.ts:116` folds hidden comment edits as "N lines, only comments changed" (`rows.test.ts:48`). `code-round3.spec.ts:81` asserts "comments changed" in the panel. Hidden token edits are named by kind (`rows.test.ts:52`, `code-round3.spec.ts:93`) | — |
+| OUT-10 | Done (B-36) | The app asks for the feed URL and title (`FeedDialog.tsx`, `exports.ts:34` returns nothing without a feed, so example.com is gone). `openapi.spec.ts:137`. CLI `--append` works (own run: 1 → 2 entries, rerunning the same release keeps 2; no `--feed-url` → exit 2). `feed.test.ts` has 3 append tests. Website `docs/cli.mdx:118-136` documents it (`website.spec.ts:390`) | The app export can't append to an existing feed (only the CLI can). docs/02 doesn't ask for it |
+| X-02 | **Partial** | The OpenAPI tree is windowed: 3,000 changes → 58 nav items, 457 DOM nodes (`d/x02.mjs`). `shell-round3.spec.ts:83` asserts under 200 `li` before and after scrolling. A minified 279 KB JSON pair takes 0.84 s (round 2: 88 s, B-33) | **Code mode is still not virtualised.** A 20,000-line TS pair renders 22,000 rows and 158,135 DOM nodes (`d/x02c.mjs`, 1.97 s). `CodeResult.tsx:160-168` maps every row, and no `VirtualList` is used in `screens/code/` |
+| X-04 | Done | Closes after a change, action or setting is picked in all 5 modes (`d/x04.mjs`: dialog count 0 each time). Groups: Files, Changes, (Paths), Actions, Settings. `shell-round3.spec.ts:101` asserts `toBeHidden()` after a click and after Enter | Nit: after a pick in JSON and OpenAPI, focus lands on `<body>`. Text, Markdown and Code focus the change |
+| X-05 | Done | Own 390 px pass (`d/phone.mjs`) over 5 samples, 5 shared links and Compare: **0 targets under 44 px** outside the B-35 inline-link exemption (3 Markdown prose links). `a11y-theme.spec.ts:137` now fails on screen-owned targets (`:173`, no longer an annotation). `code-round3.spec.ts:108` and `json-md-round3.spec.ts:144` do the same | B-35 (inline links, mouse-only ruler hidden) matches WCAG 2.5.8 and hides no real gap |
+| X-07 | Done | Code at 390: `scrollWidth` 390 for both the sample and a shared link, measured after 4 s and with animations settled (round 2: 619). All 5 samples and 5 shared links are 390. `code-round3.spec.ts:102` waits for the Code region first | Wide code lines scroll inside their own region (expected) |
+| X-08 | Done | `Result.tsx:44-96`: "Show formatting changes" now opens the raw line diff of the same result. The count is real, and the button is hidden when nothing was ignored. Own run (`d/x08.mjs`): OpenAPI "6 formatting-only lines" → "8 lines differ", JSON 5 → 6, Markdown 5 → 8. `Result.test.tsx` (3), `json-md-round3.spec.ts:117`, `shell-round3.spec.ts:155` | — |
+| X-09 | Done | Parse-error axe: `shell-round3.spec.ts:140-150`. Axe with the Shortcuts sheet open: `shell-round3.spec.ts:233-241`. `a11y-theme.spec.ts:94-107` `openSample` waits for each mode's result heading and a non-empty `main`. Fixtures 115/115 | `app.spec.ts:32-35` still runs axe after Escape (harmless now that `:233` covers the open sheet) |
+| OUT-05 same-tab | Done | `boot.ts:52-53` listens for `hashchange`. Own run (`d/share.mjs`): OpenAPI → second OpenAPI (1 breaking) → text → Markdown → OpenAPI, each replaced in place. Back restores the previous one. `shell-round3.spec.ts:287` | — |
+| IN-03 | Done | Own run with routed hosts: a GitHub blob URL with "After" picked loads `raw.githubusercontent.com` content into After, and Before stays empty. A blocked host shows "…didn't allow this page to read the file (CORS). Download the file and drop it in instead." `screens-fixes.spec.ts:260`, `input.test.ts` | — |
+
+## All 136 IDs, one line each
+
+`file:line` refers to `e2e/` unless it says otherwise. "obs" means my own drive of the production build.
+
+| ID | Verdict | Evidence |
+|---|---|---|
+| WEB-01 | Done | website.spec:59 hero entrance, :69 demo tabs, :88 slider, :106 package tabs; Home axe 1440/390. Visual parity is by eye (B-3) |
+| WEB-02 | Done | website.spec:119 (WEB-02) |
+| WEB-03 | Done | "Docs page is axe clean" 1440/390; doc pages built (round 1) |
+| WEB-04 | Done | website.spec:166, :232, :247, :341, :352, :362, :379. The area filter still has no test |
+| WEB-05 | Done | website.spec:323 pre-commit snippets, :390 CLI docs |
+| WEB-06 | Done (D-13) | website.spec:190 RSS valid with both releases; dates are still placeholders |
+| WEB-07 | Done | website.spec:199 SEO |
+| WEB-08 | Done | "404 is axe clean" 1440/390 |
+| WEB-09 | Done | website.spec:44 reduced motion, :59 |
+| IN-01 | Done | app.spec:16 |
+| IN-02 | Done | screens-fixes:278 drag over |
+| IN-03 | Done | see above |
+| IN-04 | Done | core multifile.test "resolves for app folder / ZIP"; app input.test "reads a ZIP" |
+| IN-05 | Done | samples.test (4); obs: all 5 samples render |
+| IN-06 | Done | text-extras:157 reload; swap per round 1 |
+| IN-07 | Done | detect.test "detects modes" |
+| IN-08 | Done | screens-fixes:32, :70; multifile "reports each real stage in order" |
+| IN-09 | Done | app.spec:46; parse.test hint tests |
+| IN-10 | Done | input.test "size guard"; screens-fixes:244 O-08 |
+| IN-11 | Done | screens-fixes:88; app-output:152 |
+| IN-12 | Done | cli inputs.test rev:path; cli.spec:57 |
+| TX-01 | Done (B-10) | obs: Split/Unified in the text toolbar; app.spec:25 |
+| TX-02 | Done | obs: Smart/Word/Char; diff.test "smart precision…" |
+| TX-03 | Done (B-22) | text-extras:72 |
+| TX-04 | Done | diff.test "ignores case and line endings", "identical when only whitespace differs" |
+| TX-05 | Done | diff.test foldRows; obs "Show 38 unchanged lines" |
+| TX-06 | Done | app.spec:25 (`j` → "2 / n") |
+| TX-07 | Done | screens-fixes:131; obs "Turn word wrap on" |
+| TX-08 | Done | app.spec:25 `‹time›`; diff.test "masks filter matches…counts hits" |
+| TX-09 | Done | diff.test "applies transforms before comparing" |
+| TX-10 | Done | screens-fixes:148 |
+| TX-11 | Done (B-23) | text-extras:87; diff.test TX-11 (4) |
+| TX-12 | Done (B-24) | text-extras:106, :125; patch.test (5) |
+| OA-01 | Done | normalise.test OA-01 (4), including 3.2 query/additionalOperations |
+| OA-02 | Done | normalise.test OA-02 (4); multifile (6) |
+| OA-03 | Done | fixtures.test 115/115 over 76 rule dirs (asserts ruleId, severity, direction, path, kind) |
+| OA-04 | Done | same; properties.test "direction" |
+| OA-05 | Done (B-25) | report.test "every row of docs/06 (74 rows, 76 rule ids)"; fixture dirs == catalogue |
+| OA-06 | Done | fixture `path-param-renamed` |
+| OA-07 | Done | fixes.test (2); openapi.spec:240 |
+| OA-08 | Done | report.test OA-08 (2); openapi.spec:8 |
+| OA-09 | Done | util.test OA-09 (3) |
+| OA-10 | Done | util.test OA-10 (3) |
+| OA-11 | Done (B-20) | openapi.spec:48 |
+| OA-12 | Done | normalise "ignore.paths matches extension keys…"; openapi.spec:60 |
+| OA-13 | Done | openapi.spec:211; screens-fixes:224 |
+| OA-14 | Done | payments.test "reports Card.last4 once…3 endpoints"; normalise OA-14 |
+| OA-15 | Done | same; obs: M-02 "shared-schema changes grouped first" (openapi.spec:112) |
+| OA-16 | Done | normalise OA-16 (17) |
+| OA-17 | Done | fixtures sunset-date-moved-earlier, sunset-inside-grace-period |
+| OA-18 | Done | normalise OA-18 (3) |
+| OA-19 | Done | normalise "SDK preset raises K→B rules only"; obs Wire/SDK radios |
+| OA-20 | Done (Beta) | openapi.spec:78; consumer-logic "names SDK calls" |
+| OA-21 | Done | openapi.spec:185; cli.spec:26; decisions.test (2) |
+| OA-22 | Done | openapi.spec:226; consumer-logic (4) |
+| OA-23 | Done (Later, absent) | grep: no validator |
+| JS-01 | Done | keyorder.test (3) |
+| JS-02 | Done | json.test auto-detected key, array order; obs key "auto" control |
+| JS-03 | Done | keyorder "keyed array moves"; obs "↕ Moved 1" |
+| JS-04 | Done | json.test null/missing and duplicate keys |
+| JS-05 | Done | json.test "deterministic with positions and ids"; obs Copy JSONPath |
+| JS-06 | Done | json.test "ignores keys"; obs `updatedAt, requestId` field |
+| JS-07 | Done (B-31) | obs Tree / Side by side / Raw text; app-output:33 |
+| JS-08 | Done (B-32) | patch.test (6); json-md-round3:94, :104 |
+| JS-09 | Done (Later, absent) | no TOML or .env mode |
+| JS-10 | Done | json.test "numeric tolerance and type changed" |
+| JS-11 | Done | same; obs "~ Type changed 1" chip |
+| MD-01 | Done | markdown.test "marks word-level insertions". New nit: `Some   text` vs `Some text` (renders the same) shows as an Edited paragraph (`d/x08b.mjs`) |
+| MD-02 | Done | obs Rendered/Source/Side by side; screens-fixes:307 |
+| MD-03 | Done | markdown.test MD-03 (2) |
+| MD-04 | Done | markdown.test "changed links with before/after"; app-output:70 |
+| MD-05 | Done | markdown.test "GFM tables, task lists and code blocks" |
+| MD-06 | Done | markdown.test "finds the anchor broken by the rename" |
+| MD-07 | Done | markdown.test MD-07 (7) |
+| MD-08 | Done (Later, absent) | grep: no CriticMarkup |
+| CD-01 | Done (Beta) | code.test (9); app.spec:55 |
+| CD-02 | Done | code.test "collapses formatting-only"; obs "3 lines reformatted, no logic change" |
+| CD-03 | Done | see above |
+| CD-04 | Done | app.spec:63; screens-fixes:328; code.test "falls back on parse errors" |
+| CD-05 | Done | no tree-sitter in the 20 start-up scripts (`cc/initial-js.mjs`); loaded per language (round 1) |
+| CD-06 | Done | see above |
+| OUT-01 | Done | report.test OUT-01/02; openapi.spec:60 |
+| OUT-02 | Done | same; changelogText.test |
+| OUT-03 | Done | report.test OUT-03 (2); obs Export menu .md/.json/.html |
+| OUT-05 | Done | openapi.spec:211; screens-fixes:224; shell-round3:287 |
+| OUT-06 | Done | codec "large content crosses the warning size"; screens-fixes:359; obs: exported comparison.specdiff.json reopens as "7 differences". The e2e still uses a hand-made payload |
+| OUT-07 | Done | app-output:121; History.test; persist.test |
+| OUT-08 | Done | obs "Print report" menu item; no test |
+| OUT-09 | Done | app-output:88; codec locked round trip; Unlock.test |
+| OUT-10 | Done (B-36) | see above |
+| OUT-11 | Done | feed.test "publishes a JSON Schema that the report satisfies"; the live URL can't be checked |
+| OUT-12 | Done | obs: 4 menu items (breaking/all/current/Open in Claude); the clipboard holds "Breaking changes in payments-v2.yaml…" |
+| SET-01 | Done | normalise "severity overrides, disabled rules"; a11y-theme:225 |
+| SET-02 | Done | normalise ignore.paths (2) |
+| SET-03 | Done (B-19) | Rule-set file screen (`Settings.tsx:182-196`); gate.test reads config/decisions |
+| SET-04 | Done | obs Settings "Diff options" section |
+| SET-05 | Done | obs: Dark → `data-theme=dark`, body rgb(11,13,12), kept after reload |
+| SET-06 | Done (B-27) | obs: High contrast → `data-diff-theme=high-contrast`, `--sd-added` #b8d0ff |
+| SET-07 | Done | commands.test "maps the O-03 sheet"; shell-round3:233; "Motion follows your system" |
+| VW-01 | Done | viewer.spec:13; viewer.test buildModel (3) |
+| VW-02 | Done | viewer.spec:24, :236 |
+| VW-03 | Done | viewer.spec:42 |
+| VW-04 | Done | viewer.spec:50; viewer.test search |
+| VW-05 | Done | viewer.spec:168; viewer-ui token memory and schema check |
+| VW-06 | Done | viewer.test "renders curl, fetch, python and java" |
+| VW-07 | Done (B-16) | viewer.spec:69 |
+| VW-08 | Done | viewer-ui badges (3) |
+| VW-09 | Done | viewer.spec:35 |
+| VW-10 | Done | viewer.spec:81, :102, :127 |
+| VW-11 | Done (Beta) | viewer.spec:190 |
+| VW-12 | Done | viewer.spec:249 brand colour; the logo option has no test |
+| VW-13 | Done | viewer.spec:202, :212 |
+| VW-14 | Done | obs: harness "Copy for LLM" copies "# Payments API 2.0.0…" Markdown; no test |
+| PK-01 | Done | packages.spec: 9 core subpaths import in plain Node |
+| PK-02 | Done | embed.test (3); 169,928 B gzip |
+| PK-03 | Done | react.test (4) |
+| PK-04 | Done (B-1/B-11) | cli.spec (4); gate.test (6) |
+| PK-06 | Done | express.spec (3); express/fastify tests |
+| PK-07 | Done (serving) | round 1; Maven Central not verifiable here |
+| PK-08 | Done | pwa.spec "works offline" |
+| PK-09 | Done (B-26) | cli.spec:66 |
+| PK-10 | Done | precommit.spec (4); not run under the pre-commit framework |
+| PK-11 | Done (Later, absent) | `--help` has no MCP command; no MCP dependency |
+| X-01 | Done | obs `cc/net.mjs`: 475 requests, 0 to another origin, 0 non-GET |
+| X-02 | **Partial** | see above (Code mode) |
+| X-03 | Done | shell-round3:302; the 20 start-up scripts include no diff/tree-sitter/markdown/Viewer chunk |
+| X-04 | Done | see above |
+| X-05 | Done | see above |
+| X-06 | Done | screens-fixes:193; react.test "symbols, not colour alone"; obs chips `+ − ~ ↕ ≠` |
+| X-07 | Done | see above |
+| X-08 | Done | see above |
+| X-09 | Done | see above |
+| X-10 | Done | no analytics requests (X-01 run) |
+| X-11 | Done | modes-extras:35, :45; openapi.spec:22 |
+| X-12 | Done | modes-extras:23; text-extras:135 |
+| X-13 | Done | report.test X-13 (2); properties.test; CLI hashes below |
+
+## Cross-cutting checks
+
+| Check | Result | Evidence |
+|---|---|---|
+| App start-up JS (real load) | **Pass** | `cc/initial-js.mjs`, Playwright on `:4173/app/`, service workers blocked: **20 scripts, 174,267 B gzip**. The same after waiting 8 s, so nothing is fetched late (round 2: 27 scripts, 231,321 B). ExportMenu/CopyLlm don't load on empty Compare (`shell-round3.spec.ts:302`). `budget.spec.ts` measures real fetched scripts after networkidle |
+| Viewer embed ≤ 250 KB | Pass | `specdiff-embed.js` 169,928 B gzip; `specdiff-compare.js` 167,276 B (lazy) |
+| No eval / new Function in our source | Pass | grep over `packages/*/src apps/*/src packages/viewer/harness scripts e2e`: 0. CSP: `'wasm-unsafe-eval'` only |
+| No inline scripts in built HTML | Pass | 106 HTML files under app/website/embed/viewer/express dist: 0 inline scripts, 0 `on*=` handlers |
+| No content leaving the browser | Pass | `cc/net.mjs`: 5 samples, share and receive, history, settings, Viewer. 475 requests, 0 off-origin, 0 non-GET. `fetch` call sites: `boot.ts:63` (same-origin CLI token), `input.ts:70` (user URL), Viewer Try it/OAuth (user action) |
+| No `.github` | Pass | `ls -a .github`: no such file. No `action.yml` |
+| Deterministic CLI JSON | Pass | Two runs per format, identical: json `1a5521bcc60b`, md `7dffb0f5c337`, html `d53a70fb21f1` (same as round 2). Run from `/tmp` with absolute paths: 0 differing lines apart from `name`/`file` |
+| Raw hex | Pass | 72 `.module.css`: 0 hex, 0 rgb/hsl. Website src: only `Base.astro:28-29` theme-color metas and a doc example (`embed.mdx:24`) |
+| B-11 copy | Pass | No `npx specdiff` without `-cli` outside the audit file, the guard test and the `site.ts:6` comment. 0 in built HTML |
+| Tests that measure before render | None found | Every e2e measurement of scroll width, targets or axe after `?sample=` waits for result content: a11y-theme `openSample`, code-round3 `HEADING`, json-md `openJson`/`openMarkdown`, viewer and website helpers. `shell-round3.spec.ts:253` waits for Export to enable, but it measures only after opening History or Settings and seeing their headings |
+
+## Rulings B-32..B-36
+
+B-32 (patch includes ignored keys so it reproduces the file), B-33 (pretty-print minified JSON before the line diff), B-34 (a "More" menu on utility screens), B-35 (inline-link exemption, which is WCAG 2.5.8) and B-36 (feed URL dialog) each close a real gap rather than hide one. B-35 exempted only 3 prose links in my run.
+
+## Misrepresented or weak evidence
+
+- **X-02 is called fixed, but it is fixed for the OpenAPI tree only.** Code mode still renders every row (22,000 rows and 158 k nodes for a 20,000-line pair). No ruling covers this.
+- OUT-06 e2e still uses a hand-made payload. The real round trip works by my run.
+- The rest of the round-3 claims match what I saw: start-up 231 → 174 KB, palette closes, phone targets, same-tab share links, CD-03 callers, the feed dialog.
+- New minor defects, logged and not fixed: focus goes to `<body>` after a palette pick in JSON and OpenAPI. Whitespace-only paragraph edits show as Markdown "Edited". The app feed export cannot append (the CLI can).
+
+## After round 3 (builder fixes, not re-audited by a fresh auditor)
+
+- X-02: code mode is windowed (`CodeResult.tsx`, `VirtualList` with threshold 0). `e2e/code-round3.spec.ts` "X-02 …": 137,528 elements before, under 20,000 after.
+- Palette pick leaves focus on `<body>` (JSON, OpenAPI): fixed in `shell/palette.tsx`; `e2e/shell-round3.spec.ts` "after a palette pick…" failed before, passes after.
+- Markdown whitespace-only edit reported as "Edited": block signatures normalise whitespace; unit test failed before, passes after.
+- Missing tests added (`e2e/gaps-round4.spec.ts`): OUT-06 export → reopen with a real exported file, WEB-04 area filter, VW-12 logo, VW-14 Copy for LLM.
+- pnpm verify after these: 506 unit, 244 e2e (axe), Java, budgets (start-up 174.1 KB).
