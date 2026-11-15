@@ -130,3 +130,14 @@ describe('front matter and footnotes (MD-01)', () => {
     expect(edited.html).toContain('note.');
   });
 });
+
+describe('link targets and alt text (MD-02)', () => {
+  it('reports a reference link whose definition now points elsewhere, and shows the new target', () => {
+    const d = diffMarkdown('See [docs][d].\n\n[d]: https://a.example/docs\n', 'See [docs][d].\n\n[d]: https://evil.example/docs\n');
+    expect(d.stats.edited + d.stats.added + d.stats.removed).toBeGreaterThan(0);
+    expect(d.blocks.filter((b) => b.status !== 'same').map((b) => b.html).join(' ')).toContain('evil.example');
+  });
+  it('reports a changed image alt text', () => {
+    expect(diffMarkdown('![old alt](a.png)\n', '![new alt](a.png)\n').stats.edited).toBe(1);
+  });
+});

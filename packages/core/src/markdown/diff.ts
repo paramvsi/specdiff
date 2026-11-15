@@ -107,6 +107,8 @@ const toHtml = unified()
 
 /** A footnote definition rendered on its own (remark-rehype only renders them in a document-end section). */
 function footnoteAsBlock(n: RootContent): RootContent {
+  // A link reference definition renders as nothing; show it as text so a changed target is visible (MD-02).
+  if (n.type === 'definition') return { type: 'paragraph', children: [{ type: 'text', value: `[${n.label ?? n.identifier}]: ${n.url}${n.title ? ` "${n.title}"` : ''}` }] };
   if (n.type !== 'footnoteDefinition') return n;
   const label: Text = { type: 'text', value: `[^${n.label ?? n.identifier}]: ` };
   const [first, ...rest] = n.children;
@@ -122,7 +124,7 @@ function render(nodes: RootContent[]): string {
 
 const plain = (n: Nodes): string => ('value' in n && (n.type === 'text' || n.type === 'inlineCode') ? n.value : 'children' in n ? n.children.map((c) => plain(c as Nodes)).join('') : '');
 const checks = (n: RootContent): string => (n.type === 'list' ? n.children.map((li) => (li.checked == null ? '-' : li.checked ? 'x' : 'o')).join('') : '');
-const signature = (n: RootContent): string => `${n.type}:${n.type === 'heading' ? n.depth : ''}:${checks(n)}:${n.type === 'code' ? `${n.lang ?? ''}\n${n.value}` : plain(n).replace(/\s+/g, ' ').trim()}:${links(n).map((l) => l.url).join(' ')}`;
+const signature = (n: RootContent): string => `${n.type}:${n.type === 'heading' ? n.depth : ''}:${checks(n)}:${n.type === 'code' ? `${n.lang ?? ''}\n${n.value}` : plain(n).replace(/\s+/g, ' ').trim()}:${links(n).map((l) => `${l.url}|${l.text}`).join(' ')}:${n.type === 'definition' ? `${n.identifier} ${n.url} ${n.title ?? ''}` : ''}`;
 const lines = (n: RootContent): [number, number] => [n.position?.start.line ?? 0, n.position?.end.line ?? 0];
 
 function links(n: Nodes): MdLink[] {
