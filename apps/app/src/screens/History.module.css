@@ -149,3 +149,11 @@
   margin: 0;
   color: var(--sd-muted);
 }
+@media (pointer: coarse) {
+  .chip {
+    height: 44px;
+  }
+  .files {
+    min-height: 44px;
+  }
+}

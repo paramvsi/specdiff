@@ -31,3 +31,13 @@ test('Settings controls are at least 44 px tall on a phone @phone', async ({ pag
     expect(await smallTargets(page), s).toEqual([]);
   }
 });
+
+test('History controls are at least 44 px tall on a phone @phone', async ({ page }) => {
+  test.skip(test.info().project.name !== 'phone');
+  await page.goto('/app/?sample=openapi');
+  await expect(page.getByText('Suggested version')).toBeVisible();
+  await page.getByRole('button', { name: 'More' }).click();
+  await page.getByRole('menuitem', { name: 'History' }).click();
+  await expect(page.getByRole('heading', { name: 'History', level: 1 })).toBeVisible();
+  expect(await smallTargets(page)).toEqual([]);
+});
