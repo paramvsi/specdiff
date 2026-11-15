@@ -11,7 +11,8 @@
     "./detect": "./src/detect.ts",
     "./json": "./src/json/index.ts",
     "./markdown": "./src/markdown/diff.ts",
-    "./har": "./src/har/har.ts"
+    "./har": "./src/har/har.ts",
+    "./code": "./src/code/diff.ts"
   },
   "files": [
     "dist"
@@ -42,6 +43,7 @@
     "remark-rehype": "11.1.2",
     "semver": "7.8.5",
     "unified": "11.0.5",
+    "web-tree-sitter": "0.27.1",
     "yaml": "2.9.1",
     "zod": "4.6.7"
   },
@@ -51,6 +53,10 @@
     "@types/picomatch": "4.0.3",
     "@types/semver": "7.8.0",
     "fast-check": "4.10.2",
-    "fast-json-patch": "3.1.1"
+    "fast-json-patch": "3.1.1",
+    "tree-sitter-java": "0.23.5",
+    "tree-sitter-javascript": "0.25.0",
+    "tree-sitter-python": "0.25.0",
+    "tree-sitter-typescript": "0.23.2"
   }
 }

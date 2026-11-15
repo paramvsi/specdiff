@@ -58,3 +58,6 @@ Pinning rule (docs/05): latest stable release public for at least 14 days, pinne
 | picocolors | 1.1.1 | 2026-11-15 | Terminal colours |
 | open | 11.0.4 | 2026-11-15 | Open the local UI |
 | sirv | 3.0.2 | 2026-11-15 | Static server for the local UI |
+| @astrojs/react, @astrojs/mdx, @astrojs/sitemap | 7.1.2, 8.1.2, 3.7.4 | 2026-11-15 | Website islands, MDX docs, sitemap |
+| web-tree-sitter | 0.27.1 | 2026-11-15 | Code mode (Beta) parser runtime |
+| tree-sitter-javascript, tree-sitter-typescript, tree-sitter-java, tree-sitter-python | 0.25.0, 0.23.2, 0.23.5, 0.25.0 | 2026-11-15 | WASM grammars only (their native build scripts are not run) |
