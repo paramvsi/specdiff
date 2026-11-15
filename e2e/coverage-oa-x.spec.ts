@@ -763,6 +763,8 @@ test('OA-22 changes that affect me from a HAR file: filtered list, call counts, 
   // Requests that will fail.
   await expect(table.getByText('1 call to DELETE /v1/refunds/{id}, which is removed')).toBeVisible();
   await expect(table.getByText(/which is removed\. It will be rejected/)).toBeVisible();
+  // One sentence: no flex gaps around the bold part (A05-ConsumerFilter).
+  expect(await table.locator('p', { hasText: 'which is removed' }).evaluate((p) => p.innerText)).toBe('Your HAR also has 1 call to DELETE /v1/refunds/{id}, which is removed. It will be rejected after the upgrade.');
   await expect(table.getByText('1 call with limit above 50')).toBeVisible();
   await expectAxeClean(page);
 });

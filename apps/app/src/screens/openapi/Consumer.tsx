@@ -85,7 +85,7 @@ export function AffectsMeView({ changes }: { changes: Change[] }) {
             })}
           </tbody>
         </table>
-        {filter.failing.map((f) => <p key={f.change.id} className={css.foot}>Your {filter.source.endsWith('.har') ? 'HAR' : 'list'} also has <strong>{f.reason}</strong>. {f.count === 1 ? 'It' : 'They'} will be rejected after the upgrade.</p>)}
+        {filter.failing.map((f) => <p key={f.change.id} className={css.foot}><span>Your {filter.source.endsWith('.har') ? 'HAR' : 'list'} also has <strong>{f.reason}</strong>. {f.count === 1 ? 'It' : 'They'} will be rejected after the upgrade.</span></p>)}
       </section>
     </div>
   );
