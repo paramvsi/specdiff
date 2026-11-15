@@ -43,3 +43,18 @@ it('refuses path traversal and passes unknown paths on', async () => {
   expect((await fetch(`${base}/docs/assets/..%2F..%2Fetc%2Fpasswd`)).status).toBe(400);
   expect(await (await fetch(`${base}/docs/nope`)).text()).toBe('next');
 });
+
+it('answers a malformed URL escape with 400 instead of throwing', () => {
+  const h = specdiff({ spec: { openapi: '3.1.0', info: { title: 'T', version: '1' }, paths: {} } });
+  const res = { status: 0, writeHead(s: number) { this.status = s; return this; }, end() {} };
+  expect(() => h({ method: 'GET', url: '/%E0%A4%A' } as never, res as never)).not.toThrow();
+  expect(res.status).toBe(400);
+});
+
+it('hands a missing spec file to next(err) instead of throwing', () => {
+  const h = specdiff({ spec: join(tmpdir(), 'specdiff-no-such-file.yaml') });
+  let err: unknown;
+  const res = { writeHead() { return this; }, end() {} };
+  expect(() => h({ method: 'GET', url: '/openapi.yaml' } as never, res as never, (e) => { err = e; })).not.toThrow();
+  expect(String(err)).toMatch(/ENOENT/);
+});

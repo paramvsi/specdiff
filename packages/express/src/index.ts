@@ -66,10 +66,11 @@ export function specdiff(opts: SpecdiffOptions): Handler {
   const config = JSON.stringify({ url: specName, ...(prevName ? { compareWith: prevName } : {}), ...(opts.theme ? { theme: opts.theme } : {}), ...(opts.brand ? { brand: opts.brand } : {}) });
   const headers = { 'x-content-type-options': 'nosniff', 'content-security-policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https: http:; font-src 'self'" };
 
-  return (req, res, next) => {
+  const handle: Handler = (req, res, next) => {
     const url = new URL(req.url ?? '/', 'http://x');
-    let path = decodeURIComponent(url.pathname);
     const send = (status: number, type: string, body: string | Buffer) => { res.writeHead(status, { 'content-type': type, 'cache-control': 'no-cache', ...headers }); res.end(body); };
+    let path: string;
+    try { path = decodeURIComponent(url.pathname); } catch { return send(400, 'text/plain', 'Bad path'); }
     if (req.method !== 'GET' && req.method !== 'HEAD') return next ? next() : send(405, 'text/plain', 'Method not allowed');
     // Mounted at /docs, Express strips the prefix; make relative URLs resolve under it.
     const orig = (req as IncomingMessage & { originalUrl?: string }).originalUrl ?? req.url ?? '/';
@@ -85,11 +86,20 @@ export function specdiff(opts: SpecdiffOptions): Handler {
       const file = join(assets, path);
       if (existsSync(file) && statSync(file).isFile()) {
         res.writeHead(200, { 'content-type': TYPES[extname(file)] ?? 'application/octet-stream', 'cache-control': 'public, max-age=3600', ...headers });
-        createReadStream(file).pipe(res);
+        createReadStream(file).on('error', () => res.destroy()).pipe(res);
         return;
       }
     }
     return next ? next() : send(404, 'text/plain', 'Not found');
+  };
+  // A plain node:http server has no error middleware: never throw out of the handler.
+  return (req, res, next) => {
+    try { handle(req, res, next); }
+    catch (e) {
+      if (next) return next(e);
+      res.writeHead(500, { 'content-type': 'text/plain' });
+      res.end('Internal error');
+    }
   };
 }
 
