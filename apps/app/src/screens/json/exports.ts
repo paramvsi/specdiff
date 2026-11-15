@@ -43,40 +43,68 @@ export const JSON_EXPORTS: ReadonlyArray<{ value: JsonExportKind; title: string;
 const base = (name: string) => name.replace(/\s*\(.*\)$/, '').replace(/\.(json|ya?ml)$/i, '') || 'comparison';
 const unptr = (s: string) => s.replace(/~1/g, '/').replace(/~0/g, '~');
 
-/** Apply an RFC 6902 patch (add/remove/replace only — what jsonPatch emits). Returns a new value. */
+/** Apply an RFC 6902 patch (add/remove/replace/move — what jsonPatch emits). Returns a new value. */
 export function applyJsonPatch(doc: unknown, ops: PatchOp[]): unknown {
   let root: unknown = structuredClone(doc);
-  for (const op of ops) {
-    const parts = op.path.split('/').slice(1).map(unptr);
-    if (!parts.length) {
-      root = op.op === 'remove' ? undefined : structuredClone(op.value);
-      continue;
-    }
-    let parent = root as Record<string, unknown> | unknown[];
-    for (const p of parts.slice(0, -1)) parent = (parent as Record<string, unknown>)[p] as typeof parent;
-    const last = parts[parts.length - 1]!;
-    if (Array.isArray(parent)) {
-      const i = last === '-' ? parent.length : Number(last);
-      if (op.op === 'add') parent.splice(i, 0, structuredClone(op.value));
-      else if (op.op === 'remove') parent.splice(i, 1);
-      else parent[i] = structuredClone(op.value);
-    } else if (op.op === 'remove') delete parent[last];
-    else parent[last] = structuredClone(op.value);
+  const get = (path: string): unknown =>
+    path
+      .split('/')
+      .slice(1)
+      .map(unptr)
+      .reduce<unknown>((v, p) => (v as Record<string, unknown>)[p], root);
+  for (const step of ops) {
+    // RFC 6902 §4.4: move = remove `from`, then add the same value at `path`.
+    const expanded: PatchOp[] =
+      step.op === 'move'
+        ? [
+            { op: 'remove', path: step.from },
+            { op: 'add', path: step.path, value: get(step.from) },
+          ]
+        : [step];
+    for (const op of expanded) root = applyOne(root, op as Exclude<PatchOp, { op: 'move' }>);
   }
   return root;
+}
+
+function applyOne(root: unknown, op: Exclude<PatchOp, { op: 'move' }>): unknown {
+  const parts = op.path.split('/').slice(1).map(unptr);
+  if (!parts.length) return op.op === 'remove' ? undefined : structuredClone(op.value);
+  let parent = root as Record<string, unknown> | unknown[];
+  for (const p of parts.slice(0, -1)) parent = (parent as Record<string, unknown>)[p] as typeof parent;
+  const last = parts[parts.length - 1]!;
+  if (Array.isArray(parent)) {
+    const i = last === '-' ? parent.length : Number(last);
+    if (op.op === 'add') parent.splice(i, 0, structuredClone(op.value));
+    else if (op.op === 'remove') parent.splice(i, 1);
+    else parent[i] = structuredClone(op.value);
+  } else if (op.op === 'remove') delete parent[last];
+  else parent[last] = structuredClone(op.value);
+  return root;
+}
+
+/** One operation per line (A07-JsonExport), still valid JSON. */
+export function formatPatch(ops: PatchOp[]): string {
+  if (!ops.length) return '[]\n';
+  const one = (op: PatchOp) =>
+    `{ ${Object.entries(op)
+      .map(([k, v]) => `${JSON.stringify(k)}: ${JSON.stringify(v)}`)
+      .join(', ')} }`;
+  return `[\n${ops.map((op) => `  ${one(op)}`).join(',\n')}\n]\n`;
 }
 
 export function jsonExport(
   kind: JsonExportKind,
   data: JsonResultData,
   names: { before: string; after: string },
+  /** Config `json.arrayMatchKey`: the patch matches array items the way the diff did. */
+  arrayMatchKey = 'auto',
 ): ExportFile {
   const stem = base(names.before);
   if (kind === 'patch') {
-    const ops = jsonPatch(data.before, data.after);
+    const ops = jsonPatch(data.before, data.after, { arrayMatchKey });
     return {
       name: `${stem}.patch.json`,
-      content: JSON.stringify(ops, null, 2) + '\n',
+      content: formatPatch(ops),
       type: 'application/json-patch+json',
       meta: `${ops.length} operation${ops.length === 1 ? '' : 's'}`,
       verified: stable(applyJsonPatch(data.before, ops)) === stable(data.after),

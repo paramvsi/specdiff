@@ -1,10 +1,10 @@
-// A-07 JSON / YAML (JS-01..JS-08, JS-10, JS-11, X-11): options, stats with "type changed" as its own
-// category, tree / side-by-side / raw views, JSONPath per change, duplicate keys, export panel.
+// A-07 JSON / YAML (JS-01..JS-08, JS-10, JS-11, X-11). B-31: the default view is AJson (compare options and
+// counts on the left, the changes in the middle, "Changes by path" and Export on the right); the A07 tree,
+// side by side and raw text are the middle card's views. The Export tab is A07-JsonExport.
 import { Config, type Change, type Kind } from '@specdiff/core';
 import { humanPath, stable } from '@specdiff/core/json';
 import type { Row } from '@specdiff/core/text';
 import {
-  IdenticalState,
   Button,
   Checkbox,
   DiffMarker,
@@ -30,10 +30,11 @@ import css from './JsonResult.module.css';
 
 type View = 'tree' | 'side' | 'raw';
 // Re-running the comparison remounts this screen; keep the view choices across that.
-const memo: { tab: string; view: View; format: JsonExportKind } = {
+const memo: { tab: string; view: View; format: JsonExportKind; onlyChanges: boolean } = {
   tab: 'diff',
   view: 'tree',
   format: 'patch',
+  onlyChanges: true,
 };
 
 /** Chip categories: the change kinds, plus null ≠ missing as its own (A-07). */
@@ -162,10 +163,13 @@ export default function JsonResult() {
     return () => clearTimeout(t);
   }, [settings.config.json, compare]);
 
+  // X-08: the identical state is Result's (it can show the formatting-only changes).
   if (!data || !result || !('json' in result)) return null;
-  if (!data.changes.length && !data.duplicates.before.length && !data.duplicates.after.length) {
-    return <IdenticalState ignoredLines={0} />;
-  }
+  const options = Config.parse(settings.config).json;
+  const toExport = () => {
+    memo.tab = 'export';
+    setTab('export');
+  };
   const names = { before: before?.name ?? 'before', after: after?.name ?? 'after' };
 
   return (
@@ -188,12 +192,17 @@ export default function JsonResult() {
                 names={names}
                 viewed={viewed}
                 toggleViewed={toggleViewed}
-                options={Config.parse(settings.config).json}
+                options={options}
                 setOptions={(p) => updateConfig((c) => ({ ...c, json: { ...c.json, ...p } }))}
+                onAllFormats={toExport}
               />
             ),
           },
-          { value: 'export', label: 'Export', content: <ExportTab data={data} names={names} /> },
+          {
+            value: 'export',
+            label: 'Export',
+            content: <ExportTab data={data} names={names} matchKey={options.arrayMatchKey} />,
+          },
         ]}
       />
     </div>
@@ -210,6 +219,7 @@ function DiffTab({
   toggleViewed,
   options,
   setOptions,
+  onAllFormats,
 }: {
   data: JsonResultData;
   rawRows: Parameters<typeof DiffRows>[0]['rows'];
@@ -218,9 +228,11 @@ function DiffTab({
   toggleViewed: (id: string) => void;
   options: JsonOptions;
   setOptions: (p: Partial<JsonOptions>) => void;
+  onAllFormats: () => void;
 }) {
   const { toast } = useToast();
   const [view, setView] = useState<View>(memo.view);
+  const [onlyChanges, setOnlyChanges] = useState(memo.onlyChanges);
   const [filter, setFilter] = useState<Set<ChipKind>>(new Set());
   const changeId = useNav((s) => s.changeId);
   const rowRefs = useRef(new Map<string, HTMLLIElement>());
@@ -257,6 +269,7 @@ function DiffTab({
     const out: Array<
       | { type: 'group'; path: string; matchKey?: string | undefined; size: string }
       | { type: 'change'; c: Change; e: TreeEntry }
+      | { type: 'context'; key: string; value: string; ignored: boolean }
     > = [];
     for (const [g, list] of groups) {
       if (g !== '$') {
@@ -265,8 +278,17 @@ function DiffTab({
       }
       for (const x of list) out.push({ type: 'change', ...x });
     }
+    // AJson "Only show changes" off: the top-level keys with no change, as context.
+    if (!onlyChanges && data.after && typeof data.after === 'object' && !Array.isArray(data.after)) {
+      const touched = new Set(data.changes.map((c) => /^\$(?:\.([^.[]+)|\['((?:[^'\\]|\\.)*)'\])?/.exec(c.jsonPath ?? '$')?.slice(1).find(Boolean)));
+      for (const [k, v] of Object.entries(data.after)) {
+        if (touched.has(k)) continue;
+        const ignored = options.ignoreKeys.includes(k);
+        out.push({ type: 'context', key: k, value: ignored ? 'ignored by your rules' : fmt(v), ignored });
+      }
+    }
     return out;
-  }, [visible, data]);
+  }, [visible, data, onlyChanges, options.ignoreKeys]);
   const treeApi = useRef<VirtualListApi>(null);
   const rootKeys =
     data.after && typeof data.after === 'object' && !Array.isArray(data.after)
@@ -357,6 +379,16 @@ function DiffTab({
     ...data.duplicates.after.map((d) => ({ ...d, file: names.after })),
   ];
 
+  const copyExport = async (kind: 'patch' | 'paths') => {
+    const f = jsonExport(kind, data, names, options.arrayMatchKey);
+    const ok = await copyText(f.content);
+    toast(
+      ok
+        ? { title: kind === 'patch' ? 'JSON Patch copied' : 'JSONPath list copied', description: f.meta, tone: 'success' }
+        : { title: 'Couldn’t copy', description: 'Use All export formats → Download instead.', tone: 'error' },
+    );
+  };
+
   const copyPath = async (p: string) => {
     const ok = await copyText(p);
     toast(
@@ -420,6 +452,27 @@ function DiffTab({
       )}
 
       <div className={css.body}>
+        <div className={css.left}>
+          <Options options={options} setOptions={setOptions} data={data} />
+          <section className={css.counts} aria-label="Counts">
+            <dl>
+              {(
+                [
+                  ['added', counts.added, 'added'],
+                  ['removed', counts.removed, 'removed'],
+                  ['changed', counts.changed + counts.typeChanged, 'changed'],
+                  ['moved', counts.moved, 'moved only'],
+                ] as const
+              ).map(([kind, n, label]) => (
+                <div key={kind} data-kind={kind}>
+                  <dt className={css.countLabel}>{label}</dt>
+                  <dd className={css.countN}>{n}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+        </div>
+
         <section className={css.card} aria-label="Differences">
           <div className={css.toolbar}>
             <SegmentedControl
@@ -432,9 +485,19 @@ function DiffTab({
               options={[
                 { value: 'tree', label: 'Tree' },
                 { value: 'side', label: 'Side by side' },
-                { value: 'raw', label: 'Raw' },
+                { value: 'raw', label: 'Raw text' },
               ]}
             />
+            {view === 'tree' && (
+              <Checkbox
+                label="Only show changes"
+                checked={onlyChanges}
+                onCheckedChange={(v) => {
+                  memo.onlyChanges = v;
+                  setOnlyChanges(v);
+                }}
+              />
+            )}
             <span className={css.progress}>
               {seen} of {total} viewed
             </span>
@@ -481,6 +544,16 @@ function DiffTab({
                       </li>
                     );
                   const t = tree[i - (rootKeys !== null ? 1 : 0)]!;
+                  if (t.type === 'context')
+                    return (
+                      <li
+                        key={`k${t.key}`}
+                        className={css.context}
+                        {...slotProps(slot, { paddingLeft: 'calc(20px + 16px)' })}
+                      >
+                        {t.key} <span className={t.ignored ? css.muted : css.size}>{t.value}</span>
+                      </li>
+                    );
                   return t.type === 'group' ? (
                     <li
                       key={`g${t.path}`}
@@ -545,10 +618,78 @@ function DiffTab({
           )}
         </section>
 
-        <Options options={options} setOptions={setOptions} data={data} />
+        <div className={css.right}>
+          <section className={css.panel} aria-labelledby="json-by-path">
+            <h2 id="json-by-path" className={css.panelTitle}>
+              Changes by path
+            </h2>
+            <ul className={css.byPath} aria-label="Changed paths">
+              {data.changes.slice(0, BY_PATH_MAX).map((c) => (
+                <li key={c.id}>
+                  <button
+                    type="button"
+                    className={css.byPathItem}
+                    aria-current={c.id === changeId || undefined}
+                    onClick={() => go(visible.findIndex((v) => v.id === c.id))}
+                  >
+                    <span className={css.byPathPath}>
+                      <span className={css.dot} data-kind={chipOf(c)} aria-hidden="true" />
+                      <code>{c.jsonPath ?? '$'}</code>
+                    </span>
+                    <span className={css.byPathWhat}>
+                      <span className="sd-visually-hidden">{SYMBOL[c.kind]} </span>
+                      {describe(c)}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+            {data.changes.length > BY_PATH_MAX && (
+              <p className={css.muted}>
+                and {data.changes.length - BY_PATH_MAX} more in the tree.
+              </p>
+            )}
+          </section>
+          <section className={css.panel} aria-labelledby="json-export">
+            <h2 id="json-export" className={css.panelTitle}>
+              Export
+            </h2>
+            <Button
+              variant="inverse"
+              className={css.exportBtn}
+              onClick={() => void copyExport('patch')}
+            >
+              Copy as JSON Patch
+            </Button>
+            <Button
+              variant="secondary"
+              className={css.exportBtn}
+              onClick={() => void copyExport('paths')}
+            >
+              Copy JSONPath list
+            </Button>
+            <button type="button" className={`sd-link ${css.allFormats}`} onClick={onAllFormats}>
+              All export formats
+            </button>
+          </section>
+        </div>
       </div>
     </div>
   );
+}
+
+const BY_PATH_MAX = 50;
+
+/** AJson "Changes by path": what happened at the path, in words ("changed 3 → 5", "added "disputes""). */
+function describe(c: Change): string {
+  if (isNullMissing(c)) return c.kind === 'removed' ? 'null → missing' : 'missing → null';
+  if (c.kind === 'changed') return c.after === null ? 'set to null' : `changed ${fmt(c.before)} → ${fmt(c.after)}`;
+  if (c.kind === 'typeChanged') return `type changed ${typeOf(c.before)} → ${typeOf(c.after)}`;
+  if (c.kind === 'added') return `added ${fmt(c.after)}`;
+  if (c.kind === 'removed') return 'removed';
+  if (c.kind === 'moved' && typeof c.before === 'number' && typeof c.after === 'number')
+    return `moved ${c.before} → ${c.after}, not a change`;
+  return 'moved, not a change';
 }
 
 /** Spread a virtual row's position (and any own style) on a row's root element. */
@@ -729,8 +870,8 @@ function Options({
   };
   return (
     <aside className={css.options} aria-labelledby="json-options">
-      <h2 id="json-options" className={css.h2}>
-        Options
+      <h2 id="json-options" className={css.panelTitle}>
+        Compare options
       </h2>
       <div>
         <TextField
@@ -794,13 +935,15 @@ function Options({
 function ExportTab({
   data,
   names,
+  matchKey,
 }: {
   data: JsonResultData;
   names: { before: string; after: string };
+  matchKey: string;
 }) {
   const { toast } = useToast();
   const [format, setFormat] = useState<JsonExportKind>(memo.format);
-  const file = useMemo(() => jsonExport(format, data, names), [format, data, names]);
+  const file = useMemo(() => jsonExport(format, data, names, matchKey), [format, data, names, matchKey]);
   return (
     <div className={css.exportTab}>
       <RadioCardGroup

@@ -69,4 +69,6 @@ Claude Code adds rows here when it takes a default without the owner.
 | B-29 | Phone (<640 px): one-row top bar with icon-only Search, More, Share, Export (44 px); Copy for LLM hidden (read-only, as in M-01). Menus are non-modal so the page isn't aria-hidden while open | Audit fix | X-07, axe aria-hidden-focus |
 | B-30 | Workspace has two approved frames: AWorkspace (stat strip, filter "All", focused hunk) is the default view; A05-Review applies when the "To review" filter is chosen | Audit round 2 | Both frames approved; this keeps both |
 | B-31 | JSON has two approved frames: AJson (counts card, changes by path, export card) is the default overview; A07-JsonTree is the "Tree" view inside it | Audit round 2 | Both frames approved; this keeps both |
+| B-32 | JSON Patch export is built from the keyed diff (move/remove/replace/add) and includes keys the diff ignores (e.g. `updatedAt`), so applying it gives the after file exactly: 8 ops on the sample vs 7 in A07-JsonExport | Round 3 | A patch must reproduce the file |
+| B-33 | Minified JSON (a line over 2,000 characters) is pretty-printed before the raw line diff | Round 3 | 273 KB minified pair: 30 s → 2 s |
 

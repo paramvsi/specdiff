@@ -3,7 +3,7 @@
 import { diffArrays, diffWordsWithSpace } from 'diff';
 import GithubSlugger from 'github-slugger';
 import type { ElementContent, Root as HastRoot } from 'hast';
-import type { Blockquote, Link, Nodes, Paragraph, Parent, Root, RootContent, Text } from 'mdast';
+import type { Blockquote, Link, Nodes, Paragraph, Parent, Root, RootContent, Table, TableCell, TableRow, Text } from 'mdast';
 import remarkGfm from 'remark-gfm';
 import remarkParse from 'remark-parse';
 import remarkRehype from 'remark-rehype';
@@ -30,7 +30,13 @@ export interface MdDiff {
   blocks: MdBlock[];
   outline: Array<{ depth: number; text: string; slug: string; status: BlockStatus }>;
   brokenAnchors: Array<{ anchor: string; line: number; renamedFrom?: string; renamedTo?: string }>;
+  /** Changed blocks by status. */
   stats: { added: number; removed: number; edited: number };
+  /**
+   * Sections (a heading and the blocks up to the next heading; text before the first heading is one too):
+   * added or removed with their heading, edited when the heading was renamed or any block in it changed.
+   */
+  sections: { added: number; removed: number; edited: number };
 }
 
 const parser = unified().use(remarkParse).use(remarkGfm);
@@ -109,7 +115,7 @@ function links(n: Nodes): MdLink[] {
 }
 
 /** Mark word-level changes inside the after block's text leaves. */
-function markWords(before: RootContent, after: RootContent): RootContent {
+function markWords<T extends Nodes>(before: Nodes, after: T): T {
   const parts = diffWordsWithSpace(plain(before), plain(after));
   const clone = structuredClone(after);
   // Ranges in the after text to wrap in <ins>, and deletions to insert at an offset.
@@ -153,6 +159,78 @@ function markWords(before: RootContent, after: RootContent): RootContent {
   };
   if ('children' in clone) visit(clone as Parent);
   return clone;
+}
+
+/**
+ * GFM tables cell by cell: rows are matched by their first cell (or by position when that cell was edited),
+ * each matched cell gets its own word marks, and new or dropped rows are whole <ins>/<del> rows.
+ */
+function markTable(before: Table, after: Table): Table {
+  const clone = structuredClone(after);
+  const rows = before.children;
+  const keyOf = (r: TableRow) => (r.children[0] ? plain(r.children[0]) : '');
+  const afterKeys = new Set(after.children.map(keyOf));
+  const wrap = (cell: TableCell, tag: 'ins' | 'del'): TableCell => ({ ...cell, children: cell.children.length ? [{ type: tag, children: cell.children } as never] : [] });
+  const used = new Set<number>();
+  const out: TableRow[] = [];
+  const dropUpTo = (end: number) => {
+    for (let k = 0; k < end; k++) {
+      if (used.has(k) || afterKeys.has(keyOf(rows[k]!))) continue;
+      used.add(k);
+      out.push({ ...structuredClone(rows[k]!), children: rows[k]!.children.map((c) => wrap(structuredClone(c), 'del')) });
+    }
+  };
+  clone.children.forEach((row, ri) => {
+    let m = rows.findIndex((r, k) => !used.has(k) && keyOf(r) === keyOf(row));
+    // Same position and a similar first cell: that cell was edited.
+    if (m < 0 && ri < rows.length && !used.has(ri) && !afterKeys.has(keyOf(rows[ri]!)) && bigramSimilarity(keyOf(rows[ri]!), keyOf(row)) >= 0.5) m = ri;
+    if (m < 0) {
+      out.push({ ...row, children: row.children.map((c) => wrap(c, 'ins')) });
+      return;
+    }
+    dropUpTo(m);
+    used.add(m);
+    const br = rows[m]!;
+    out.push({ ...row, children: row.children.map((c, k) => (br.children[k] ? markWords(br.children[k], c) : wrap(c, 'ins'))) });
+  });
+  dropUpTo(rows.length);
+  clone.children = out;
+  return clone;
+}
+
+/**
+ * Which removed and added blocks of one hunk are edits of each other. Headings pair first (in order); blocks
+ * under a heading that did not pair belong to a removed or added section and never pair. Other blocks pair
+ * with the next similar block on the other side, without crossing a paired heading.
+ */
+function pairHunk(removed: RootContent[], added: RootContent[]): Array<[number, number]> {
+  const heads = new Map<number, number>();
+  let t0 = 0;
+  removed.forEach((x, r) => {
+    if (x.type !== 'heading') return;
+    for (let t = t0; t < added.length; t++) {
+      if (added[t]!.type === 'heading' && similar(x, added[t]!)) { heads.set(r, t); t0 = t + 1; return; }
+    }
+  });
+  const pairedAdded = new Set(heads.values());
+  const locked = (list: RootContent[], paired: (i: number) => boolean) => {
+    const out = new Set<number>();
+    let on = false;
+    list.forEach((n, i) => { if (n.type === 'heading') on = !paired(i); else if (on) out.add(i); });
+    return out;
+  };
+  const lockedR = locked(removed, (i) => heads.has(i)), lockedA = locked(added, (i) => pairedAdded.has(i));
+  const pairs: Array<[number, number]> = [];
+  let s = 0;
+  removed.forEach((x, r) => {
+    const h = heads.get(r);
+    if (h !== undefined) { pairs.push([r, h]); s = h + 1; return; }
+    if (x.type === 'heading' || lockedR.has(r)) return;
+    for (let t = s; t < added.length && !pairedAdded.has(t); t++) {
+      if (!lockedA.has(t) && added[t]!.type !== 'heading' && similar(x, added[t]!)) { pairs.push([r, t]); s = t + 1; return; }
+    }
+  });
+  return pairs;
 }
 
 /** Dice coefficient of character bigrams, case-insensitive: 1 = same, 0 = nothing shared. */
@@ -205,40 +283,50 @@ export function diffMarkdown(before: string, after: string): MdDiff {
     const nextP = parts[k + 1];
     const added = p.removed && nextP?.added ? b.slice(j, j + nextP.count!) : p.added ? b.slice(j, j + p.count!) : [];
     if (p.removed && nextP?.added) k++;
-    // Pair removed/added blocks of the same kind, in order, as edits.
+    // Pair edits; the unpaired removed blocks before each edit come as one run, then the unpaired added ones,
+    // so a removed section and an added section show as two groups, not interleaved block by block.
+    const emitRemoved = (x: RootContent) => {
+      const hb = headingOf(x, sa);
+      if (hb) beforeSlugs.push(hb.slug);
+      blocks.push({ status: 'removed', type: x.type, html: render([x]), lines: { before: lines(x) }, ...(hb ? { heading: hb } : {}), ...co(x) });
+      stats.removed++;
+    };
+    const emitAdded = (y: RootContent) => {
+      const h = headingOf(y, sb);
+      if (h) afterSlugs.push(h.slug);
+      blocks.push({ status: 'added', type: y.type, html: render([y]), lines: { after: lines(y) }, ...(h ? { heading: h } : {}), ...co(y) });
+      stats.added++;
+    };
+    const emitEdited = (x: RootContent, y: RootContent) => {
+      const hb = headingOf(x, sa), h = headingOf(y, sb);
+      if (hb) beforeSlugs.push(hb.slug);
+      if (h) afterSlugs.push(h.slug);
+      if (hb && h && hb.slug !== h.slug) renamed.set(hb.slug, h.slug);
+      const la = links(x), lb = links(y);
+      const changedLinks = lb.map((l, idx) => ({ text: l.text, before: la[idx]?.url ?? '', after: l.url })).filter((l) => l.before !== l.after);
+      const marked = x.type === 'code' ? y : x.type === 'table' && y.type === 'table' ? markTable(x, y) : markWords(x, y);
+      blocks.push({
+        status: 'edited', type: y.type,
+        html: render([marked]),
+        beforeHtml: render([x]),
+        lines: { before: lines(x), after: lines(y) },
+        ...(h ? { heading: { ...h, beforeText: hb?.text ?? '' } } : {}),
+        ...(x.type === 'code' && y.type === 'code' ? { code: { ...(y.lang ? { lang: y.lang } : {}), before: x.value, after: y.value } } : {}),
+        ...(changedLinks.length ? { links: changedLinks } : {}),
+        ...co(y),
+      });
+      stats.edited++;
+    };
     let r = 0, s = 0;
-    while (r < removed.length || s < added.length) {
-      const x = removed[r], y = added[s];
-      if (x && y && similar(x, y)) {
-        const hb = headingOf(x, sa), h = headingOf(y, sb);
-        if (hb) beforeSlugs.push(hb.slug);
-        if (h) afterSlugs.push(h.slug);
-        if (hb && h && hb.slug !== h.slug) renamed.set(hb.slug, h.slug);
-        const la = links(x), lb = links(y);
-        const changedLinks = lb.map((l, idx) => ({ text: l.text, before: la[idx]?.url ?? '', after: l.url })).filter((l) => l.before !== l.after);
-        blocks.push({
-          status: 'edited', type: y.type,
-          html: x.type === 'code' ? render([y]) : render([markWords(x, y)]),
-          beforeHtml: render([x]),
-          lines: { before: lines(x), after: lines(y) },
-          ...(h ? { heading: { ...h, beforeText: hb?.text ?? '' } } : {}),
-          ...(x.type === 'code' && y.type === 'code' ? { code: { ...(y.lang ? { lang: y.lang } : {}), before: x.value, after: y.value } } : {}),
-          ...(changedLinks.length ? { links: changedLinks } : {}),
-          ...co(y),
-        });
-        stats.edited++; r++; s++; i++; j++;
-      } else if (x && (!y || removed.length - r >= added.length - s)) {
-        const hb = headingOf(x, sa);
-        if (hb) beforeSlugs.push(hb.slug);
-        blocks.push({ status: 'removed', type: x.type, html: render([x]), lines: { before: lines(x) }, ...(hb ? { heading: hb } : {}), ...co(x) });
-        stats.removed++; r++; i++;
-      } else if (y) {
-        const h = headingOf(y, sb);
-        if (h) afterSlugs.push(h.slug);
-        blocks.push({ status: 'added', type: y.type, html: render([y]), lines: { after: lines(y) }, ...(h ? { heading: h } : {}), ...co(y) });
-        stats.added++; s++; j++;
-      }
+    for (const [pr, pa] of pairHunk(removed, added)) {
+      for (; r < pr; r++) emitRemoved(removed[r]!);
+      for (; s < pa; s++) emitAdded(added[s]!);
+      emitEdited(removed[r++]!, added[s++]!);
     }
+    for (; r < removed.length; r++) emitRemoved(removed[r]!);
+    for (; s < added.length; s++) emitAdded(added[s]!);
+    i += removed.length;
+    j += added.length;
   }
 
   const outline = blocks.filter((bl) => bl.heading).map((bl) => ({ depth: bl.heading!.depth, text: bl.heading!.text, slug: bl.heading!.slug, status: bl.status }));
@@ -255,5 +343,24 @@ export function diffMarkdown(before: string, after: string): MdDiff {
     if ('children' in n) n.children.forEach((c) => walk(c as Nodes));
   };
   b.forEach((n) => walk(n));
-  return { blocks, outline, brokenAnchors, stats };
+  return { blocks, outline, brokenAnchors, stats, sections: sectionStats(blocks) };
+}
+
+function sectionStats(blocks: MdBlock[]): MdDiff['sections'] {
+  const out = { added: 0, removed: 0, edited: 0 };
+  let status: BlockStatus = 'same', changed = false;
+  const close = () => {
+    if (status === 'added') out.added++;
+    else if (status === 'removed') out.removed++;
+    else if (changed) out.edited++;
+  };
+  for (const bl of blocks) {
+    if (bl.heading) {
+      close();
+      status = bl.status;
+      changed = bl.status !== 'same';
+    } else if (bl.status !== 'same') changed = true;
+  }
+  close();
+  return out;
 }

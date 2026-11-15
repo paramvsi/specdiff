@@ -19,12 +19,18 @@ export function blockLabel(b: MdBlock): string {
   return t.length > 80 ? `${t.slice(0, 79)}…` : t || b.type;
 }
 
+/** Section counts; absent on results saved before they existed (history, share links). */
+export const sectionsOf = (d: MdDiff): MdDiff['sections'] | undefined =>
+  (d as Partial<MdDiff>).sections;
+
 export function mdSummary(d: MdDiff, names: { before: string; after: string }): string {
   const s = d.stats;
+  const sec = sectionsOf(d);
   const lines = [
     `# ${names.before} → ${names.after}`,
     '',
-    `${s.added} added, ${s.removed} removed, ${s.edited} edited.`,
+    ...(sec ? [`Sections: ${sec.added} added, ${sec.removed} removed, ${sec.edited} edited.`] : []),
+    `Blocks: ${s.added} added, ${s.removed} removed, ${s.edited} edited.`,
     '',
   ];
   const changed = d.blocks.filter((b) => b.status !== 'same');

@@ -422,3 +422,12 @@
   left: var(--sd-space-8) !important;
   right: var(--sd-space-8) !important;
 }
+
+/* X-05: phone touch targets are at least 44 px (inline links in prose are exempt, WCAG 2.5.8). */
+@media (max-width: 1023px) {
+  .outlineItem,
+  .viewedBtn,
+  .linkChip {
+    min-height: 44px;
+  }
+}

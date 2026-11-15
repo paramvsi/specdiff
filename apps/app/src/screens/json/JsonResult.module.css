@@ -84,9 +84,148 @@
 }
 .body {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
+  grid-template-columns: 280px minmax(0, 1fr) 300px;
   gap: var(--sd-space-4);
   align-items: start;
+}
+.left,
+.right {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sd-space-3);
+  min-width: 0;
+}
+.panel,
+.counts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sd-space-2);
+  padding: var(--sd-space-4);
+  background: var(--sd-surface);
+  border: 1px solid var(--sd-line);
+  border-radius: var(--sd-radius-xl);
+}
+.panelTitle {
+  margin: 0;
+  padding-bottom: var(--sd-space-1);
+  border-bottom: 1px solid var(--sd-line);
+  font-family: var(--sd-font-mono);
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--sd-muted);
+}
+.counts dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sd-space-3) var(--sd-space-4);
+}
+.counts dl > div {
+  display: flex;
+  flex-direction: column-reverse;
+}
+.countN {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--sd-ink);
+}
+.counts [data-kind='added'] .countN {
+  color: var(--sd-added-strong);
+}
+.counts [data-kind='removed'] .countN {
+  color: var(--sd-removed-strong);
+}
+.counts [data-kind='changed'] .countN {
+  color: var(--sd-changed);
+}
+.countLabel {
+  font-size: 13px;
+  color: var(--sd-muted);
+}
+.byPath {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  max-height: 420px;
+  overflow: auto;
+}
+.byPath > li + li {
+  border-top: 1px solid var(--sd-line);
+}
+.byPathItem {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  min-height: 44px;
+  padding: var(--sd-space-2) 0;
+  border: 0;
+  background: transparent;
+  color: var(--sd-ink);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+.byPathItem[aria-current='true'] code {
+  text-decoration: underline;
+}
+.byPathItem:focus-visible,
+.allFormats:focus-visible {
+  outline: none;
+  box-shadow: var(--sd-shadow-focus);
+}
+.byPathPath {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sd-space-2);
+  min-width: 0;
+}
+.byPathPath code {
+  font-family: var(--sd-font-mono);
+  font-size: 12.5px;
+  overflow-wrap: anywhere;
+}
+.byPathWhat {
+  font-size: 13px;
+  color: var(--sd-muted);
+  overflow-wrap: anywhere;
+}
+.dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--sd-muted);
+}
+.dot[data-kind='added'] {
+  background: var(--sd-added-strong);
+}
+.dot[data-kind='removed'] {
+  background: var(--sd-removed-strong);
+}
+.dot[data-kind='changed'],
+.dot[data-kind='typeChanged'],
+.dot[data-kind='nullMissing'] {
+  background: var(--sd-changed);
+}
+.exportBtn {
+  width: 100%;
+  justify-content: flex-start;
+}
+.allFormats {
+  align-self: flex-start;
+  min-height: 32px;
+  font-size: 13px;
+}
+.context {
+  padding: var(--sd-space-2) var(--sd-space-4);
+  border-top: 1px solid var(--sd-line);
+  color: var(--sd-ink);
 }
 .card {
   background: var(--sd-surface);
@@ -347,13 +486,57 @@
   background: var(--sd-possibly-bg);
   color: var(--sd-ink);
 }
+@media (max-width: 1279px) {
+  .body {
+    grid-template-columns: minmax(0, 1fr) 300px;
+  }
+  .left {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+  .card {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+  }
+  .right {
+    grid-column: 2;
+  }
+}
 @media (max-width: 1023px) {
   .body,
   .exportTab {
     grid-template-columns: 1fr;
   }
+  .left,
+  .card,
+  .right {
+    grid-column: auto;
+    grid-row: auto;
+  }
+  .card {
+    order: -1;
+  }
   .nav {
     margin-left: 0;
+  }
+  /* X-05: phone touch targets are at least 44 px. */
+  .chip,
+  .viewed,
+  .copy,
+  .allFormats {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  .options input {
+    min-height: 44px;
+  }
+  /* Phone: the marker, detail and Viewed go under the path instead of squeezing it. */
+  .row {
+    grid-template-columns: 16px minmax(0, 1fr);
+  }
+  .meta {
+    grid-column: 2;
+    justify-content: flex-start;
   }
 }
 

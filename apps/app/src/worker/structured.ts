@@ -17,13 +17,19 @@ export async function compareStructured(
   pair: Detected,
   onProgress: (p: Progress) => void,
 ): Promise<CompareResult> {
-  // Raw line diff is always available for the "Raw diff" views.
-  const raw = () =>
-    diffText(req.before.content, req.after.content, {
+  // Raw line diff for the "Raw" views. X-02: a minified document is one huge line, and a line diff of
+  // two of those is a word diff of everything (88 s for a 277 KB pair). Such documents are pretty-printed
+  // first, so the diff is line by line and core's approximate fallback can kick in on big rewrites.
+  const raw = (values?: { before: unknown; after: unknown }) => {
+    const minified = isMinified(req.before.content) || isMinified(req.after.content);
+    const side = (content: string, value: unknown) =>
+      minified ? (prettyJson(value, content) ?? content) : content;
+    return diffText(side(req.before.content, values?.before), side(req.after.content, values?.after), {
       ...config.text,
       filters: [],
       transforms: [],
     });
+  };
   if (mode === 'openapi') return compareOpenApiInWorker(req, config, pair, onProgress, raw);
 
   onProgress({ step: 'parse', state: 'running', side: 'before' });
@@ -47,7 +53,7 @@ export async function compareStructured(
   return {
     mode: mode === 'json' ? 'json' : 'yaml',
     detected: pair.mode,
-    text: raw(),
+    text: raw({ before: a.value, after: b.value }),
     json: {
       diff,
       changes,
@@ -56,6 +62,32 @@ export async function compareStructured(
       after: b.value,
     },
   };
+}
+
+/** A line this long only comes from a minified (or generated) document. */
+const LONG_LINE = 2000;
+export function isMinified(content: string): boolean {
+  let start = 0;
+  while (start < content.length) {
+    const end = content.indexOf('\n', start);
+    const stop = end === -1 ? content.length : end;
+    if (stop - start > LONG_LINE) return true;
+    start = stop + 1;
+  }
+  return false;
+}
+
+/** The document pretty-printed as JSON (two-space indent), from its parsed value or by parsing it as JSON. */
+function prettyJson(value: unknown, content: string): string | undefined {
+  let v = value;
+  if (v === undefined) {
+    try {
+      v = JSON.parse(content);
+    } catch {
+      return undefined;
+    }
+  }
+  return JSON.stringify(v, null, 2) + '\n';
 }
 
 function fail(

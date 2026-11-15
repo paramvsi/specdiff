@@ -40,3 +40,28 @@ it('lists JSONPaths and Markdown', () => {
   expect(jsonExport('paths', d, names).content).toBe('changed\t$.a\nadded\t$.b\n');
   expect(jsonExport('markdown', d, names).content).toContain('# config.prod.json → config.next.json');
 });
+
+it('A07-JsonExport: the sample patch follows the keyed diff, with a move, one operation per line', async () => {
+  const { samples } = await import('../../lib/samples');
+  const s = samples().find((x) => x.id === 'json')!;
+  const before = JSON.parse(s.before.content) as unknown, after = JSON.parse(s.after.content) as unknown;
+  const f = jsonExport('patch', data(before, after), { before: 'flags.prod.json', after: 'flags.staging.json' });
+  const ops = JSON.parse(f.content) as Array<{ op: string; path: string; from?: string }>;
+  // 7 structural differences + the ignored `updatedAt`, which a patch must still carry to give the file exactly.
+  expect(ops.map((o) => `${o.op} ${o.from ? `${o.from} → ` : ''}${o.path}`)).toEqual([
+    'remove /flags/6',
+    'move /flags/3 → /flags/11',
+    'add /flags/-',
+    'replace /flags/1/enabled',
+    'replace /limits/maxUpload',
+    'replace /limits/timeoutMs',
+    'remove /rollout/region',
+    'replace /updatedAt',
+  ]);
+  expect(ops.length).toBeLessThanOrEqual(9);
+  expect(ops.some((o) => o.op === 'move')).toBe(true);
+  expect(f.meta).toBe(`${ops.length} operations`);
+  expect(f.verified).toBe(true);
+  expect(f.content.split('\n').filter((l) => l.includes('"op"'))).toHaveLength(ops.length);
+  expect(applyJsonPatch(before, ops as never)).toEqual(after);
+});

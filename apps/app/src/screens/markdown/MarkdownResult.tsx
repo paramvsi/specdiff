@@ -3,7 +3,7 @@
 import { Config } from '@specdiff/core';
 import type { BlockStatus, MdBlock, MdDiff } from '@specdiff/core/markdown';
 import { diffText } from '@specdiff/core/text';
-import { IdenticalState, SegmentedControl, Tooltip, useToast } from '@specdiff/ui';
+import { SegmentedControl, Tooltip, useToast } from '@specdiff/ui';
 import * as icons from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState, type Ref } from 'react';
 import { VirtualList, type RowSlot, type VirtualListApi } from '../../lib/VirtualList';
@@ -11,7 +11,7 @@ import { useCommand } from '../../shell/commands';
 import { changeLink, focusChange, readChangeHash, useNav } from '../../shell/nav';
 import { useApp } from '../../state/store';
 import { DiffRows } from '../json/DiffRows';
-import { blockLabel } from './summary';
+import { blockLabel, sectionsOf } from './summary';
 import css from './MarkdownResult.module.css';
 
 type View = 'rendered' | 'source' | 'side';
@@ -134,8 +134,8 @@ export default function MarkdownResult() {
     el?.focus({ preventScroll: true });
   }, []);
 
-  if (!md || !result) return null;
-  if (!changed.length) return <IdenticalState ignoredLines={0} />;
+  // X-08: the identical state is Result's (it can show the formatting-only changes).
+  if (!md || !result || !changed.length) return null;
   const seen = changed.filter((i) => viewed[changeIdOf(i)]).length;
   const names = { before: before?.name ?? 'before', after: after?.name ?? 'after' };
   const links = md.blocks.flatMap((b) => b.links ?? []);
@@ -235,9 +235,18 @@ export default function MarkdownResult() {
           <dl className={css.stats}>
             {(
               [
-                ['Sections added', md.stats.added],
-                ['Sections removed', md.stats.removed],
-                ['Sections edited', md.stats.edited],
+                // AMarkdown: counts are sections (a heading and its blocks); older saved results only have blocks.
+                ...(sectionsOf(md)
+                  ? ([
+                      ['Sections added', sectionsOf(md)!.added],
+                      ['Sections removed', sectionsOf(md)!.removed],
+                      ['Sections edited', sectionsOf(md)!.edited],
+                    ] as const)
+                  : ([
+                      ['Blocks added', md.stats.added],
+                      ['Blocks removed', md.stats.removed],
+                      ['Blocks edited', md.stats.edited],
+                    ] as const)),
                 ['Links changed', links.length],
                 ['Code blocks changed', codes],
                 ['Viewed', `${seen} of ${changed.length}`],

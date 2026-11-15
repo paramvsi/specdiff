@@ -1,33 +1,111 @@
 // Exports for JSON/YAML mode (JS-08). Patches are generated from the documents, so they always apply.
 import type { JsonDiff } from './diff';
-import { humanPath, stable } from './diff';
+import { detectMatchKey, humanPath, stable } from './diff';
 
 export type PatchOp =
   | { op: 'add'; path: string; value: unknown }
   | { op: 'remove'; path: string }
-  | { op: 'replace'; path: string; value: unknown };
+  | { op: 'replace'; path: string; value: unknown }
+  | { op: 'move'; from: string; path: string };
 
 const ptr = (parts: Array<string | number>) => parts.map((p) => '/' + String(p).replace(/~/g, '~0').replace(/\//g, '~1')).join('');
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 
-/** RFC 6902 JSON Patch that turns `a` into `b`. */
-export function jsonPatch(a: unknown, b: unknown, at: Array<string | number> = []): PatchOp[] {
+export interface PatchOptions {
+  /** As `Config['json'].arrayMatchKey`: the key that identifies array items ('auto' tries id, uuid, key, name). */
+  arrayMatchKey?: string;
+}
+
+/**
+ * RFC 6902 JSON Patch that turns `a` into `b`, following the keyed structural diff (A07-JsonExport):
+ * array items are matched by their key (or, for arrays of unique scalars, by value), so a removed item
+ * is one `remove`, a new one one `add`, an item that moved one `move`, and a changed field one `replace`
+ * at the item's final index. Arrays without a usable key fall back to index-by-index.
+ */
+export function jsonPatch(a: unknown, b: unknown, opts: PatchOptions = {}, at: Array<string | number> = []): PatchOp[] {
   if (stable(a) === stable(b)) return [];
   if (isObj(a) && isObj(b)) {
     const ops: PatchOp[] = [];
     for (const k of Object.keys(a).sort()) if (!Object.hasOwn(b, k)) ops.push({ op: 'remove', path: ptr([...at, k]) });
-    for (const k of Object.keys(b).sort()) ops.push(...(Object.hasOwn(a, k) ? jsonPatch(a[k], b[k], [...at, k]) : [{ op: 'add' as const, path: ptr([...at, k]), value: b[k] }]));
+    for (const k of Object.keys(b).sort()) ops.push(...(Object.hasOwn(a, k) ? jsonPatch(a[k], b[k], opts, [...at, k]) : [{ op: 'add' as const, path: ptr([...at, k]), value: b[k] }]));
     return ops;
   }
   if (Array.isArray(a) && Array.isArray(b)) {
-    const ops: PatchOp[] = [];
-    const n = Math.min(a.length, b.length);
-    for (let i = 0; i < n; i++) ops.push(...jsonPatch(a[i], b[i], [...at, i]));
-    for (let i = a.length - 1; i >= n; i--) ops.push({ op: 'remove', path: ptr([...at, i]) });
-    for (let i = n; i < b.length; i++) ops.push({ op: 'add', path: ptr([...at, '-']), value: b[i] });
-    return ops;
+    const keyOf = itemKey(a, b, opts.arrayMatchKey ?? 'auto');
+    return keyOf ? keyedArrayPatch(a, b, keyOf, opts, at) : positionalArrayPatch(a, b, opts, at);
   }
   return [{ op: 'replace', path: ptr(at), value: b }];
+}
+
+/** How array items are identified: by the detected match key, or by value when every item is a unique scalar. */
+function itemKey(a: unknown[], b: unknown[], preferred: string): ((v: unknown) => string) | undefined {
+  const key = detectMatchKey(a, b, preferred);
+  if (key) return (v) => String((v as Record<string, unknown>)[key]);
+  const scalar = (v: unknown) => v === null || typeof v !== 'object';
+  const unique = (xs: unknown[]) => new Set(xs.map(stable)).size === xs.length;
+  if ([...a, ...b].every(scalar) && unique(a) && unique(b)) return stable;
+  return undefined;
+}
+
+function positionalArrayPatch(a: unknown[], b: unknown[], opts: PatchOptions, at: Array<string | number>): PatchOp[] {
+  const ops: PatchOp[] = [];
+  const n = Math.min(a.length, b.length);
+  for (let i = 0; i < n; i++) ops.push(...jsonPatch(a[i], b[i], opts, [...at, i]));
+  for (let i = a.length - 1; i >= n; i--) ops.push({ op: 'remove', path: ptr([...at, i]) });
+  for (let i = n; i < b.length; i++) ops.push({ op: 'add', path: ptr([...at, '-']), value: b[i] });
+  return ops;
+}
+
+/**
+ * Removes first, then moves (only items outside the longest run that kept its order), then adds at their
+ * final index, then changes inside matched items at their final index. Every index is the one the array
+ * has at that point of the patch, so the operations apply in order.
+ */
+function keyedArrayPatch(a: unknown[], b: unknown[], keyOf: (v: unknown) => string, opts: PatchOptions, at: Array<string | number>): PatchOp[] {
+  const ops: PatchOp[] = [];
+  const ka = a.map(keyOf), kb = b.map(keyOf);
+  const inB = new Set(kb), inA = new Map(ka.map((k, i) => [k, i]));
+  const cur = [...ka];
+  for (let i = cur.length - 1; i >= 0; i--) {
+    if (inB.has(cur[i]!)) continue;
+    ops.push({ op: 'remove', path: ptr([...at, i]) });
+    cur.splice(i, 1);
+  }
+  const target = kb.filter((k) => inA.has(k));
+  const keep = longestKept(cur, target);
+  target.forEach((k, t) => {
+    if (keep.has(k)) return;
+    const from = cur.indexOf(k);
+    cur.splice(from, 1);
+    const to = t === 0 ? 0 : cur.indexOf(target[t - 1]!) + 1;
+    cur.splice(to, 0, k);
+    if (from !== to) ops.push({ op: 'move', from: ptr([...at, from]), path: ptr([...at, to]) });
+  });
+  kb.forEach((k, j) => {
+    if (inA.has(k)) return;
+    ops.push({ op: 'add', path: ptr([...at, j === cur.length ? '-' : j]), value: b[j] });
+    cur.splice(j, 0, k);
+  });
+  kb.forEach((k, j) => {
+    const i = inA.get(k);
+    if (i !== undefined) ops.push(...jsonPatch(a[i], b[j], opts, [...at, j]));
+  });
+  return ops;
+}
+
+/** Keys in the longest subsequence that has the same order on both sides (they stay; the rest move). */
+function longestKept(xs: string[], ys: string[]): Set<string> {
+  const pos = new Map(ys.map((k, i) => [k, i]));
+  const seq = xs.map((k) => pos.get(k)!);
+  const tails: number[] = [], tailIdx: number[] = [], prev: number[] = [];
+  seq.forEach((v, i) => {
+    let lo = 0, hi = tails.length;
+    while (lo < hi) { const m = (lo + hi) >> 1; if (tails[m]! < v) lo = m + 1; else hi = m; }
+    tails[lo] = v; tailIdx[lo] = i; prev[i] = lo > 0 ? tailIdx[lo - 1]! : -1;
+  });
+  const keep = new Set<string>();
+  for (let i = tailIdx[tails.length - 1] ?? -1; i >= 0; i = prev[i]!) keep.add(xs[i]!);
+  return keep;
 }
 
 /** RFC 7386 Merge Patch. Arrays are replaced whole; `null` deletes (so a null value in `b` cannot be expressed — reported). */
