@@ -11,7 +11,7 @@ const links: Array<[string, string]> = [
   ['Docs', '/docs/'],
   ['Rules', '/rules/'],
   ['Changelog', '/changelog/'],
-  ['GitHub', 'https://github.com/paramvsi'],
+  ['GitHub', 'https://github.com/paramvsi/specdiff'],
 ];
 
 export default function PhoneMenu() {

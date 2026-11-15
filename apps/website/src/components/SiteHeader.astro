@@ -3,7 +3,7 @@
 import Logo from './Logo.astro';
 import ThemeToggle from './ThemeToggle.astro';
 import GithubMark from './GithubMark.astro';
-import { APP, GITHUB_PROFILE } from '../lib/site';
+import { APP, REPO } from '../lib/site';
 interface Props { current?: 'docs' | 'rules' | 'changelog' }
 const { current } = Astro.props;
 const links: Array<[string, string, Props['current'] | undefined]> = [
@@ -14,4 +14,4 @@ const links: Array<[string, string, Props['current'] | undefined]> = [
   ['Changelog', '/changelog/', 'changelog'],
 ];
 ---
-<header class="shead"><div class="shead-in"><div class="shead-left"><Logo /><nav aria-label="Main">{links.map(([label, href, id]) => <a href={href} aria-current={id && id === current ? 'page' : undefined}>{label}</a>)}</nav></div><div class="shead-right"><ThemeToggle /><a class="btn" href={GITHUB_PROFILE}><GithubMark />GitHub</a><a class="btn btn-brand" href={APP}>Open the app</a></div></div></header>
+<header class="shead"><div class="shead-in"><div class="shead-left"><Logo /><nav aria-label="Main">{links.map(([label, href, id]) => <a href={href} aria-current={id && id === current ? 'page' : undefined}>{label}</a>)}</nav></div><div class="shead-right"><ThemeToggle /><a class="btn" href={REPO}><GithubMark />GitHub</a><a class="btn btn-brand" href={APP}>Open the app</a></div></div></header>

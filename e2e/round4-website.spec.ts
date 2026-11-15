@@ -206,3 +206,12 @@ test('W01v2-Home: the hero headline sets on 5 lines at 1440, as in the frame', a
     );
   expect(lines).toBe(5);
 });
+
+test('the GitHub buttons open the Specdiff repository, not the owner profile', async ({ page }) => {
+  for (const path of ['/', '/docs/', '/rules/']) {
+    await page.goto(`http://localhost:4321${path}`);
+    const links = page.getByRole('link', { name: 'GitHub', exact: true });
+    expect(await links.count(), path).toBeGreaterThan(0);
+    for (const href of await links.evaluateAll((els) => els.map((e) => e.getAttribute('href')))) expect(href, path).toBe('https://github.com/paramvsi/specdiff');
+  }
+});

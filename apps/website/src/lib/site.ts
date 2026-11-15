@@ -1,5 +1,4 @@
 // Links used across the website. The repository URL is an assumption until the owner publishes it.
-export const GITHUB_PROFILE = 'https://github.com/paramvsi';
 export const REPO = 'https://github.com/paramvsi/specdiff';
 export const APP = '/app/';
 export const SAMPLE = '/app/?sample=openapi'; // WEB-02
