@@ -11,15 +11,15 @@ Owner asleep. Claude runs self-paced loops: audit → fix → commit, then enhan
 
 ## Summary so far (refreshed during the night; final version at the end)
 
-**Read first in the morning.** 29 code commits (26 fixes, 1 feature, 2 test-only), each with a test shown failing before and passing after. Nothing pushed. The pre-push `pnpm verify` has not been run tonight (CLAUDE.md: full suite only at push); two combined checkpoints (rows 34, 47) ran every affected test file, typecheck and lint together and were green.
+**Read first in the morning.** 33 code commits (29 fixes, 1 feature, 3 test-only), each with a test shown failing before and passing after. Nothing pushed. The pre-push `pnpm verify` has not been run tonight (CLAUDE.md: full suite only at push); three combined checkpoints (rows 34, 47, 63) ran every affected test file, typecheck, lint and the new e2e plus all visual baselines together and were green.
 
 **Worth your attention first**
-- **Security:** share-link decompression bomb capped (`031c5f2`); Express handler could crash a plain node server on a malformed URL (`135002d`); CLI read and served unrelated files next to the input (`a7df01e`); bidi / Trojan Source characters now named in diffs (`9bfe139`); 15 XSS vectors locked in as a Markdown guard (`1d3f212`).
-- **Wrong results:** identical Java files with overloads reported a change (`5ac73b0`); output order depended on the machine locale (`2233bba`); unquoted `info.version: 1.10` read as 1.1, so 1.9 → 1.10 was called a decrease (`ea6a2ef`, `74b7c51`); reports said generator 0.0.0 (`ad3fbdb`); YAML front matter read as a heading (`3fb3837`).
+- **Security:** share-link decompression bomb capped (`031c5f2`); Express handler could crash a plain node server on a malformed URL (`135002d`); CLI read and served unrelated files next to the input (`a7df01e`); bidi / Trojan Source characters now named in diffs (`9bfe139`); 15 XSS vectors locked in as a Markdown guard (`1d3f212`); a backtick in a spec value let raw HTML out of changelog code spans into release notes and PR comments (`d224b1a`, follow-up `ac585e4`); an accepted review decision cannot cover a different later change (guard `fb5591a`).
+- **Wrong results:** identical Java files with overloads reported a change (`5ac73b0`); output order depended on the machine locale (`2233bba`); unquoted `info.version: 1.10` read as 1.1, so 1.9 → 1.10 was called a decrease (`ea6a2ef`, `74b7c51`); reports said generator 0.0.0 (`ad3fbdb`); YAML front matter read as a heading (`3fb3837`); a missing final newline was reported identical with line endings compared (`c9bcd76`).
 - **Review a visual change:** `60f14c1` updated 2 visual baselines (text result at 390 px: the stats line now wraps). Revert = one CSS line plus the two PNGs.
 - **Watch at push:** the 20,000-line text-diff timing test can exceed its 4 s budget on a loaded machine (row 41).
 
-**Morning decisions:** M-1 … M-8 below. Each has a suggested answer.
+**Morning decisions:** M-1 … M-9 below. Each has a suggested answer.
 
 ## Morning decisions
 - **M-1 (row 12):** with `--allow-external-refs`, should the CLI also follow *relative* `$ref`s found inside a fetched remote file (resolved against that file's URL)? Today they stay unresolved. Default kept: no (smaller network reach).
@@ -101,3 +101,4 @@ Owner asleep. Claude runs self-paced loops: audit → fix → commit, then enhan
 | 64 | 02:43 | research · end-of-file newline and CRLF (TX-02) | CRLF vs LF: a change only when line endings are compared (correct; with default ignoreWhitespace `\r` counts as space). **Bug:** with line endings and whitespace both compared, files differing only by a final newline were reported identical. Now a removed / added empty last line; default (ignore line endings) unchanged; documented | 1 test failing before, 3 passing after; text e2e green | `c9bcd76` |
 | 65 | 02:50 | core + cli · review decisions and CI gate (OA-21) | Fine: rejected always fails; accepted skips; stale decisions reported and ignored; fingerprint = hash(rule, path, before, after) as docs/07 says, so an accepted change cannot silently cover a different change at the same place. Locked in with a gate test | test passes as shipped, fails with values dropped from the fingerprint | `fb5591a` (test only) |
 | 66 | 02:58 | app · review flow (UI, A05-Review, OA-21) | Light and dark: in review mode, Enter on Accept records the decision, "To review" drops 5 → 4, focus stays on the button (now "Accepted", aria-pressed true), axe clean. Note for scripting: the decision card only shows in review mode ("To review" filter), by design | scripted keyboard run | no change |
+| 67 | 03:00 | housekeeping · summary refresh | Summary block brought up to date: 33 code commits (29 fixes, 1 feature, 3 test-only), checkpoints 34 / 47 / 63, new security and wrong-result items, decisions M-1 … M-9 | git log counts | n/a |
