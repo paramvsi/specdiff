@@ -182,9 +182,16 @@ export function loadSpec(input: Input, opts: { autoUpgrade: boolean }): LoadedSp
     const hash = ref.indexOf('#');
     const filePart = hash < 0 ? ref : ref.slice(0, hash);
     const fragment = hash < 0 ? '' : ref.slice(hash + 1);
-    if (/^[a-z][a-z0-9+.-]*:/i.test(filePart)) return undefined; // remote URLs are never fetched here
+    // Remote URLs are never fetched here. A caller that was allowed to fetch them (the CLI's
+    // --allow-external-refs) passes their content in `files`, keyed by absolute URL.
+    const isUrl = (s: string) => /^[a-z][a-z0-9+.-]*:/i.test(s);
     let file = fromFile;
-    if (filePart !== '') {
+    if (filePart !== '' && (isUrl(filePart) || isUrl(fromFile))) {
+      let abs: string;
+      try { abs = new URL(filePart, isUrl(fromFile) ? fromFile : undefined).toString(); } catch { return undefined; }
+      if (input.files?.[abs] === undefined) return undefined;
+      file = abs;
+    } else if (filePart !== '') {
       file = normalisePath(dirname(fromFile) + filePart);
       if (fileValue(file) === undefined) {
         const alt = Object.keys(input.files ?? {}).find((k) => normalisePath(k) === file);
