@@ -161,6 +161,12 @@ for (const sample of SAMPLES) {
             const r = el.getBoundingClientRect();
             return r.height < 44 || r.width < 24;
           })
+          // WCAG 2.5.8 exceptions: links inside running text, and mouse-only extras hidden from assistive tech.
+          .filter((el) => {
+            if (el.getAttribute('aria-hidden') === 'true' && el.getAttribute('tabindex') === '-1') return false;
+            const block = el.tagName === 'A' ? el.closest('p, li, td, blockquote, dd') : null;
+            return !(block && (block.textContent ?? '').trim().length > (el.textContent ?? '').trim().length + 10);
+          })
           .map((el) => ({
             shared: el.matches(shared),
             what: `${el.tagName.toLowerCase()} "${(el.getAttribute('aria-label') ?? el.textContent ?? '').trim().slice(0, 24)}" ${Math.round(el.getBoundingClientRect().width)}×${Math.round(el.getBoundingClientRect().height)}`,

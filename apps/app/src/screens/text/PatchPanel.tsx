@@ -1,7 +1,6 @@
 // A03-Patch (TX-12): open a pasted unified patch or `git diff` output as a text comparison.
 import { looksLikePatch, parseUnifiedPatch, type PatchFile } from '@specdiff/core/text/patch';
 import { Button } from '@specdiff/ui';
-import * as icons from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { Source } from '../../lib/input';
 import { useApp } from '../../state/store';
@@ -45,9 +44,6 @@ export function PatchPanel({ initial, onClose }: { initial: string; onClose: () 
     <div className={css.page}>
       <div className={css.top}>
         <h1 className={css.h1}>Open a patch</h1>
-        <Button variant="secondary" icon={<icons.ChevronLeft size={15} />} onClick={onClose}>
-          Back
-        </Button>
       </div>
       <div className={css.grid}>
         <div className={css.card}>

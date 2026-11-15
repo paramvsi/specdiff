@@ -487,3 +487,6 @@
     min-height: 44px;
   }
 }
+
+/* The overview ruler is a mouse-only shortcut; phones use Next/Previous (B-35). */
+@media (max-width: 639px) { .ruler { display: none; } }

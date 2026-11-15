@@ -3,7 +3,9 @@
 import type { Row } from '@specdiff/core/text';
 import { Button, Menu, useToast, type MenuItem } from '@specdiff/ui';
 import * as icons from 'lucide-react';
+import { useState } from 'react';
 import { useApp } from '../state/store';
+import { FeedDialog } from './openapi/FeedDialog';
 import { JSON_EXPORTS, jsonExport } from './json/exports';
 import { mdSummary } from './markdown/summary';
 import { exportOpenApi, OPENAPI_EXPORTS, printReport } from './openapi/exports';
@@ -96,6 +98,7 @@ const stem = (n: string) => n.replace(/\s*\(.*\)$/, '').replace(/\.[^.]+$/, '') 
 export function ExportMenu({ disabled }: { disabled: boolean }) {
   const { result, before, after, settings, decisions } = useApp();
   const { toast } = useToast();
+  const [feedOpen, setFeedOpen] = useState(false);
   const trigger = (
     <Button variant="brand" icon={<icons.Download size={15} />} disabled={disabled}>
       Export
@@ -129,6 +132,7 @@ export function ExportMenu({ disabled }: { disabled: boolean }) {
       items.push({
         label: e.label,
         onSelect: () => {
+          if (e.kind === 'atom') { setFeedOpen(true); return; }
           const f = exportOpenApi(e.kind);
           if (f) save(f);
           else toast({ title: 'This export isn’t available yet', tone: 'info' });
@@ -153,5 +157,20 @@ export function ExportMenu({ disabled }: { disabled: boolean }) {
     label: 'Comparison file (.specdiff.json)',
     onSelect: () => save(comparisonFile({ before, after, result, settings, decisions, includeRules: true, includeDecisions: true, changeId: null })),
   });
-  return <Menu align="end" trigger={trigger} items={items} />;
+  return (
+    <>
+      <Menu align="end" trigger={trigger} items={items} />
+      {feedOpen && (
+        <FeedDialog
+          defaultTitle={`${after.name.replace(/\.[^.]+$/, '')} changelog`}
+          onCancel={() => setFeedOpen(false)}
+          onDone={(feed) => {
+            setFeedOpen(false);
+            const f = exportOpenApi('atom', feed);
+            if (f) save(f);
+          }}
+        />
+      )}
+    </>
+  );
 }

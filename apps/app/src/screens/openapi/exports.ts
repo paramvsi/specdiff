@@ -20,7 +20,7 @@ export interface OpenApiExportFile {
   type: string;
 }
 
-export function exportOpenApi(kind: OpenApiExportKind): OpenApiExportFile | null {
+export function exportOpenApi(kind: OpenApiExportKind, feed?: { url: string; title: string }): OpenApiExportFile | null {
   const { result, after } = useApp.getState();
   if (!result || !('report' in result)) return null;
   const r = result.report;
@@ -29,31 +29,21 @@ export function exportOpenApi(kind: OpenApiExportKind): OpenApiExportFile | null
   if (kind === 'markdown') return { name: `${base}-changelog.md`, type: 'text/markdown', content: designChangelog(r, 'release-notes', { groupBySeverity: true, includeDocs: false, version, date: new Date().toISOString().slice(0, 10) }, specContext(after?.content, after?.name).spec) };
   if (kind === 'json') return { name: `${base}-report.json`, type: 'application/json', content: JSON.stringify(r, null, 2) + '\n' };
   if (kind === 'html') return { name: `${base}-report.html`, type: 'text/html', content: reportToHtml(r) };
-  // OUT-10: host this file next to your docs and point feed readers at it. The feed's URL is its
-  // Atom id and self link, so ask for it (and the title) rather than inventing one.
-  const feed = askFeed(`${base} changelog`);
+  // OUT-10: host this file next to your docs and point feed readers at it. The feed URL is its Atom id and
+  // self link, so the caller asks for it (FeedDialog) rather than inventing one.
   if (!feed) return null;
   return { name: 'changelog.xml', type: 'application/atom+xml', content: changelogFeed(r, { title: feed.title, feedUrl: feed.url, version }) };
 }
 
 const FEED_KEY = 'specdiff.feed';
-/** The feed URL and title, asked with the browser's own prompt and remembered in this browser. */
-function askFeed(defaultTitle: string): { url: string; title: string } | null {
-  let last: { url?: string; title?: string } = {};
-  try { last = JSON.parse(localStorage.getItem(FEED_KEY) ?? '{}') as typeof last; } catch { /* storage off: no defaults */ }
-  let url = last.url ?? '';
-  for (let msg = 'Changelog feed URL: where you will publish changelog.xml (its Atom id and self link).'; ; msg = 'That is not an http(s) URL. Changelog feed URL:') {
-    const answer = window.prompt(msg, url);
-    if (answer === null) return null;
-    url = answer.trim();
-    try { if (/^https?:$/.test(new URL(url).protocol)) break; } catch { /* ask again */ }
-  }
-  const title = window.prompt('Feed title:', last.title ?? defaultTitle)?.trim();
-  if (title === undefined) return null;
-  const out = { url, title: title || defaultTitle };
-  try { localStorage.setItem(FEED_KEY, JSON.stringify(out)); } catch { /* not remembered */ }
-  return out;
+export function lastFeed(): { url: string; title: string } {
+  try { const v = JSON.parse(localStorage.getItem(FEED_KEY) ?? '{}') as { url?: string; title?: string }; return { url: v.url ?? '', title: v.title ?? '' }; }
+  catch { return { url: '', title: '' }; }
 }
+export function rememberFeed(feed: { url: string; title: string }) {
+  try { localStorage.setItem(FEED_KEY, JSON.stringify(feed)); } catch { /* not remembered */ }
+}
+export const isHttpUrl = (u: string) => { try { return /^https?:$/.test(new URL(u).protocol); } catch { return false; } };
 
 /** OUT-08: print-friendly report in a new tab (the HTML report has print styles). */
 export function printReport() {

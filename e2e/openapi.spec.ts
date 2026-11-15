@@ -134,22 +134,24 @@ test('@phone M-02 change list: shared-schema changes grouped first, docs-only co
   await expect(page.locator('main section[aria-label] li')).toHaveCount(9);
 });
 
-test('OUT-10 the Atom export asks for the feed URL and title instead of example.com', async ({ page }) => {
+test('OUT-10 the Atom export asks for the feed URL and title in a dialog', async ({ page }) => {
   await page.goto('/app/?sample=openapi');
   await expect(page.getByText('28 changes').first()).toBeVisible();
-  const asked: string[] = [];
-  page.on('dialog', (d) => {
-    asked.push(d.message());
-    void (/feed url/i.test(d.message()) ? d.accept('https://docs.acme.dev/changelog.xml') : d.accept('Payments API'));
-  });
-  const dl = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Export' }).first().click();
   await page.getByRole('menuitem', { name: 'Changelog feed (.xml)' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Changelog feed' });
+  await expect(dialog).toBeVisible();
+  await expectAxeClean(page);
+  await dialog.getByLabel('Feed URL').fill('not a url');
+  await dialog.getByRole('button', { name: 'Download changelog.xml' }).click();
+  await expect(dialog.getByText('Enter an http or https URL.')).toBeVisible();
+  await dialog.getByLabel('Feed URL').fill('https://docs.acme.dev/changelog.xml');
+  await dialog.getByLabel('Feed title').fill('Payments API');
+  const dl = page.waitForEvent('download');
+  await dialog.getByRole('button', { name: 'Download changelog.xml' }).click();
   const file = await dl;
   expect(file.suggestedFilename()).toBe('changelog.xml');
   const xml = await (await import('node:fs/promises')).readFile(await file.path(), 'utf8');
-  expect(asked).toHaveLength(2);
-  expect(asked[0]).toMatch(/feed URL/);
   expect(xml).toContain('<link rel="self" href="https://docs.acme.dev/changelog.xml"/>');
   expect(xml).toContain('<title>Payments API</title>');
   expect(xml).not.toContain('example.com');

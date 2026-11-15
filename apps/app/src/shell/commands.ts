@@ -39,11 +39,19 @@ export function run(name: CommandName): boolean {
   return true;
 }
 
+const pending = new Set<CommandName>();
+
+/** Run now, or as soon as a screen registers a handler (lazy screens mount after their top bar). */
+export function runOrQueue(name: CommandName): void {
+  if (!run(name)) pending.add(name);
+}
+
 export function useCommand(name: CommandName, fn: Handler, enabled = true) {
   useEffect(() => {
     if (!enabled) return;
     const list = handlers.get(name) ?? [];
     handlers.set(name, [...list, fn]);
+    if (pending.delete(name)) fn(); // a command sent before its (lazy) screen was ready
     return () => {
       handlers.set(
         name,

@@ -3,7 +3,7 @@ import * as icons from 'lucide-react';
 import { lazy, Suspense, useState } from 'react';
 import { useApp } from '../state/store';
 import { usePatch } from './chrome';
-import { openPalette, run } from './commands';
+import { openPalette, runOrQueue } from './commands';
 import { modeLabel } from './labels';
 // Loaded on demand so report builders and the schema library stay out of the start-up bundle.
 // Export and Copy for LLM mount only once there is a result, so the empty Compare screen never fetches them.
@@ -112,7 +112,7 @@ function UtilityActions() {
         </Button>
       )}
       {screen === 'saved' && (
-        <Button variant="brand" icon={<icons.Plus size={15} />} onClick={() => run('add-source')}>
+        <Button variant="brand" icon={<icons.Plus size={15} />} onClick={() => runOrQueue('add-source')}>
           Add source
         </Button>
       )}

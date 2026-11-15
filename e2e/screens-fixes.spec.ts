@@ -343,6 +343,8 @@ for (const scheme of ['light', 'dark'] as const) {
     await page.goto('/app/?sample=openapi');
     await expect(page.getByRole('tab', { name: 'Summary' })).toBeVisible();
     await page.keyboard.press('2');
+    // B-30: the Workspace opens on All; review mode is the "To review" filter.
+    await page.getByRole('button', { name: /^To review/ }).click();
     await expect(page.getByText('0 of 5 decided')).toBeVisible();
     await page.keyboard.press('a');
     await expect(page.getByText('1 of 5 decided')).toBeVisible();
