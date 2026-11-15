@@ -10,7 +10,8 @@
     "./share": "./src/share/codec.ts",
     "./detect": "./src/detect.ts",
     "./json": "./src/json/index.ts",
-    "./markdown": "./src/markdown/diff.ts"
+    "./markdown": "./src/markdown/diff.ts",
+    "./har": "./src/har/har.ts"
   },
   "files": [
     "dist"
