@@ -80,6 +80,9 @@ importers:
       '@specdiff/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      '@specdiff/viewer':
+        specifier: workspace:*
+        version: link:../../packages/viewer
       '@tanstack/react-virtual':
         specifier: 3.14.24
         version: 3.14.24(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -209,6 +212,9 @@ importers:
         specifier: 2.9.1
         version: 2.9.1
     devDependencies:
+      '@specdiff/app':
+        specifier: workspace:*
+        version: link:../../apps/app
       '@types/node':
         specifier: 26.6.6
         version: 26.6.6

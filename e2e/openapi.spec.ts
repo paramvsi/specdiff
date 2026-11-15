@@ -103,3 +103,15 @@ for (const scheme of ['light', 'dark'] as const) {
     await expectAxeClean(page);
   });
 }
+
+test('the app opens the comparison in the Viewer with change badges', async ({ page }) => {
+  await page.goto('/app/?sample=openapi');
+  await expect(page.getByRole('tab', { name: 'Summary' })).toBeVisible();
+  await page.getByRole('button', { name: 'More' }).click();
+  await page.getByRole('menuitem', { name: 'Open in Viewer' }).click();
+  await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible();
+  await expect(page.getByText('Breaking').first()).toBeVisible();
+  await expectAxeClean(page);
+  await page.getByRole('button', { name: 'Back to comparison' }).click();
+  await expect(page.getByRole('tab', { name: 'Summary' })).toBeVisible();
+});

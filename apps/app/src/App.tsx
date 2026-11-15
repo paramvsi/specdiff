@@ -17,6 +17,7 @@ const History = lazy(() => import('./screens/History'));
 const Settings = lazy(() => import('./screens/Settings'));
 const Unlock = lazy(() => import('./screens/Unlock'));
 const SavedSources = lazy(() => import('./screens/SavedSources'));
+const ViewerScreen = lazy(() => import('./screens/ViewerScreen'));
 
 function useTheme() {
   const { theme, diffTheme } = useApp((s) => s.settings);
@@ -62,6 +63,7 @@ function Main() {
             {screen === 'settings' && <Settings />}
             {screen === 'unlock' && <Unlock />}
             {screen === 'saved' && <SavedSources />}
+          {screen === 'viewer' && <ViewerScreen />}
           </Suspense>
         </main>
         <Palette />

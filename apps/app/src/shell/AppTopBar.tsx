@@ -41,6 +41,7 @@ export function AppTopBar() {
         }
         items={[
           { label: 'New comparison', onSelect: () => setScreen('compare') },
+          ...(hasResult && result.mode === 'openapi' ? [{ label: 'Open in Viewer', onSelect: () => setScreen('viewer') }] : []),
           { label: 'History', onSelect: () => setScreen('history') },
           { label: 'Saved sources', onSelect: () => setScreen('saved') },
           { label: 'Rules and settings', onSelect: () => setScreen('settings') },

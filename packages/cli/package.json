@@ -22,7 +22,8 @@
     "yaml": "2.9.1"
   },
   "devDependencies": {
-    "@types/node": "26.6.6"
+    "@types/node": "26.6.6",
+    "@specdiff/app": "workspace:*"
   },
   "engines": {
     "node": ">=22"

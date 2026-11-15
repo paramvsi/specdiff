@@ -8,7 +8,7 @@ import { saveHistory } from './persist';
 
 export type Theme = 'light' | 'dark' | 'system';
 export type DiffTheme = 'default' | 'high-contrast';
-export type Screen = 'compare' | 'parsing' | 'result' | 'history' | 'settings' | 'saved' | 'unlock';
+export type Screen = 'compare' | 'parsing' | 'result' | 'history' | 'settings' | 'saved' | 'unlock' | 'viewer';
 export type Side = 'before' | 'after';
 
 export interface Settings {
