@@ -8,6 +8,15 @@ export interface Job {
   cancel: () => void;
 }
 
+/** Rejects if the worker fails to load or crashes: comlink alone would wait for an answer forever. */
+function died(worker: Worker): Promise<never> {
+  return new Promise((_, reject) => {
+    const fail = () => reject(new Error('The comparison engine could not start. Reload the page and try again.'));
+    worker.addEventListener('error', fail);
+    worker.addEventListener('messageerror', fail);
+  });
+}
+
 export function startCompare(req: CompareRequest, onProgress: (p: Progress) => void): Job {
   const worker = new Worker(new URL('./engine.worker.ts', import.meta.url), {
     type: 'module',
@@ -22,7 +31,7 @@ export function startCompare(req: CompareRequest, onProgress: (p: Progress) => v
       reject(new DOMException('Cancelled', 'AbortError'));
     };
   });
-  const promise = Promise.race([api.runCompare(req, proxy(onProgress)), cancelled]).finally(() =>
+  const promise = Promise.race([api.runCompare(req, proxy(onProgress)), cancelled, died(worker)]).finally(() =>
     worker.terminate(),
   );
   return { promise, cancel };
@@ -36,7 +45,7 @@ export function startTextDiff(before: string, after: string): { promise: Promise
   });
   const api = wrap<{ runTextDiff: typeof runTextDiff }>(worker);
   return {
-    promise: api.runTextDiff(before, after).finally(() => worker.terminate()),
+    promise: Promise.race([api.runTextDiff(before, after), died(worker)]).finally(() => worker.terminate()),
     cancel: () => worker.terminate(),
   };
 }
