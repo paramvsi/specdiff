@@ -12,6 +12,7 @@ Owner asleep. Claude runs self-paced loops: audit → fix → commit, then enhan
 ## Morning decisions
 - **M-1 (row 12):** with `--allow-external-refs`, should the CLI also follow *relative* `$ref`s found inside a fetched remote file (resolved against that file's URL)? Today they stay unresolved. Default kept: no (smaller network reach).
 - **M-2 (row 3):** integers beyond 2^53 lose precision in JSON/YAML mode. Options: (a) leave, (b) flag "number too large to compare exactly" as a warning, (c) compare such numbers by their source text. Suggest (b).
+- **M-3 (row 14):** History on a phone shows the desktop table, scrolling sideways with the Result column cut off. There is no phone design for A-11. Options: (a) leave, (b) stack each row as a card below 640 px (Mode chip, files, result on separate lines). Suggest (b); it is a layout change, so not done.
 
 ## Log
 | # | Time | Area | Finding | Evidence | Fix / commit |
@@ -28,3 +29,5 @@ Owner asleep. Claude runs self-paced loops: audit → fix → commit, then enhan
 | 10 | 00:24 | cli · inputs (IN-12) | Sibling scan ran for every spec with or without an external `$ref`; a dangling symlink or unreadable folder beside the input crashed the CLI; from ~ or /tmp it read and served unrelated files; git diff driver scanned git's temp folder | 2 new tests failing (ENOENT) before, 15/15 after; built CLI smoke test | `a7df01e` |
 | 11 | 00:24 | cli · serve | Local UI: 127.0.0.1 only, random 128-bit session token, no-store. OK | read | no change |
 | 12 | 00:24 | cli · remote refs | `--allow-external-refs` follows only absolute http(s) refs inside fetched files; a relative ref inside a remote file is left unresolved (reported as unresolved, not fetched) | read | noted, not changed: fetching relative-to-remote URLs widens network reach; owner call → Morning decisions |
+| 13 | 00:30 | app · phone sweep (UI) | Compare + all 5 sample results + More menu + Viewer/History/Saved sources/Settings at 390 px, light and dark: axe clean everywhere. Undersized: History chips 34 px, file link 42 px. Inline Markdown links are exempt (WCAG 2.5.8 inline) | scratch sweep + guard failing before, passing after | `1f77564` |
+| 14 | 00:30 | app · A11 History on phone | Results table is wider than 390 px: it scrolls inside its card and the Result column is cut ("4 br…") | screenshot | **Morning decision M-3** (layout) |
