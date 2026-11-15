@@ -78,6 +78,18 @@ describe('samples', () => {
     expect(sample('python', input)).toContain('json={"amount":1200,"currency":"AED"}');
     expect(sample('java', input)).toContain('HttpRequest.BodyPublishers.ofString(');
   });
+  it('python keeps "true"/"null" inside strings and maps the literals (VW-06)', () => {
+    const py = sample('python', { ...input, body: JSON.stringify({ note: 'true story, not null', ok: true, gone: null, n: [false] }) });
+    expect(py).toContain('"note":"true story, not null"');
+    expect(py).toContain('"ok":True');
+    expect(py).toContain('"gone":None');
+    expect(py).toContain('"n":[False]');
+  });
+  it('javascript never pastes a non-JSON body as code (VW-06)', () => {
+    const js = sample('javascript', { ...input, body: '1); alert(1); (' });
+    expect(js).toContain('body: "1); alert(1); ("');
+    expect(js).not.toContain('JSON.stringify(1); alert');
+  });
   it('escapes shell quotes', () => {
     expect(sample('curl', { ...input, headers: { X: "it's" }, body: undefined as never })).toContain(`'X: it'\\''s'`);
   });

@@ -50,7 +50,7 @@ export function sample(lang: Lang, i: SampleInput): string {
     return [`curl ${/^[\w.:/@%+=,~-]+$/.test(url) ? url : sh(url)}`, ...(implied ? [] : [`  -X ${m}`]), ...hs.map(([k, v]) => `  -H ${sh(`${k}: ${v}`)}`), ...(i.body ? [`  -d ${sh(pretty(i.body).replace(/\n/g, '\n  '))}`] : [])].join(' \\\n');
   }
   if (lang === 'javascript') {
-    const opts = [`  method: ${js(m)},`, ...(hs.length ? [`  headers: {\n${hs.map(([k, v]) => `    ${js(k)}: ${js(v)},`).join('\n')}\n  },`] : []), ...(i.body ? [`  body: JSON.stringify(${i.body}),`] : [])];
+    const opts = [`  method: ${js(m)},`, ...(hs.length ? [`  headers: {\n${hs.map(([k, v]) => `    ${js(k)}: ${js(v)},`).join('\n')}\n  },`] : []), ...(i.body ? [`  body: ${jsBody(i.body)},`] : [])];
     return `const res = await fetch(${js(url)}, {\n${opts.join('\n')}\n});\nconst data = await res.json();`;
   }
   if (lang === 'python') {
@@ -66,7 +66,17 @@ function pretty(json: string): string {
   try { return JSON.stringify(JSON.parse(json), null, 2); } catch { return json; }
 }
 
+/** JSON as a Python literal, built from the parsed value so "true" inside a string stays a string. */
 function toPython(json: string): string {
-  try { return JSON.stringify(JSON.parse(json), null, 0).replace(/\btrue\b/g, 'True').replace(/\bfalse\b/g, 'False').replace(/\bnull\b/g, 'None'); }
-  catch { return js(json); }
+  const lit = (v: unknown): string =>
+    v === null ? 'None' : v === true ? 'True' : v === false ? 'False'
+    : Array.isArray(v) ? `[${v.map(lit).join(',')}]`
+    : typeof v === 'object' ? `{${Object.entries(v as Record<string, unknown>).map(([k, x]) => `${JSON.stringify(k)}:${lit(x)}`).join(',')}}`
+    : JSON.stringify(v);
+  try { return lit(JSON.parse(json)); } catch { return js(json); }
+}
+
+/** The body for the fetch sample: re-serialised JSON, or a string literal, never raw text as code. */
+function jsBody(body: string): string {
+  try { return `JSON.stringify(${JSON.stringify(JSON.parse(body))})`; } catch { return js(body); }
 }
