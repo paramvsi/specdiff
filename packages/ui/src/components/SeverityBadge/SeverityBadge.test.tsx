@@ -15,8 +15,9 @@ describe('SeverityBadge', () => {
     expect(container.textContent).toBe(`${symbol}${label}`);
   });
 
-  it('compact dot keeps the label for screen readers', () => {
+  it('compact chip shows the symbol and keeps the label for screen readers', () => {
     const { container } = render(<SeverityBadge severity="breaking" compact />);
-    expect(container.textContent).toBe('Breaking');
+    expect(container.textContent).toBe('!Breaking');
+    expect(container.querySelector('[aria-hidden="true"]')?.textContent).toBe('!');
   });
 });

@@ -5,18 +5,10 @@ import { ChevronRight, KeyRound, RefreshCw, TriangleAlert, Upload } from 'lucide
 import { createContext, useContext, useRef } from 'react';
 import { changeTitle } from './change-index';
 import { useViewer } from './context';
+import { schemeSummary } from './fields';
 import { Method, cx } from './parts';
 import type { LoadError, ViewerVersion } from './types';
 import css from './Viewer.module.css';
-
-function schemeSummary(s: Record<string, unknown>): string {
-  const t = s.type;
-  if (t === 'http') return s.scheme === 'bearer' ? 'Bearer token' : s.scheme === 'basic' ? 'Basic auth' : `HTTP ${String(s.scheme ?? '')}`;
-  if (t === 'apiKey') return `API key (${String(s.in)} ${String(s.name)})`;
-  if (t === 'oauth2') return 'OAuth2';
-  if (t === 'openIdConnect') return 'OpenID Connect';
-  return String(t ?? 'Custom');
-}
 
 export function authSummary(schemes: Record<string, Record<string, unknown>>): string {
   const names = [...new Set(Object.values(schemes).map(schemeSummary))];

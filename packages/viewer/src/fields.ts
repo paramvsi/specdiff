@@ -102,3 +102,20 @@ export function schemaMarkdown(spec: Json, s: SchemaEntry): string {
 export function changesMarkdown(from: string, to: string, changes: Change[]): string {
   return [`# Changes from ${from} to ${to}`, '', ...changes.map((c) => `- ${c.severity ?? 'change'}: ${changeTitle(c)}${c.explanation?.who ? ` (affects: ${c.explanation.who})` : ''}`)].join('\n') + '\n';
 }
+
+export function schemeSummary(s: Record<string, unknown>): string {
+  const t = s.type;
+  if (t === 'http') return s.scheme === 'bearer' ? 'Bearer token' : s.scheme === 'basic' ? 'Basic auth' : `HTTP ${String(s.scheme ?? '')}`;
+  if (t === 'apiKey') return `API key (${String(s.in)} ${String(s.name)})`;
+  if (t === 'oauth2') return 'OAuth2';
+  if (t === 'openIdConnect') return 'OpenID Connect';
+  return String(t ?? 'Custom');
+}
+
+export function authMarkdown(m: Model): string {
+  const s = Object.entries(m.securitySchemes);
+  const out = [`# Authentication`, '', `API: ${m.title} ${m.version}`, ''];
+  if (!s.length) out.push('This API does not declare any authentication.');
+  for (const [name, x] of s) out.push(`- \`${name}\`: ${schemeSummary(x)}${x.description ? ` (${String(x.description)})` : ''}`);
+  return out.join('\n').trim() + '\n';
+}

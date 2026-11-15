@@ -5,7 +5,7 @@ import css from './SeverityBadge.module.css';
 
 export interface SeverityBadgeProps {
   severity: Severity;
-  /** 8px dot for tree items; the label stays available to screen readers. */
+  /** Compact chip for tree items: a small disc with the symbol (never colour alone, X-06); label for screen readers. */
   compact?: boolean | undefined;
   className?: string | undefined;
 }
@@ -15,6 +15,7 @@ export function SeverityBadge({ severity, compact, className }: SeverityBadgePro
   if (compact) {
     return (
       <span className={cx(css.dot, css[severity], className)}>
+        <span aria-hidden="true">{SEVERITY_SYMBOL[severity]}</span>
         <VisuallyHidden>{SEVERITY_LABEL[severity]}</VisuallyHidden>
       </span>
     );

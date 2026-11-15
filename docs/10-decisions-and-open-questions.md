@@ -75,3 +75,5 @@ Claude Code adds rows here when it takes a default without the owner.
 | B-35 | Inline links inside sentences are exempt from the 44 px phone target check (WCAG 2.5.8 inline exception); the Text overview ruler (mouse-only ticks) is hidden on phones | Round 3 | WCAG 2.5.8 |
 | B-36 | The Atom feed export asks for the feed URL and title in a dialog and remembers them in this browser | Round 3 | OUT-10 needs a real feed URL |
 
+| B-37 | After the first load, the service worker precaches the lazy chunks in the background so the app works offline (PK-08). Page loads still fetch them on demand, so X-03's start-up budget is unaffected | Coverage pass | Offline vs lazy loading |
+| B-38 | No CLI `--today` option: the six date-pinned sunset fixtures run in Vitest, and the CLI's sunset rules are covered end to end with relative dates (OA-17) | Coverage pass | Keeps test-only flags out of the CLI |

@@ -82,6 +82,17 @@ const schema: SanitizeSchema = {
     p: [...(defaultSchema.attributes?.p ?? []), ['className', 'markdown-alert-title']],
   },
 };
+type HastNode = HastRoot | ElementContent;
+const textOf = (n: HastNode): string => (n.type === 'text' ? n.value : 'children' in n ? n.children.map((c) => textOf(c as HastNode)).join('') : '');
+/** GFM task checkboxes have no label; name each one after its item's text (MD-07, axe "label"). */
+function labelTaskBoxes(n: HastNode): void {
+  if (!('children' in n)) return;
+  if (n.type === 'element' && n.tagName === 'li') {
+    const box = n.children.find((c) => c.type === 'element' && c.tagName === 'input' && c.properties.type === 'checkbox');
+    if (box && box.type === 'element') box.properties.ariaLabel = textOf(n).trim() || 'Task';
+  }
+  for (const c of n.children) labelTaskBoxes(c as HastNode);
+}
 const toHtml = unified()
   .use(remarkRehype, {
     handlers: {
@@ -91,6 +102,7 @@ const toHtml = unified()
     } as never,
   })
   .use(rehypeSanitize, schema)
+  .use(() => labelTaskBoxes)
   .use(rehypeStringify);
 
 function render(nodes: RootContent[]): string {

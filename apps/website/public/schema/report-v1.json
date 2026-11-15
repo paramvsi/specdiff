@@ -190,7 +190,8 @@
           "enum": [
             "major",
             "minor",
-            "patch"
+            "patch",
+            "none"
           ]
         },
         "verdict": {
@@ -340,6 +341,12 @@
               },
               "operationId": {
                 "type": "string"
+              },
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
               }
             },
             "required": [
@@ -431,6 +438,12 @@
           "location"
         ],
         "additionalProperties": false
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
       }
     },
     "decisions": {

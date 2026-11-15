@@ -76,7 +76,7 @@ export function Summary() {
 
         <aside className={css.side}>
           <section className={css.card} aria-labelledby="where-h">
-            <h2 id="where-h" className={css.h3}>Where the {s.total} changes are</h2>
+            <h2 id="where-h" className={css.h3}>Where the {s.total} {s.total === 1 ? 'change is' : 'changes are'}</h2>
             <dl className={css.areas}>
               {areas.map(([area, n]) => (
                 <div key={area} className={css.area}>

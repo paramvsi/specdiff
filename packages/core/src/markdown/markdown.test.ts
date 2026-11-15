@@ -24,6 +24,7 @@ describe('diffMarkdown', () => {
     const x = diffMarkdown('| a | b |\n|---|---|\n| 1 | 2 |\n\n- [ ] todo\n\n```js\nconst a = 1;\n```\n', '| a | b |\n|---|---|\n| 1 | 3 |\n\n- [x] todo\n\n```js\nconst a = 2;\n```\n');
     expect(x.stats.edited).toBe(3);
     expect(x.blocks[0]!.html).toContain('<table>');
+    expect(x.blocks.map((b) => b.html).join('')).toMatch(/<input type="checkbox"[^>]*aria-label="todo"/);
     expect(x.blocks.find((b) => b.code)!.code).toEqual({ lang: 'js', before: 'const a = 1;', after: 'const a = 2;' });
   });
   it('sanitises HTML', () => {

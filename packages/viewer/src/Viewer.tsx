@@ -8,7 +8,7 @@ import { Changes, ChangesAside } from './Changes';
 import { Ctx, type Loaded, type ViewerCtx } from './context';
 import { MyEndpointsDialog, SearchDialog, endpointsKey } from './Dialogs';
 import { Endpoint } from './Endpoint';
-import { changesMarkdown, opMarkdown, overviewMarkdown, schemaMarkdown } from './fields';
+import { authMarkdown, changesMarkdown, opMarkdown, overviewMarkdown, schemaMarkdown } from './fields';
 import { ReportStore, copyText, hrefFor, useHashRoute, useMediaQuery, useReport, useTheme, type Route } from './hooks';
 import { buildModel, type Json } from './model';
 import { ActionsCtx, AuthPage, LoadErrorBanner, LoadingSkeleton, Overview } from './Overview';
@@ -231,6 +231,7 @@ function ViewerInner(props: Omit<ViewerProps, 'theme'> & { theme: 'light' | 'dar
     if (op) return opMarkdown(cur.spec, cur.model, op, index.opChanges.get(op.key) ?? []);
     if (schema) return schemaMarkdown(cur.spec, schema);
     if (page.page === 'changes' && prev) return changesMarkdown(prev.label, cur.label, ctx.changes);
+    if (page.page === 'auth') return authMarkdown(cur.model);
     return overviewMarkdown(cur.model, cur.label);
   };
   const download = () => {

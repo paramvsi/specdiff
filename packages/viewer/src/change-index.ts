@@ -83,7 +83,9 @@ export function indexChanges(report: Report | undefined, current: Model, previou
       push(idx.fieldChanges, f.key, c);
       const kind = fieldKind(c);
       if (kind) idx.fields.set(f.key, stronger(idx.fields.get(f.key), kind));
-      if (c.kind === 'removed') push(idx.removed, f.container, { name: f.name, change: c });
+      // One row per removed field: a schema used in a request and a response yields one change for each.
+      if (c.kind === 'removed' && !idx.removed.get(f.container)?.some((r) => r.name === f.name))
+        push(idx.removed, f.container, { name: f.name, change: c });
     }
     const head = c.path.split(' › ')[0] ?? '';
     if (head.startsWith('components.schemas.') && c.severity !== 'docs') {
