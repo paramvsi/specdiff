@@ -4,11 +4,17 @@ import type { Change } from '@specdiff/core';
 import { Button, SeverityBadge } from '@specdiff/ui';
 import { Copy } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { bySeverity, changeAdvice, changeTitle, checklist, displayKeyOf, filterByEndpoints } from './change-index';
+import { bySeverity, changeAdvice, checklist, displayKeyOf, fieldNames, filterByEndpoints, shortTitle } from './change-index';
 import { useViewer } from './context';
 import { useReports } from './hooks';
 import { CodePanel, InlineText, Method, cx } from './parts';
 import css from './Viewer.module.css';
+
+/** Field names as clients see them (Card → card), from the current spec. */
+export function useFieldNames() {
+  const v = useViewer();
+  return useMemo(() => fieldNames(v.cur.spec), [v.cur.spec]);
+}
 
 export function useFilteredChanges(): { all: Change[]; shown: Change[] } {
   const v = useViewer();
@@ -65,6 +71,7 @@ function Timeline() {
 export function Changes() {
   const v = useViewer();
   const { all, shown } = useFilteredChanges();
+  const names = useFieldNames();
   const ops = new Map([...v.cur.model.ops, ...(v.prev?.model.ops ?? [])].map((o) => [o.key, o]));
   return (
     <div className={css.page}>
@@ -114,7 +121,7 @@ export function Changes() {
                             {op && v.cur.model.ops.includes(op) ? <a className={css.usedLink} href={v.href({ page: 'op', slug: op.slug, tab: 'docs' })}>{path}</a> : <span className={css.mono}>{path}</span>}
                           </p>
                         ) : null}
-                        <p className={css.changeTitle}>{changeTitle(c)}</p>
+                        <p className={css.changeTitle}>{shortTitle(c, names)}</p>
                         <p className={css.small}><InlineText text={changeAdvice(c)} /></p>
                       </div>
                     </li>
@@ -134,8 +141,9 @@ export function Changes() {
 export function ChangesAside() {
   const v = useViewer();
   const { shown } = useFilteredChanges();
+  const names = useFieldNames();
   if (!v.prev || v.report?.status !== 'ready') return null;
-  const list = checklist(shown);
+  const list = checklist(shown, names, v.myEndpoints);
   const n = list.required.length;
   return (
     <div className={css.aside}>

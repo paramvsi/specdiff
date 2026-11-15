@@ -4,6 +4,7 @@ import { diffText } from '@specdiff/core/text';
 import { MethodChip, SeverityBadge, useToast } from '@specdiff/ui';
 import * as icons from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { openPalette } from '../../shell/commands';
 import { changeLink } from '../../shell/nav';
 import { useApp } from '../../state/store';
 import { Md, Title } from './Title';
@@ -27,13 +28,14 @@ export function PhoneOpenApi() {
   }
   if (view.kind === 'list') {
     const shown = all.filter((c) => filter === 'all' || c.severity === filter);
-    const groups = new Map<string, Change[]>();
-    for (const c of shown) { const k = groupKey(c, 'path'); groups.set(k, [...(groups.get(k) ?? []), c]); }
+    const groups = phoneGroups(shown, filter === 'all');
+    const docs = filter === 'all' ? shown.filter((c) => c.severity === 'docs') : [];
     return (
-      <div className={css.page}>
+      <div className={cx(css.page, css.listPage)}>
         <header className={css.bar}>
           <button type="button" className={css.icon} aria-label="Back to summary" onClick={() => setView({ kind: 'summary' })}><icons.ChevronLeft size={20} /></button>
           <h1 className={css.barTitle}>{s.total} changes</h1>
+          <button type="button" className={css.icon} aria-label="Search changes" onClick={openPalette}><icons.Search size={18} /></button>
         </header>
         <div className={css.chips} role="group" aria-label="Filter changes">
           {([['all', `All ${s.total}`], ['breaking', `Breaking ${s.breaking}`], ['possibly', `Possibly ${s.possibly}`], ['safe', `Safe ${s.safe}`], ['docs', `Docs ${s.docs}`]] as const).map(([f, l]) => (
@@ -41,7 +43,7 @@ export function PhoneOpenApi() {
           ))}
         </div>
         <div className={css.card}>
-          {[...groups.entries()].map(([g, cs]) => (
+          {groups.map(([g, cs]) => (
             <section key={g} aria-label={g}>
               <p className={css.group}>{g}</p>
               <ul className={css.list}>
@@ -50,7 +52,7 @@ export function PhoneOpenApi() {
                     <button type="button" className={css.row} onClick={() => setView({ kind: 'change', id: c.id })}>
                       <SeverityBadge severity={c.severity ?? 'docs'} compact />
                       {methodOf(c) ? <MethodChip method={methodOf(c)!} /> : <span className={css.all}>ALL</span>}
-                      <span className={css.rowText}><Title c={c} />{c.sharedSchema ? ` · ${c.sharedSchema.usageCount} endpoints` : ''}</span>
+                      <span className={css.rowText}><Title c={c} short codeClass={css.plain} />{c.sharedSchema ? ` · ${c.sharedSchema.usageCount} endpoints` : ''}</span>
                       <icons.ChevronRight size={16} aria-hidden="true" />
                     </button>
                   </li>
@@ -58,6 +60,22 @@ export function PhoneOpenApi() {
               </ul>
             </section>
           ))}
+          {docs.length > 0 && (
+            // M-02: docs-only changes collapse into one row; it opens the Docs filter.
+            <section aria-label={`${docs.length} operations`}>
+              <p className={css.group}>{docs.length} operations</p>
+              <ul className={css.list}>
+                <li>
+                  <button type="button" className={css.row} aria-label={`${docs.length} operations · Descriptions updated`} onClick={() => setFilter('docs')}>
+                    <SeverityBadge severity="docs" compact />
+                    <span className={css.all}>ALL</span>
+                    <span className={css.rowText}>Descriptions updated</span>
+                    <icons.ChevronRight size={16} aria-hidden="true" />
+                  </button>
+                </li>
+              </ul>
+            </section>
+          )}
         </div>
       </div>
     );
@@ -90,6 +108,30 @@ export function PhoneOpenApi() {
       <p className={css.privacy}><icons.Shield size={13} aria-hidden="true" /> Decoded on this phone. Nothing was uploaded.</p>
     </div>
   );
+}
+
+const SEV_RANK: Record<Severity, number> = { breaking: 0, possibly: 1, safe: 2, docs: 3 };
+const cx = (...c: Array<string | false | undefined>) => c.filter(Boolean).join(' ');
+
+/**
+ * M-02 groups: shared-schema (components.*) groups first, then one group per path; each group and
+ * the rows in it ordered Breaking → Docs. Each change is one row, so a shared-schema change is
+ * listed once with its endpoint count. With `collapseDocs`, docs-only changes are left out (they
+ * become the single "N operations · Descriptions updated" row).
+ */
+function phoneGroups(changes: Change[], collapseDocs: boolean): Array<[string, Change[]]> {
+  const groups = new Map<string, Change[]>();
+  for (const c of changes) {
+    if (collapseDocs && c.severity === 'docs') continue;
+    const k = groupKey(c, 'path');
+    groups.set(k, [...(groups.get(k) ?? []), c]);
+  }
+  const rank = (c: Change) => SEV_RANK[c.severity ?? 'docs'];
+  const worst = (cs: Change[]) => Math.min(...cs.map(rank));
+  return [...groups.entries()]
+    .map(([k, cs], i) => ({ k, cs: cs.map((c, j) => [c, j] as const).sort(([a, x], [b, y]) => rank(a) - rank(b) || x - y).map(([c]) => c), i }))
+    .sort((a, b) => Number(!a.k.startsWith('components.')) - Number(!b.k.startsWith('components.')) || worst(a.cs) - worst(b.cs) || a.i - b.i)
+    .map(({ k, cs }) => [k, cs]);
 }
 
 function PhoneChange({ c, index, total, onBack, onGo }: { c: Change; index: number; total: number; onBack: () => void; onGo: (d: number) => void }) {

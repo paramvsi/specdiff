@@ -1,5 +1,5 @@
 // The `specdiff` command (PK-04, IN-12, PK-09, PK-10). Exit codes: 0 ok, 1 gate failed, 2 usage or input error.
-import { existsSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { buildChangelog, changelogFeed, compareOpenApi, reportToHtml, reportToMarkdown, type ChangelogTemplate, type Report } from '@specdiff/core';
 import { detectMode } from '@specdiff/core/detect';
 import { diffJson, parseWithPositions } from '@specdiff/core/json';
@@ -41,11 +41,13 @@ export async function runCi(beforeArg: string, afterArg: string, o: CiOptions, i
 }
 
 export type ChangelogFormat = 'md' | 'atom' | 'keep-a-changelog' | 'slack' | 'pr-comment';
-export interface ChangelogCliOptions { format: ChangelogFormat; feedUrl?: string; siteUrl?: string; title?: string; release?: string; date?: string; config?: string; out?: string }
+export interface ChangelogCliOptions { format: ChangelogFormat; feedUrl?: string; siteUrl?: string; title?: string; release?: string; date?: string; config?: string; out?: string; append?: string }
 
 /** `specdiff changelog` (OUT-01, OUT-02, OUT-10): the changelog of two OpenAPI specs, or an Atom feed. */
 export function runChangelog(beforeArg: string, afterArg: string, o: ChangelogCliOptions, io: Io): number {
   if (o.format === 'atom' && !o.feedUrl) { io.err('--format atom needs --feed-url <url>: the URL the feed will be published at (its Atom id and self link).'); return 2; }
+  if (o.append && o.format !== 'atom') { io.err('--append works with --format atom only.'); return 2; }
+  if (o.append && !existsSync(o.append)) { io.err(`--append: ${o.append} does not exist.`); return 2; }
   const { config } = loadConfig(o.config);
   const before = readInput(beforeArg);
   const after = readInput(afterArg);
@@ -54,7 +56,7 @@ export function runChangelog(beforeArg: string, afterArg: string, o: ChangelogCl
   for (const w of report.warnings ?? []) io.err(`⚠ ${w}`);
   let output: string;
   if (o.format === 'atom') {
-    output = changelogFeed(report, { title: o.title ?? 'API changelog', feedUrl: o.feedUrl!, ...(o.siteUrl ? { siteUrl: o.siteUrl } : {}), ...(o.release ? { version: o.release } : {}), ...(o.date ? { date: o.date } : {}) });
+    output = changelogFeed(report, { title: o.title ?? 'API changelog', feedUrl: o.feedUrl!, ...(o.siteUrl ? { siteUrl: o.siteUrl } : {}), ...(o.release ? { version: o.release } : {}), ...(o.date ? { date: o.date } : {}), ...(o.append ? { existing: readFileSync(o.append, 'utf8') } : {}) });
   } else {
     const template: ChangelogTemplate = o.format === 'md' ? 'release-notes' : o.format;
     output = buildChangelog(report, template, { ...(o.title ? { title: o.title } : {}), ...(o.release ? { version: o.release } : {}), ...(o.date ? { date: o.date.slice(0, 10) } : {}) });

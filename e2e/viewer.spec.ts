@@ -124,6 +124,47 @@ test('V-04 "Pick my endpoints" narrows the list to the picked endpoints, breakin
   await expectAxeClean(page);
 });
 
+test('V-04 with the design\'s 5 endpoints: fixes = Breaking rows, a short filtered checklist, short titles, dimmed nav', async ({ page }) => {
+  await ready(page, `${H}#/changes`);
+  await page.getByRole('button', { name: 'Pick my endpoints' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Which endpoints does your app use?' });
+  const u = (method: string, path: string) => ({ request: { method, url: `https://api.example.com${path}` } });
+  const har = { log: { entries: [u('POST', '/v1/payments'), u('GET', '/v1/payments'), u('GET', '/v1/payments/pay_1'), u('POST', '/v1/refunds'), u('GET', '/v1/refunds/re_1')] } };
+  await dialog.locator('input[type=file]').setInputFiles({ name: 'checkout-session.har', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(har)) });
+  await dialog.getByRole('button', { name: 'Show my changes' }).click();
+  await expect(page.getByRole('heading', { name: 'Showing changes for the 5 endpoints you use' })).toBeVisible();
+  const rows = page.locator('ul[class*="changeRows"] > li');
+  const badges = await rows.evaluateAll((els) => els.map((e) => e.querySelector('span')?.textContent?.replace(/^[!?+¶]\s*/, '').trim() ?? ''));
+  const breaking = badges.filter((b) => b === 'Breaking').length;
+  const possibly = badges.filter((b) => b === 'Possibly breaking').length;
+  expect(breaking).toBeGreaterThan(0);
+  await expect(page.getByRole('heading', { name: `${breaking} required ${breaking === 1 ? 'fix' : 'fixes'}` })).toBeVisible();
+  // Checklist: one short line per required fix and per thing to check, for the picked endpoints only.
+  const lines = (await page.getByRole('region', { name: 'Checklist' }).locator('pre').innerText()).trim().split('\n');
+  expect(lines).toHaveLength(breaking + possibly);
+  expect(lines).toContain('- [ ] Send currency on POST /v1/payments');
+  expect(lines).toContain('- [ ] Stop reading card.last4');
+  for (const l of lines) expect(l.length, l).toBeLessThanOrEqual(56);
+  expect(lines.join('\n')).not.toMatch(/DELETE|payouts|customers/);
+  // Short titles, as in the design ("currency is now required", "card.last4 removed").
+  const titles = await rows.locator('p[class*="changeTitle"]').allTextContents();
+  expect(titles).toContain('currency is now required');
+  expect(titles).toContain('card.last4 removed');
+  for (const t of titles) expect(t.length, t).toBeLessThanOrEqual(40);
+  // Endpoints the app does not use are dimmed in the nav, without their change badge.
+  const nav = page.getByRole('navigation', { name: 'API reference' });
+  const unused = nav.getByRole('link', { name: /Send a payout/ });
+  const used = nav.getByRole('link', { name: /Create a payment/ });
+  await expect(unused).toHaveAttribute('class', /navDim/);
+  await expect(unused).toContainText('not used');
+  await expect(unused.locator('[class*="navBadge"]')).toHaveCount(0);
+  await expect(used).not.toHaveAttribute('class', /navDim/);
+  await expect(used.locator('[class*="navBadge"]')).toHaveCount(1);
+  const [dimMethod, usedMethod] = await Promise.all([unused, used].map((l) => l.locator('span').first().evaluate((e) => getComputedStyle(e).color)));
+  expect(dimMethod).not.toBe(usedMethod);
+  await expectAxeClean(page);
+});
+
 test('Try it sends to a mocked API and checks the response schema (VW-05)', async ({ page }) => {
   let auth = '';
   await page.route('https://api.example.com/**', async (route) => {

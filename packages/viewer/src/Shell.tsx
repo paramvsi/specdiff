@@ -58,7 +58,8 @@ export function Nav({ route, onSearch, onNavigate }: { route: Route; onSearch: (
         {row.kind === 'op' ? <NavMethod method={row.op.method} /> : null}
         <span className={css.navLabel}>{row.kind === 'top' ? row.label : row.kind === 'op' ? row.op.summary ?? row.op.path : row.s.name}</span>
         {row.kind === 'top' && row.count !== undefined ? <span className={css.navCount}>{row.count}</span> : null}
-        {badge ? <ViewerBadge kind={badge} className={css.navBadge} /> : null}
+        {/* V-04: endpoints outside "my endpoints" are dimmed and drop their badge. */}
+        {dim ? <span className={css.srOnly}> (not used by your app)</span> : badge ? <ViewerBadge kind={badge} className={css.navBadge} /> : null}
       </a>
     );
   };

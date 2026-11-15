@@ -330,3 +330,67 @@ test('pre-commit snippets use `specdiff-cli pre-commit` and pass file names (PK-
   }
   expect(await (await request.get(WEB + '/docs/pre-commit/')).text()).toContain('.pre-commit-hooks.yaml');
 });
+
+// ---- Round 3: W-04 rule pages (per-rule copy, focused excerpt, unclipped .specdiff.yaml)
+const ruleHtml = () =>
+  builtPages()
+    .filter((f) => /\/dist\/rules\/[^/]+\/index\.html$/.test(f))
+    .map((f) => ({ id: f.split('/rules/')[1]!.split('/')[0]!, html: readFileSync(f, 'utf8') }));
+const textOf = (html: string, re: RegExp) => (re.exec(html)?.[1] ?? '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+
+test('W-04 every rule page has its own headline and intro, not the catalogue title or a one-liner (WEB-04)', () => {
+  const rules = ruleHtml();
+  expect(rules.length).toBeGreaterThan(70);
+  const h1s = rules.map((r) => textOf(r.html, /<h1[^>]*>([\s\S]*?)<\/h1>/));
+  const ledes = rules.map((r) => textOf(r.html, /<p class="lede rule-lede"[^>]*>([\s\S]*?)<\/p>/));
+  expect(new Set(h1s).size).toBe(rules.length);
+  expect(new Set(ledes).size).toBe(rules.length);
+  const short = rules.map((r, i) => `${r.id}: ${ledes[i]}`).filter((_, i) => ledes[i]!.length < 50);
+  expect(short).toEqual([]);
+});
+
+test('W-04 rule detail matches the design copy: headline, intro, who it breaks, 3-step how to avoid', async ({ page }) => {
+  await page.goto(WEB + '/rules/request-property-became-required/');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('An optional request property became required');
+  await expect(page.locator('.rule-lede')).toHaveText('A property that clients could leave out of the request body is now in the schema’s required list.');
+  await expect(page.locator('#who + p')).toContainText('POST /a');
+  await expect(page.locator('#who + p')).toContainText('first call after you deploy');
+  await expect(page.locator('#fix + ol > li')).toHaveCount(3);
+  await expect(page.locator('#fix + ol > li').first()).toContainText('Add a default or keep the field optional');
+});
+
+test('W-04 before/after show a focused excerpt with the changed lines marked − and + in colour', async ({ page }) => {
+  await page.goto(WEB + '/rules/request-property-became-required/');
+  const [before, after] = [page.locator('.yaml-card').nth(0), page.locator('.yaml-card').nth(1)];
+  // The fixture is 20 lines; the excerpt leaves out the unrelated top (info: …) and bottom (responses: …).
+  await expect(before).not.toContainText('title: Fixture');
+  await expect(after).not.toContainText('description: OK');
+  await expect(after.locator('.yl-add')).toHaveCount(2);
+  await expect(after.locator('.yl-add').first()).toContainText('required:');
+  await expect(after.locator('.yl-add .yl-mark').first()).toHaveText('+');
+  await expect(after.locator('.yl-gap').first()).toBeVisible();
+  const [plain, added] = await after.evaluate((el) => [getComputedStyle(el.querySelector('.yl:not(.yl-add):not(.yl-gap)')!).backgroundColor, getComputedStyle(el.querySelector('.yl-add')!).backgroundColor]);
+  expect(added).not.toBe(plain);
+  // A removal is marked on the before side.
+  await page.goto(WEB + '/rules/response-property-removed/');
+  await expect(page.locator('.yaml-card').nth(0).locator('.yl-rem .yl-mark').first()).toHaveText('−');
+});
+
+test('W-04 the .specdiff.yaml snippet is not clipped at 1440, even for the longest rule id', async ({ page }, info) => {
+  test.skip(info.project.name !== 'desktop');
+  for (const id of ['request-property-became-required', 'request-property-constraint-tightened']) {
+    await page.goto(WEB + `/rules/${id}/`);
+    const pre = page.locator('.aside-card pre');
+    await expect(pre).toContainText(`${id}:`);
+    const [sw, cw] = await pre.evaluate((el) => [el.scrollWidth, el.clientWidth]);
+    expect(sw, id).toBeLessThanOrEqual(cw);
+  }
+});
+
+test('CLI docs document `specdiff changelog` with the Atom feed and --append (OUT-10)', async ({ page }) => {
+  await page.goto(WEB + '/docs/cli/');
+  await expect(page.getByRole('heading', { name: /Changelogs and feeds/ })).toBeVisible();
+  await expect(page.locator('main')).toContainText('npx specdiff-cli changelog v1.yaml v2.yaml --format atom');
+  await expect(page.locator('main')).toContainText('--append public/changelog.xml');
+  await expect(page.getByRole('cell', { name: '--append <feed.xml>' })).toBeVisible();
+});

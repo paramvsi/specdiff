@@ -109,6 +109,35 @@ npx specdiff-cli schema > specdiff-report.schema.json
 
 Inputs that are not OpenAPI (JSON, YAML, text) are compared too, but only OpenAPI changes can fail the check.
 
+## Changelogs and feeds: `changelog`
+
+```bash
+npx specdiff-cli changelog v1.yaml v2.yaml                 # release notes (Markdown)
+npx specdiff-cli changelog main:openapi.yaml openapi.yaml --format keep-a-changelog --date 2026-11-15
+npx specdiff-cli changelog v1.yaml v2.yaml --format atom \
+  --feed-url https://api.example.org/changelog.xml --title "Payments API" --out public/changelog.xml
+```
+
+Writes the changelog of two OpenAPI specs. With `--format atom` it writes an Atom feed to host next to your docs, so readers can subscribe to API releases. For each new release, pass the feed you already publish with `--append`: the new release becomes the first entry, older entries stay below it, and running the same release again replaces its entry instead of adding a second one.
+
+```bash
+npx specdiff-cli changelog v2.yaml v3.yaml --format atom --feed-url https://api.example.org/changelog.xml \
+  --title "Payments API" --append public/changelog.xml --out public/changelog.xml
+```
+
+| Flag | Default |
+|---|---|
+| `--format md\|atom\|keep-a-changelog\|slack\|pr-comment` | `md`: release notes |
+| `--feed-url <url>` | Required with `atom`: where the feed is published (its id and `rel="self"` link) |
+| `--site-url <url>` | With `atom`: the site the feed links to |
+| `--title <title>` | `API changelog` (feed title), or the heading for `md` and `slack` |
+| `--release <version>` | The suggested version |
+| `--date <date>` | Now (Atom `updated`); the Keep a Changelog heading date |
+| `--append <feed.xml>` | With `atom`: add this release to an existing feed |
+| `--out <file>` | stdout |
+
+In the app, **Export → Changelog feed (.xml)** asks for the feed URL and title and remembers them in this browser.
+
 ## Viewer timeline: `history`
 
 ```bash

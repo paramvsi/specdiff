@@ -263,6 +263,11 @@
 .navDim {
   color: var(--sd-muted);
 }
+/* V-04: an endpoint the app doesn't use: grey label and method, no badge. */
+.navDim .navMethod {
+  color: var(--sd-muted);
+  font-weight: 500;
+}
 .navSchema {
   font-family: var(--sd-font-mono);
   font-size: 13px;

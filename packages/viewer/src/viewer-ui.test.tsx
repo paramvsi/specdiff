@@ -124,7 +124,8 @@ describe('HAR filter and checklist (VW-10)', () => {
     expect(res.matches.map((m) => m.operationKey)).toEqual(['GET /payments']);
     const shown = filterByEndpoints(report.changes, new Set(res.matches.map((m) => m.operationKey)));
     expect(shown.map((c) => c.path)).toEqual(['GET /payments › query limit › maximum']);
-    expect(checklist(shown).text).toBe('- [ ] limit is now at most 50.');
+    // V-04: one short, actionable line per fix (was the full changelog sentence).
+    expect(checklist(shown).text).toBe('- [ ] Check what limit accepts on GET /payments');
   });
 });
 

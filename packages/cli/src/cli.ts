@@ -69,6 +69,7 @@ program
   .option('--date <date>', 'release date, ISO 8601 (Keep a Changelog heading; Atom updated time, default now)')
   .option('--config <file>', 'path to .specdiff.yaml')
   .option('--out <file>', 'write to a file instead of stdout')
+  .option('--append <feed.xml>', 'with --format atom: add this release to an existing feed (newest first; same release replaces its entry)')
   .action((before: string, after: string, o: ChangelogCliOptions) => {
     try { process.exitCode = runChangelog(before, after, o, io); }
     catch (e) { io.err(pc.red((e as Error).message ?? String(e))); process.exitCode = 2; }

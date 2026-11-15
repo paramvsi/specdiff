@@ -226,11 +226,24 @@
   background: var(--sd-added-bg);
   color: var(--sd-added-strong);
 }
-.yl-rem::before {
-  content: '− ';
+.yl-mark {
+  display: inline-block;
+  width: 2ch;
+  font-weight: 700;
 }
-.yl-add::before {
-  content: '+ ';
+.yl-gap {
+  color: var(--sd-muted);
+  background: var(--sd-raised);
+}
+.ol-doc {
+  margin: 0;
+  padding-left: 1.4em;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font: 400 16.5px/1.7 var(--sd-font-sans);
+  color: var(--sd-ink);
+  max-width: 68ch;
 }
 .note-box {
   margin: 0;
@@ -254,7 +267,7 @@
   max-width: 68ch;
 }
 .rule-aside {
-  flex: 1 1 280px;
+  flex: 1 1 340px; /* W04: 340 px aside at 1440 */
   min-width: 0;
   max-width: 340px;
   display: flex;
@@ -300,6 +313,13 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+/* The .specdiff.yaml snippet fits the 340 px aside; very long rule ids wrap instead of clipping. */
+.aside-card .codecard pre {
+  padding: 12px;
+  font-size: 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 .aside-card h2,
 .related h2 {

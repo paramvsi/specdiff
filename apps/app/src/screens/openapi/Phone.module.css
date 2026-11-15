@@ -36,3 +36,6 @@
 .line[data-kind='add'] { background: var(--sd-added-bg); color: var(--sd-added-strong); }
 .body { margin: 0; font-size: 15px; }
 .small { font-family: var(--sd-font-mono); font-size: 12px; color: var(--sd-muted); }
+/* M-02: the change list has its own bar (back · "28 changes" · search), so the app's top bar is hidden. */
+:global(body):has(.listPage) :global(header:has(+ #main)) { display: none; }
+.plain { font: inherit; }

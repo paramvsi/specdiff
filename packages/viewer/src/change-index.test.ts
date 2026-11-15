@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { compareOpenApi, parseDocument } from '@specdiff/core';
 import { describe, expect, it } from 'vitest';
-import { bySeverity, displayKeyOf, filterByEndpoints, indexChanges } from './change-index';
+import { bySeverity, checklist, displayKeyOf, fieldNames, filterByEndpoints, indexChanges, shortTitle } from './change-index';
 import { buildModel } from './model';
 
 const dir = join(__dirname, '../../../fixtures/samples');
@@ -47,5 +47,30 @@ describe('V-04 ordering and display', () => {
     const last4 = report.changes.find((c) => c.path === 'components.schemas.Card › last4')!;
     expect(displayKeyOf(last4)).toBe('GET /v1/customers/{id}/cards');
     expect(displayKeyOf(last4, new Set(['GET /v1/payments/{id}']))).toBe('GET /v1/payments/{id}');
+  });
+});
+
+describe('V-04 short titles and the checklist for picked endpoints', () => {
+  const names = fieldNames(parseDocument(after, 'payments-v2.yaml').value);
+  const picked = new Set(['POST /v1/payments', 'GET /v1/payments', 'GET /v1/payments/{id}', 'POST /v1/refunds', 'GET /v1/refunds/{id}']);
+  const shown = filterByEndpoints(report.changes, picked);
+  it('titles are short, as in the design', () => {
+    const t = (path: string, rule?: string) => shortTitle(report.changes.find((c) => c.path === path && (!rule || c.ruleId === rule))!, names);
+    expect(t('POST /v1/payments › requestBody › currency', 'request-property-became-required')).toBe('currency is now required');
+    expect(t('components.schemas.Card › last4')).toBe('card.last4 removed');
+    expect(t('components.schemas.PaymentStatus', 'response-property-enum-value-added')).toBe('status can be disputed');
+    expect(t('components.schemas.Card › fingerprint')).toBe('card.fingerprint added');
+    expect(t('GET /v1/payments › query limit › maximum')).toBe('limit maximum 100 → 50');
+    expect(t('DELETE /v1/refunds/{id}')).toBe('Endpoint removed');
+  });
+  it('lists one line per required fix and per check, for the picked endpoints only; counts match', () => {
+    const list = checklist(shown, names, picked);
+    expect(list.required).toHaveLength(shown.filter((c) => c.severity === 'breaking').length);
+    expect(list.text.split('\n')).toEqual([
+      '- [ ] Send currency on POST /v1/payments',
+      '- [ ] Keep limit within maximum 50',
+      '- [ ] Stop reading card.last4',
+      '- [ ] Handle status = disputed',
+    ]);
   });
 });

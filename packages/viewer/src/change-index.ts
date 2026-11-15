@@ -125,6 +125,124 @@ export function changeAdvice(c: Change): string {
   return c.explanation?.avoid ?? c.explanation?.who ?? '';
 }
 
+/** Where shared schemas are used, as clients see them: Card → card (Payment.card), PaymentStatus → status. */
+export type FieldNames = ReadonlyMap<string, string>;
+
+/** Property names that point at each component schema (first one wins), from a parsed spec. */
+export function fieldNames(spec: unknown): FieldNames {
+  const m = new Map<string, string>();
+  const schemas = (spec as { components?: { schemas?: Record<string, unknown> } } | null)?.components?.schemas ?? {};
+  const refName = (x: unknown): string | undefined => {
+    if (!x || typeof x !== 'object') return undefined;
+    const o = x as { $ref?: unknown };
+    // Direct references only: an array of Payment (PaymentList.data) does not name a Payment.
+    return typeof o.$ref === 'string' ? /#\/components\/schemas\/(.+)$/.exec(o.$ref)?.[1] : undefined;
+  };
+  for (const schema of Object.values(schemas)) {
+    for (const [name, p] of Object.entries((schema as { properties?: Record<string, unknown> } | null)?.properties ?? {})) {
+      const r = refName(p);
+      if (r && !m.has(r)) m.set(r, name);
+    }
+  }
+  return m;
+}
+
+const lowerFirst = (s: string) => (s ? s[0]!.toLowerCase() + s.slice(1) : s);
+const BOUNDS = ['maximum', 'minimum', 'exclusiveMaximum', 'exclusiveMinimum', 'maxLength', 'minLength', 'maxItems', 'minItems', 'pattern'];
+
+/** The field a change is about, as client code names it: currency, limit, card.last4, status. */
+export function fieldName(c: Change, names?: FieldNames): string {
+  const segs = c.path.split(' › ');
+  const head = segs[0] ?? '';
+  if (head.startsWith('components.schemas.')) {
+    const schema = head.slice('components.schemas.'.length);
+    const prefix = names?.get(schema) ?? lowerFirst(schema);
+    const rest = segs.slice(1).filter((s) => !BOUNDS.includes(s));
+    return rest.length ? [prefix, ...rest].join('.') : prefix;
+  }
+  const rest = segs.slice(1).filter((s) => s !== 'requestBody' && !BOUNDS.includes(s) && !/^response \S+$/.test(s) && !s.includes('/'));
+  const last = rest.at(-1);
+  return last ? last.replace(/^(query|path|header|cookie) /, '') : '';
+}
+
+/** A bound and its value on one side: `{maximum: 50}`, or `50` when the path ends at `› maximum`. */
+const boundOn = (c: Change, side: 'before' | 'after'): [string, unknown] | undefined => {
+  const v = c[side];
+  const last = c.path.split(' › ').at(-1) ?? '';
+  if (BOUNDS.includes(last) && v !== undefined && (typeof v !== 'object' || v === null)) return [last, v];
+  return bound(v);
+};
+const bound = (v: unknown): [string, unknown] | undefined => {
+  if (v && typeof v === 'object' && !Array.isArray(v)) {
+    const k = Object.keys(v).find((x) => BOUNDS.includes(x));
+    return k ? [k, (v as Record<string, unknown>)[k]] : undefined;
+  }
+  return undefined;
+};
+const text = (v: unknown) => (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean' ? String(v) : '');
+
+/**
+ * Short headline for a change in a list that already shows its endpoint (V-04):
+ * "currency is now required", "card.last4 removed", "status can be disputed", "Description rewritten".
+ * Falls back to the changelog line.
+ */
+export function shortTitle(c: Change, names?: FieldNames): string {
+  const f = fieldName(c, names);
+  const r = c.ruleId ?? '';
+  const after = text(c.after);
+  if (r === 'endpoint-removed' || r === 'endpoint-removed-after-deprecation') return 'Endpoint removed';
+  if (r === 'endpoint-added') return 'Endpoint added';
+  if (r === 'endpoint-deprecated') return 'Endpoint deprecated';
+  if (r === 'description-changed') return 'Description rewritten';
+  if (r === 'summary-changed') return 'Summary rewritten';
+  if (r === 'example-changed') return 'Example updated';
+  if (r === 'tag-changed') return 'Tags changed';
+  if (f) {
+    if (/became-required|added-required/.test(r)) return `${f} is now required`;
+    if (/became-optional/.test(r)) return `${f} is now optional`;
+    if (/enum-value-added/.test(r) && after) return r.startsWith('response-') ? `${f} can be ${after}` : `${f} accepts ${after}`;
+    if (/enum-value-removed/.test(r)) return `${f} no longer accepts ${text(c.before) || 'a value'}`;
+    if (/constraint-(tightened|relaxed)/.test(r)) {
+      const [k, a] = boundOn(c, 'after') ?? boundOn(c, 'before') ?? [];
+      const b = k ? boundOn(c, 'before')?.[1] : undefined;
+      if (k && a !== undefined && b !== undefined) return `${f} ${k} ${text(b)} → ${text(a)}`;
+      return `${f} limits ${r.endsWith('tightened') ? 'tightened' : 'relaxed'}`;
+    }
+    if (c.kind === 'typeChanged' && after) return `${f} is now ${after}`;
+    if (c.kind === 'removed') return `${f} removed`;
+    if (c.kind === 'added') return `${f} added`;
+  }
+  return changeTitle(c);
+}
+
+/**
+ * One short checklist line for a change, written for the client's developer:
+ * "Send currency on POST /v1/payments", "Stop reading card.last4", "Handle status = disputed".
+ */
+export function checklistLine(c: Change, names?: FieldNames, key?: string): string {
+  const f = fieldName(c, names);
+  const r = c.ruleId ?? '';
+  const op = key ?? opKeysOf(c)[0] ?? '';
+  const on = op ? ` on ${op}` : '';
+  if (r.startsWith('endpoint-removed')) return `Stop calling ${op}`;
+  if (f) {
+    if (/became-required|added-required/.test(r)) return `Send ${f}${on}`;
+    if (r.startsWith('response-') && (c.kind === 'removed' || r === 'response-required-became-write-only')) return `Stop reading ${f}`;
+    if (r === 'response-property-became-optional') return `Handle a missing ${f}`;
+    if (r === 'response-property-nullable-added') return `Handle ${f} = null`;
+    if (/enum-value-added/.test(r) && text(c.after)) return `Handle ${f} = ${text(c.after)}`;
+    if (/enum-value-removed/.test(r)) return `Stop sending ${f} = ${text(c.before)}`;
+    if (/constraint-tightened/.test(r)) {
+      const a = boundOn(c, 'after');
+      return a ? `Keep ${f} within ${a[0]} ${text(a[1])}` : `Check what ${f} accepts${on}`;
+    }
+    if (/nullable-removed/.test(r)) return `Stop sending ${f} = null`;
+    if (c.kind === 'typeChanged') return `Handle ${f} as ${text(c.after) || 'its new type'}`;
+    if (c.kind === 'removed') return `Stop sending ${f}${on}`;
+  }
+  return `Check: ${shortTitle(c, names)}${on}`;
+}
+
 export interface Checklist {
   required: Change[];
   check: Change[];
@@ -132,15 +250,18 @@ export interface Checklist {
   text: string;
 }
 
-/** Upgrade checklist (VW-10): breaking = required fix, possibly = to check, safe = optional. Docs only are left out. */
-export function checklist(changes: Change[]): Checklist {
+/**
+ * Upgrade checklist (VW-10): breaking = required fix, possibly = to check, safe = optional.
+ * The copied list holds one short line per required fix and per thing to check (V-04 design);
+ * optional and docs-only changes are counted, not listed. `picked` names the endpoint shown.
+ */
+export function checklist(changes: Change[], names?: FieldNames, picked?: ReadonlySet<string>): Checklist {
   const by = (s: Severity) => changes.filter((c) => c.severity === s);
   const required = by('breaking');
   const check = by('possibly');
   const optional = by('safe');
-  const line = (c: Change) => `- [ ] ${changeTitle(c)}`;
-  const text = [...required, ...check, ...optional].map(line).join('\n');
-  return { required, check, optional, text };
+  const lines = [...new Set([...required, ...check].map((c) => `- [ ] ${checklistLine(c, names, displayKeyOf(c, picked))}`))];
+  return { required, check, optional, text: lines.join('\n') };
 }
 
 const SEV_ORDER: Record<Severity, number> = { breaking: 0, possibly: 1, safe: 2, docs: 3 };

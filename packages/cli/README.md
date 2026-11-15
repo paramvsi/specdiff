@@ -33,6 +33,9 @@ specdiff changelog v1.yaml v2.yaml                          # release notes (Mar
 specdiff changelog main:openapi.yaml openapi.yaml --format keep-a-changelog --date 2026-11-15
 specdiff changelog v1.yaml v2.yaml --format atom \
   --feed-url https://api.example.org/changelog.xml --title "Payments API" --out public/changelog.xml
+# next release: add it to the feed you already publish
+specdiff changelog v2.yaml v3.yaml --format atom --feed-url https://api.example.org/changelog.xml \
+  --title "Payments API" --append public/changelog.xml --out public/changelog.xml
 ```
 
 | Option | |
@@ -43,6 +46,7 @@ specdiff changelog v1.yaml v2.yaml --format atom \
 | `--title <title>` | Feed title (default `API changelog`), or the heading for `md` and `slack` |
 | `--release <version>` | Version in the heading (default: the suggested version) |
 | `--date <date>` | ISO date: the Keep a Changelog heading date, and the Atom `updated` time (default now) |
+| `--append <feed.xml>` | With `atom`: add this release to an existing feed. Entries stay newest first; running the same release again replaces its entry |
 | `--out <file>` | Write to a file instead of stdout |
 
 ## Review decisions

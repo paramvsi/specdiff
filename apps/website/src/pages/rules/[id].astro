@@ -6,7 +6,8 @@ import SiteHeader from '../../components/SiteHeader.astro';
 import Footer from '../../components/Footer.astro';
 import Severity from '../../components/Severity.astro';
 import CodeCard from '../../components/CodeCard.astro';
-import { changedLines, codeSegments, directionLabel, loadExample, loadFixture, loadRules, prose, sevLabel, type Rule } from '../../lib/rules';
+import { codeSegments, directionLabel, loadExample, loadFixture, loadRules, prose, sevLabel, type Rule } from '../../lib/rules';
+import { avoidSteps, copyFor, focusedPair, whoText } from '../../lib/rule-page';
 import { REPO } from '../../lib/site';
 import '../../styles/pages.css';
 
@@ -16,9 +17,9 @@ interface Props { rule: Rule }
 const { rule } = Astro.props;
 const all = loadRules();
 const fx = loadFixture(rule.id);
-const b = fx.before?.replace(/\n$/, '').split('\n');
-const a = fx.after?.replace(/\n$/, '').split('\n');
-const diff = b && a ? changedLines(b, a) : undefined;
+// Focused excerpt: the changed lines, a few lines around them and their YAML parents (W-04).
+const pair = fx.before && fx.after ? focusedPair(fx.before, fx.after) : undefined;
+const copy = copyFor(rule);
 
 const related = all
   .filter((r) => r.id !== rule.id && r.area === rule.area)
@@ -33,10 +34,12 @@ const yaml = alt
 // Real example values from the fixture (compareOpenApi at build time); generic words otherwise.
 const ex = loadExample(rule.id);
 const expl = ex.explanation ?? (rule.explanation ? { who: prose(rule.explanation.who), see: prose(rule.explanation.see), avoid: prose(rule.explanation.avoid) } : undefined);
+const who = expl ? whoText(rule, expl) : undefined;
+const steps = expl ? avoidSteps(rule, expl) : [];
 const sevText = rule.severity ? sevLabel[rule.severity] : 'Not a change of its own';
 const rawLine = ex.changelogLine ?? fx.changelogLine ?? (rule.changelog ? prose(rule.changelog) : undefined);
 const line = rawLine && rule.severity ? `**${sevLabel[rule.severity]}:** ${rawLine}` : rawLine;
-const description = `${sevText}: ${rule.change.replace(/`/g, '')}. Who it breaks, how to avoid it, and how to change its severity in .specdiff.yaml.`;
+const description = `${sevText}: ${copy.intro.replace(/`/g, '').replace(/\.$/, '')}. Who it breaks, how to avoid it, and how to change its severity in .specdiff.yaml.`;
 ---
 <Base title={`${rule.id} · Rules · Specdiff`} description={description} ogType="article">
   <SiteHeader current="rules" />
@@ -44,22 +47,38 @@ const description = `${sevText}: ${rule.change.replace(/`/g, '')}. Who it breaks
     <div class="rule-body">
       <nav aria-label="Breadcrumb" class="crumbs"><a href="/rules/">Rules</a> / {rule.area}</nav>
       <div class="rule-idline"><Severity sev={rule.severity} /><code class="rule-code">{rule.id}</code></div>
-      <h1 class="rule-h1">{rule.title}</h1>
-      <p class="lede rule-lede">{codeSegments(rule.change).map((s) => (s.code ? <code class="icode">{s.text}</code> : s.text))}.</p>
+      <h1 class="rule-h1">{copy.headline}</h1>
+      <p class="lede rule-lede">{codeSegments(copy.intro).map((s) => (s.code ? <code class="icode">{s.text}</code> : s.text))}</p>
 
-      {b && a && diff ? (
+      {pair ? (
         <div class="ba-yaml">
-          <div class="yaml-card"><p class="yaml-name">before.yaml</p><div class="yaml-lines">{b.map((l, i) => <div class={diff.removed.has(i) ? 'yl yl-rem' : 'yl'}>{diff.removed.has(i) ? <span class="sr-only">removed: </span> : null}{l || ' '}</div>)}</div></div>
-          <div class="yaml-card"><p class="yaml-name">after.yaml</p><div class="yaml-lines">{a.map((l, i) => <div class={diff.added.has(i) ? 'yl yl-add' : 'yl'}>{diff.added.has(i) ? <span class="sr-only">added: </span> : null}{l || ' '}</div>)}</div></div>
+          {([['before.yaml', pair.before], ['after.yaml', pair.after]] as const).map(([name, rows]) => (
+            <div class="yaml-card">
+              <p class="yaml-name">{name}</p>
+              <div class="yaml-lines">
+                {rows.map((r) =>
+                  r.kind === 'gap' ? (
+                    <div class="yl yl-gap"><span class="yl-mark" aria-hidden="true"> </span><span aria-hidden="true">⋯</span><span class="sr-only">lines left out</span></div>
+                  ) : (
+                    <div class={r.kind === 'rem' ? 'yl yl-rem' : r.kind === 'add' ? 'yl yl-add' : 'yl'}>
+                      <span class="yl-mark" aria-hidden="true">{r.kind === 'rem' ? '−' : r.kind === 'add' ? '+' : ' '}</span>
+                      {r.kind === 'rem' ? <span class="sr-only">removed: </span> : r.kind === 'add' ? <span class="sr-only">added: </span> : null}
+                      {r.text || ' '}
+                    </div>
+                  ),
+                )}
+              </div>
+            </div>
+          ))}
         </div>
       ) : (
         <p class="note-box">The before and after example for this rule comes from <code class="icode">{fx.dir}/</code>. That fixture is not in this build yet.</p>
       )}
 
       <h2 id="who" class="h2-doc">Who it breaks</h2>
-      {expl ? (
+      {expl && who ? (
         <>
-          <p class="p-doc">{codeSegments(expl.who).map((s) => (s.code ? <code class="icode">{s.text}</code> : s.text))}</p>
+          <p class="p-doc">{codeSegments(who).map((s) => (s.code ? <code class="icode">{s.text}</code> : s.text))}</p>
           <p class="p-doc"><strong>What they see:</strong> {codeSegments(expl.see).map((s) => (s.code ? <code class="icode">{s.text}</code> : s.text))}</p>
         </>
       ) : (
@@ -67,7 +86,11 @@ const description = `${sevText}: ${rule.change.replace(/`/g, '')}. Who it breaks
       )}
 
       <h2 id="fix" class="h2-doc">How to avoid it</h2>
-      <p class="p-doc">{expl ? codeSegments(expl.avoid).map((s) => (s.code ? <code class="icode">{s.text}</code> : s.text)) : 'Ship the change in a new major version and say so in the changelog, or keep the old behaviour alongside the new one for a deprecation period.'}</p>
+      {steps.length > 1 ? (
+        <ol class="ol-doc">{steps.map((st) => <li>{codeSegments(st).map((s) => (s.code ? <code class="icode">{s.text}</code> : s.text))}</li>)}</ol>
+      ) : (
+        <p class="p-doc">{steps.length ? codeSegments(steps[0]!).map((s) => (s.code ? <code class="icode">{s.text}</code> : s.text)) : `Nothing to avoid: ${rule.severity === 'docs' ? 'only the documentation changes' : 'no existing client breaks'}. Mention it in the changelog so clients know it is there.`}</p>
+      )}
 
       <h2 id="msg" class="h2-doc">Example message</h2>
       {line ? <CodeCard name="Changelog line" code={line} /> : <p class="p-doc">This rule is reported in the summary, not as a changelog line.</p>}
