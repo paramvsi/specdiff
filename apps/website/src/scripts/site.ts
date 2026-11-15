@@ -37,6 +37,19 @@ if (saved) root.dataset.theme = saved;
 syncToggles();
 media.addEventListener('change', syncToggles);
 
+// One polite status region for copy feedback (an aria-label change alone is not announced).
+let status: HTMLElement | undefined;
+function announce(text: string) {
+  if (!status) {
+    status = document.createElement('span');
+    status.className = 'sr-only';
+    status.setAttribute('role', 'status');
+    document.body.append(status);
+  }
+  status.textContent = '';
+  window.setTimeout(() => { status!.textContent = text; }, 50);
+}
+
 document.addEventListener('click', (e) => {
   const target = e.target instanceof Element ? e.target : null;
   const toggle = target?.closest('[data-theme-toggle]');
@@ -54,17 +67,21 @@ document.addEventListener('click', (e) => {
   const copy = target?.closest<HTMLElement>('[data-copy]');
   if (copy) {
     const text = copy.dataset.copy ?? document.getElementById(copy.dataset.copyFrom ?? '')?.innerText ?? '';
-    void navigator.clipboard?.writeText(text).then(
+    // The button's own name, kept once: a second click within 1.6 s must not save "Copied" as it.
+    const label = (copy.dataset.label ??= copy.getAttribute('aria-label') ?? '');
+    const done = navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject(new Error('no clipboard'));
+    done.then(
       () => {
         copy.setAttribute('data-copied', '');
-        const label = copy.getAttribute('aria-label') ?? '';
         copy.setAttribute('aria-label', 'Copied');
-        window.setTimeout(() => {
+        announce('Copied');
+        window.clearTimeout(Number(copy.dataset.timer));
+        copy.dataset.timer = String(window.setTimeout(() => {
           copy.removeAttribute('data-copied');
           copy.setAttribute('aria-label', label);
-        }, 1600);
+        }, 1600));
       },
-      () => undefined,
+      () => announce('Could not copy. Select the text and copy it yourself.'),
     );
   }
 });
