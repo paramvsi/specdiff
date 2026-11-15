@@ -34,3 +34,16 @@ describe('specdiff changelog', () => {
     expect(o.out).toContain(head);
   });
 });
+
+describe('--date', () => {
+  for (const format of ['atom', 'keep-a-changelog', 'md'] as const)
+    it(`refuses a date that is not a real ISO date (${format})`, () => {
+      const { o, io } = capture();
+      expect(runChangelog(v1, v2, { format, feedUrl: 'https://x.example/feed.xml', date: '13/45/2026' }, io)).toBe(2);
+      expect(o.err).toMatch(/--date/);
+      expect(o.out).toBe('');
+    });
+  it('accepts YYYY-MM-DD and a full ISO time', () => {
+    for (const date of ['2026-11-16', '2026-11-16T08:00:00Z']) expect(runChangelog(v1, v2, { format: 'keep-a-changelog', date }, capture().io)).toBe(0);
+  });
+});

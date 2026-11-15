@@ -48,6 +48,12 @@ export function runChangelog(beforeArg: string, afterArg: string, o: ChangelogCl
   if (o.format === 'atom' && !o.feedUrl) { io.err('--format atom needs --feed-url <url>: the URL the feed will be published at (its Atom id and self link).'); return 2; }
   if (o.append && o.format !== 'atom') { io.err('--append works with --format atom only.'); return 2; }
   if (o.append && !existsSync(o.append)) { io.err(`--append: ${o.append} does not exist.`); return 2; }
+  // Changelogs print the date as written (Keep a Changelog requires YYYY-MM-DD) and the feed parses it:
+  // refuse anything that is not a real ISO date instead of writing "13/45/2026" or failing obscurely.
+  if (o.date !== undefined && !(/^\d{4}-\d{2}-\d{2}(T[\d:.]+(Z|[+-]\d{2}:\d{2})?)?$/.test(o.date) && !Number.isNaN(Date.parse(o.date)) && new Date(o.date.slice(0, 10)).toISOString().startsWith(o.date.slice(0, 10)))) {
+    io.err(`--date must be an ISO date such as 2026-11-16 or 2026-11-16T08:00:00Z (got "${o.date}").`);
+    return 2;
+  }
   const { config } = loadConfig(o.config);
   const before = readInput(beforeArg);
   const after = readInput(afterArg);
