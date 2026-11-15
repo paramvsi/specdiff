@@ -34,10 +34,17 @@ export function Workspace() {
 
   const shownBy = useCallback((c: Change, f: Filter) => (f === 'all' ? true : f === 'review' ? needsDecision(c) : c.severity === f) && matchesSearch(c, query, changeTitleText(c, ctx)), [query, ctx]);
   const visible = useMemo(() => changes.filter((c) => shownBy(c, filter)), [changes, filter, shownBy]);
-  const groups = useMemo(() => groupsOf(visible, groupBy), [visible, groupBy]);
+  // AWorkspace: under All, docs-only changes collapse into one row ("9 operations · Descriptions updated").
+  const collapseDocs = filter === 'all' && !query.trim();
+  const docsOnly = useMemo(() => (collapseDocs ? visible.filter((c) => c.severity === 'docs') : []), [visible, collapseDocs]);
+  const groups = useMemo(() => groupsOf(collapseDocs ? visible.filter((c) => c.severity !== 'docs') : visible, groupBy), [visible, groupBy, collapseDocs]);
   const flat = groups.flatMap(([, cs]) => cs);
   // One row per group heading and per change, for the (virtual) tree.
-  const rows = useMemo(() => groups.flatMap(([g, cs]) => [{ group: g } as const, ...cs.map((c) => ({ c }) as const)]), [groups]);
+  const rows = useMemo(() => [
+    ...groups.flatMap(([g, cs]) => [{ group: g } as const, ...cs.map((c) => ({ c }) as const)]),
+    ...(docsOnly.length ? [{ group: `${new Set(docsOnly.map((c) => c.sourceBlock ?? c.path)).size} operations` } as const, { docs: docsOnly.length } as const] : []),
+  ], [groups, docsOnly]);
+  // Opens on the first (most severe) change, unless a link or the user picked one.
   const current = changes.find((c) => c.id === changeId) ?? flat[0] ?? changes[0];
 
   useEffect(() => { if (current && current.id !== changeId) set({ changeId: current.id }); }, [current, changeId, set]);
@@ -69,7 +76,7 @@ export function Workspace() {
   if (!result || !('report' in result) || !current) return <p>No changes.</p>;
   const sev = (s: Filter) => changes.filter((c) => (s === 'review' ? needsDecision(c) && !decisionOf(decisions, c) : c.severity === s)).length;
   // One stable order for both views, so the chips don't move under the pointer when the view switches.
-  const chips: Array<[Filter, string]> = [['all', `All ${changes.length}`], ['breaking', `Breaking ${sev('breaking')}`], ['possibly', `Possibly ${sev('possibly')}`], ['safe', `Safe ${sev('safe')}`], ['review', `To review ${sev('review')}`]];
+  const chips: Array<[Filter, string]> = [['all', `All ${changes.length}`], ['breaking', `Breaking ${sev('breaking')}`], ['possibly', `Possibly ${sev('possibly')}`], ['safe', `Safe ${sev('safe')}`], ...(filter === 'docs' ? [['docs', `Docs ${sev('docs')}`] as [Filter, string]] : []), ['review', `To review ${sev('review')}`]];
   const d = decisionOf(decisions, current);
   // A filter that hides the current change moves to its first change (A / R act on what is shown).
   const pickFilter = (f: Filter) => {
@@ -125,7 +132,18 @@ export function Workspace() {
           apiRef={listApi}
           render={(i, slot) => {
             const r = rows[i]!;
-            return 'group' in r ? <li key={`g:${r.group}`} {...slotProps(slot)} className={css.groupName}>{r.group}</li> : item(r.c, slot);
+            if ('group' in r) return <li key={`g:${r.group}`} {...slotProps(slot)} className={css.groupName}>{r.group}</li>;
+            if ('docs' in r)
+              return (
+                <li key="docs" {...slotProps(slot)}>
+                  <button type="button" className={css.item} onClick={() => pickFilter('docs')}>
+                    <SeverityBadge severity="docs" compact />
+                    <span className={css.all}>ALL</span>
+                    <span className={css.itemText}>Descriptions updated <span className="sd-visually-hidden">({r.docs} docs-only changes; show them)</span></span>
+                  </button>
+                </li>
+              );
+            return item(r.c, slot);
           }}
         />
         {filter === 'review' && <p className={css.muted}>Safe and docs-only changes don’t need a decision. Show them with All.</p>}
@@ -193,10 +211,15 @@ export function Workspace() {
   );
 }
 
+const RANK: Record<string, number> = { breaking: 0, possibly: 1, safe: 2, docs: 3 };
+const rank = (c: Change) => RANK[c.severity ?? 'docs'] ?? 3;
+
+/** Groups ordered by their most severe change, changes by severity within a group (stable otherwise). */
 function groupsOf(cs: Change[], by: GroupBy): Array<[string, Change[]]> {
   const m = new Map<string, Change[]>();
   for (const c of cs) { const k = groupKey(c, by); m.set(k, [...(m.get(k) ?? []), c]); }
-  return [...m.entries()];
+  const groups = [...m.entries()].map(([k, list]) => [k, [...list].sort((a, b) => rank(a) - rank(b))] as [string, Change[]]);
+  return groups.sort((a, b) => Math.min(...a[1].map(rank)) - Math.min(...b[1].map(rank)));
 }
 
 /** Props a tree row spreads when the list is virtual (position and measuring). */

@@ -287,3 +287,15 @@ for (const scheme of ['light', 'dark'] as const) {
     await expectAxeClean(page);
   });
 }
+
+test('AWorkspace opens on the first breaking change, ordered by severity, docs-only collapsed', async ({ page }) => {
+  await page.goto('/app/?sample=openapi');
+  await page.getByRole('tab', { name: 'Workspace' }).click();
+  const tree = page.getByRole('navigation', { name: 'Changes' });
+  await expect(tree.locator('[aria-current="true"]')).toContainText(/required|removed/i);
+  await expect(page.getByRole('heading', { level: 2 }).filter({ hasText: /required|removed/i }).first()).toBeVisible();
+  await expect(tree.getByRole('button', { name: /Descriptions updated/ })).toHaveCount(1);
+  await expect(tree.getByText('Description updated', { exact: false })).toHaveCount(0);
+  await tree.getByRole('button', { name: /Descriptions updated/ }).click();
+  await expect(page.getByRole('button', { name: /^Docs/, pressed: true })).toBeVisible();
+});

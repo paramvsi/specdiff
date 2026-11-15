@@ -57,7 +57,7 @@ export default function Settings() {
         <header className={css.head}>
           <div>
             <h1 className={css.h1}>Rules</h1>
-            <p className={css.lead}>Choose which changes count as breaking. These settings live in <code>.specdiff.yaml</code>, which the CLI and pre-commit hook read too.</p>
+            <p className={css.lead}>Choose which changes count as breaking. These settings live in <code>.specdiff.yaml</code>, which the CLI and pre-commit hook read too. {rules.length - reported.length} more rules in the rules reference aren't changes of their own (the version check, callbacks, streamed items and inline <code>$ref</code> matching), so they have no severity here.</p>
           </div>
           <div className={css.headActions}>
             <Button variant="secondary" icon={<icons.Upload size={15} />} onClick={() => fileInput.current?.click()}>Import .specdiff.yaml</Button>

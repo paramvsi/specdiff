@@ -546,3 +546,6 @@
 .chip[data-static] {
   cursor: default;
 }
+
+/* A07-JsonExport: long operations wrap inside the card instead of being cut off. */
+.code { white-space: pre-wrap; overflow-wrap: anywhere; }

@@ -20,7 +20,7 @@ export function whatChanged(c: Change): Seg[] {
   if (id === 'response-property-removed') return codeSegments(`\`${name}\` is no longer in the response schema${c.sharedSchema ? ` \`${c.sharedSchema.name}\`` : ''}.`);
   if (c.before !== undefined || c.after !== undefined) {
     const v = (x: unknown) => (x === undefined ? 'absent' : `\`${valueText(x)}\``);
-    return codeSegments(`Before: ${v(c.before)}. After: ${v(c.after)}.`);
+    return codeSegments(`Before: ${stop(v(c.before))} After: ${stop(v(c.after))}`);
   }
   return [];
 }
@@ -79,3 +79,6 @@ export function Explain() {
     </Drawer>
   );
 }
+
+/** End a sentence with one full stop (descriptions often end with their own). */
+const stop = (t: string) => (/[.!?]$/.test(t.trim()) ? t.trim() : `${t.trim()}.`);
