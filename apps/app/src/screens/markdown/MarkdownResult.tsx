@@ -5,9 +5,10 @@ import type { BlockStatus, MdBlock, MdDiff } from '@specdiff/core/markdown';
 import { diffText } from '@specdiff/core/text';
 import { IdenticalState, SegmentedControl, Tooltip, useToast } from '@specdiff/ui';
 import * as icons from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type Ref } from 'react';
+import { VirtualList, type RowSlot, type VirtualListApi } from '../../lib/VirtualList';
 import { useCommand } from '../../shell/commands';
-import { changeLink, focusChange, readChangeHash } from '../../shell/nav';
+import { changeLink, focusChange, readChangeHash, useNav } from '../../shell/nav';
 import { useApp } from '../../state/store';
 import { DiffRows } from '../json/DiffRows';
 import { blockLabel } from './summary';
@@ -25,13 +26,24 @@ const STATUS_WORD: Record<BlockStatus, string> = {
 };
 const blockId = (i: number) => `md-block-${i}`;
 
+/**
+ * X-06: word-level changes are never colour alone. Each <ins>/<del> starts with hidden text ("inserted:",
+ * "deleted:") for screen readers; underline / strike-through and the block's + / − gutter are the visible cues.
+ * The added markup is fixed text, so the sanitised HTML stays safe.
+ */
+export function withChangeCues(html: string): string {
+  return html
+    .replace(/<ins>/g, '<ins><span class="sd-visually-hidden">inserted: </span>')
+    .replace(/<del>/g, '<del><span class="sd-visually-hidden">deleted: </span>');
+}
+
 /** Core renders through remark-rehype + rehype-sanitize (GitHub schema + ins/del), so this HTML is safe. */
 function Html({ html, className }: { html: string; className?: string | undefined }) {
   return (
     <div
       className={className}
       // eslint-disable-next-line no-restricted-syntax -- sanitised by rehype-sanitize in @specdiff/core/markdown
-      dangerouslySetInnerHTML={{ __html: html }}
+      dangerouslySetInnerHTML={{ __html: withChangeCues(html) }}
     />
   );
 }
@@ -55,29 +67,51 @@ export default function MarkdownResult() {
     [md],
   );
 
+  const listApi = useRef<VirtualListApi>(null);
   const jump = useCallback(
     (i: number) => {
       if (view === 'source') {
         memo.view = 'rendered';
         setView('rendered');
       }
-      requestAnimationFrame(() => {
+      listApi.current?.scrollToIndex(i);
+      let tries = 0;
+      const tick = () => {
         const el = document.getElementById(blockId(i));
+        if (!el && tries++ < 10) return void requestAnimationFrame(tick);
         el?.scrollIntoView({ block: 'center' });
         el?.focus({ preventScroll: true });
-      });
+      };
+      requestAnimationFrame(tick);
     },
     [view],
   );
+  // The change id this screen last navigated to; others come from outside (the command palette).
+  const handled = useRef<string | null>(useNav.getState().changeId);
   const go = useCallback(
     (d: number) => {
       if (!changed.length) return;
       const n = (current + d + changed.length) % changed.length;
       setCurrent(n);
+      handled.current = changeIdOf(changed[n]!);
       focusChange(changeIdOf(changed[n]!)); // X-12
       jump(changed[n]!);
     },
     [changed, current, jump],
+  );
+  // The palette (and other screens) call focusChange(id): follow it here too.
+  useEffect(
+    () =>
+      useNav.subscribe((st) => {
+        const id = st.changeId;
+        if (!id || id === handled.current || !id.startsWith('m-')) return;
+        handled.current = id;
+        const k = changed.indexOf(Number(id.slice(2)));
+        if (k < 0) return;
+        setCurrent(k);
+        jump(changed[k]!);
+      }),
+    [changed, jump],
   );
   useCommand(
     'next-change',
@@ -109,7 +143,7 @@ export default function MarkdownResult() {
   const headingBlocks = md.blocks.flatMap((b, i) => (b.heading ? [i] : []));
 
   return (
-    <div className={css.page}>
+    <div className={css.page} data-view={view}>
       <nav className={css.outline} aria-labelledby="md-outline">
         <h2 id="md-outline" className={css.label}>
           Outline
@@ -163,13 +197,26 @@ export default function MarkdownResult() {
           <span className={css.hint}>word-level highlights</span>
         </div>
         {view === 'rendered' && (
-          <div className={css.doc}>
-            {md.blocks.map((b, i) => (
-              <Block key={i} b={b} i={i} viewed={!!viewed[changeIdOf(i)]} onViewed={() => toggleViewed(changeIdOf(i))} />
-            ))}
-          </div>
+          <VirtualList
+            count={md.blocks.length}
+            estimate={60}
+            label="Rendered Markdown, scrollable"
+            className={css.docScroll}
+            listClassName={css.doc}
+            apiRef={listApi}
+            render={(i, slot) => (
+              <Block
+                key={i}
+                b={md.blocks[i]!}
+                i={i}
+                slot={slot}
+                viewed={!!viewed[changeIdOf(i)]}
+                onViewed={() => toggleViewed(changeIdOf(i))}
+              />
+            )}
+          />
         )}
-        {view === 'side' && <SideBySide md={md} />}
+        {view === 'side' && <SideBySide md={md} apiRef={listApi} />}
         {view === 'source' && (
           <DiffRows
             rows={'text' in result ? result.text.rows : []}
@@ -181,16 +228,16 @@ export default function MarkdownResult() {
       </section>
 
       <aside className={css.side}>
-        <section className={css.panel} aria-labelledby="md-summary">
+        <section className={`${css.panel} ${css.summary}`} aria-labelledby="md-summary">
           <h2 id="md-summary" className={css.label}>
             Summary
           </h2>
           <dl className={css.stats}>
             {(
               [
-                ['Blocks added', md.stats.added],
-                ['Blocks removed', md.stats.removed],
-                ['Blocks edited', md.stats.edited],
+                ['Sections added', md.stats.added],
+                ['Sections removed', md.stats.removed],
+                ['Sections edited', md.stats.edited],
                 ['Links changed', links.length],
                 ['Code blocks changed', codes],
                 ['Viewed', `${seen} of ${changed.length}`],
@@ -266,10 +313,16 @@ export default function MarkdownResult() {
   );
 }
 
-function Block({ b, i, viewed, onViewed }: { b: MdBlock; i: number; viewed: boolean; onViewed: () => void }) {
+function Block({ b, i, slot, viewed, onViewed }: { b: MdBlock; i: number; slot?: RowSlot | undefined; viewed: boolean; onViewed: () => void }) {
   return (
     // tabIndex -1: outline and J/K move focus here.
-    <div id={blockId(i)} className={css.block} data-status={b.status} tabIndex={-1}>
+    <div
+      id={blockId(i)}
+      className={css.block}
+      data-status={b.status}
+      tabIndex={-1}
+      {...(slot ? { ref: slot.measure, 'data-index': slot['data-index'], style: slot.style } : {})}
+    >
       {b.status !== 'same' && (
         <span className={css.gutter} aria-hidden="true">
           {STATUS_SYM[b.status]}
@@ -316,7 +369,13 @@ function CodeDiff({ code }: { code: NonNullable<MdBlock['code']> }) {
     [code],
   );
   return (
-    <pre className={css.code} aria-label={`Code block${code.lang ? ` (${code.lang})` : ''}, line diff`}>
+    <pre
+      className={css.code}
+      aria-label={`Code block${code.lang ? ` (${code.lang})` : ''}, line diff`}
+      // Long lines scroll sideways; the block must be reachable by keyboard (axe scrollable-region-focusable).
+      // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
+      tabIndex={0}
+    >
       {rows.flatMap((r, k) => {
         const text = (s: NonNullable<typeof r.left>) => s.segs.map((x) => x.text).join('');
         if (r.type === 'same') return [<span key={k} className={css.codeLine}>{'  '}{text(r.left!)}{'\n'}</span>];
@@ -345,19 +404,42 @@ function CodeDiff({ code }: { code: NonNullable<MdBlock['code']> }) {
   );
 }
 
-function SideBySide({ md }: { md: MdDiff }) {
+function SideBySide({ md, apiRef }: { md: MdDiff; apiRef: Ref<VirtualListApi> }) {
   return (
-    <div className={css.sbs}>
-      {md.blocks.map((b, i) => {
+    <VirtualList
+      count={md.blocks.length}
+      estimate={60}
+      label="Side by side, scrollable"
+      className={css.docScroll}
+      listClassName={css.sbs}
+      apiRef={apiRef}
+      render={(i, slot) => {
+        const b = md.blocks[i]!;
         const marked = b.status === 'edited' && !b.code;
         const left = b.status === 'added' ? '' : marked ? leftMarks(b) : (b.beforeHtml ?? b.html);
         const right = b.status === 'removed' ? '' : marked ? rightMarks(b) : b.html;
         return (
-          <div key={i} className={css.sbsRow} data-status={b.status}>
+          <div
+            key={i}
+            id={`sbs-${blockId(i)}`}
+            className={css.sbsRow}
+            data-status={b.status}
+            {...(slot ? { ref: slot.measure, 'data-index': slot['data-index'], style: slot.style } : {})}
+          >
             <div className={css.sbsCell} data-side="before">
+              {left && b.status !== 'same' && (
+                <span className={css.sbsGutter} aria-hidden="true">
+                  {b.status === 'edited' ? '~' : '−'}
+                </span>
+              )}
               {left ? <Html html={left} className={css.md} /> : null}
             </div>
             <div className={css.sbsCell} data-side="after">
+              {right && b.status !== 'same' && (
+                <span className={css.sbsGutter} aria-hidden="true">
+                  {b.status === 'edited' ? '~' : '+'}
+                </span>
+              )}
               {right ? <Html html={right} className={css.md} /> : null}
             </div>
             {b.status !== 'same' && (
@@ -367,8 +449,8 @@ function SideBySide({ md }: { md: MdDiff }) {
             )}
           </div>
         );
-      })}
-    </div>
+      }}
+    />
   );
 }
 

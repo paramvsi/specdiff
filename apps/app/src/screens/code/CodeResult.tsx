@@ -3,15 +3,15 @@ import type { CodeDiff, CodeItem, CodeStatus } from '@specdiff/core/code';
 import type { Row } from '@specdiff/core/text';
 import { BetaLabel, Button, Checkbox, IdenticalState, SegmentedControl, useToast } from '@specdiff/ui';
 import * as icons from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useCommand } from '../../shell/commands';
-import { changeLink, focusChange, readChangeHash } from '../../shell/nav';
+import { changeLink, focusChange, readChangeHash, useNav } from '../../shell/nav';
 import { useApp } from '../../state/store';
 import { TextResult } from '../text/TextResult';
 import css from './CodeResult.module.css';
 
-const LANG_NAME: Record<string, string> = { typescript: 'TypeScript', tsx: 'TypeScript', javascript: 'JavaScript', java: 'Java', python: 'Python', go: 'Go', ruby: 'Ruby', rust: 'Rust', kotlin: 'Kotlin', csharp: 'C#' };
-const extLang = (name: string) => LANG_NAME[({ go: 'go', rb: 'ruby', rs: 'rust', kt: 'kotlin', cs: 'csharp' } as Record<string, string>)[name.split('.').pop() ?? ''] ?? ''] ?? name.split('.').pop()?.toUpperCase() ?? 'this language';
+/** A name the user gave (a file), not the "Before"/"After" placeholder of pasted text. */
+const realName = (n: string | undefined) => (n && n !== 'Before' && n !== 'After' ? n : undefined);
 
 export default function CodeResult() {
   const { result, before, after } = useApp();
@@ -19,16 +19,19 @@ export default function CodeResult() {
   if (!result || !('code' in result)) return null;
   const outcome = result.code;
   if ('fallback' in outcome) {
-    const name = after?.name ?? before?.name ?? 'this file';
+    const name = realName(after?.name) ?? realName(before?.name);
+    // The worker names the language from the extension or the content ("Go"); never the file name.
+    const language = 'language' in result && result.language ? result.language : undefined;
     return (
       <div className={css.page}>
         {!dismissed && (
           <div className={css.notice} role="status">
+            <icons.TriangleAlert size={16} aria-hidden="true" className={css.warnIcon} />
             <div>
-              <p className={css.noticeTitle}>Showing a text diff for {name}</p>
+              <p className={css.noticeTitle}>Showing a text diff{name ? ` for ${name}` : ''}</p>
               <p className={css.noticeBody}>
                 {outcome.fallback === 'unsupported'
-                  ? `Structural diff supports TypeScript, JavaScript, Java and Python for now. ${extLang(name)} is on the list.`
+                  ? `Structural diff supports TypeScript, JavaScript, Java and Python for now.${language ? ` ${language} is on the list.` : ''}`
                   : `${outcome.side === 'before' ? before?.name : after?.name} has a syntax error${outcome.line ? ` near line ${outcome.line}` : ''}, so the structure can't be read. Fix it to see a structural diff.`}
               </p>
             </div>
@@ -40,7 +43,32 @@ export default function CodeResult() {
     );
   }
   if (outcome.items.every((i) => i.status === 'same')) return <IdenticalState ignoredLines={0} />;
-  return <Structural diff={outcome} rows={result.text.rows} />;
+  return <Structural diff={withoutContainerEcho(outcome)} rows={result.text.rows} />;
+}
+
+/**
+ * A-09: a class whose only edits are inside its members is not a change of its own: its members are listed
+ * ("1 logic change", not 2). Core marks such a parent "changed"; compare its text with the members cut out.
+ */
+export function withoutContainerEcho(d: CodeDiff): CodeDiff {
+  const echo = (item: CodeItem) => {
+    if (item.status !== 'changed' || !item.beforeText || !item.afterText) return false;
+    const kids = d.items.filter((i) => i !== item && i.name.startsWith(`${item.name}.`));
+    if (!kids.length) return false;
+    const strip = (text: string, side: 'beforeText' | 'afterText') =>
+      kids
+        .map((k) => k[side])
+        .filter((t): t is string => !!t)
+        .sort((a, b) => b.length - a.length)
+        .reduce((t, k) => t.split(k).join(''), text)
+        .replace(/\s+/g, '');
+    return strip(item.beforeText, 'beforeText') === strip(item.afterText, 'afterText');
+  };
+  const items = d.items.filter((i) => !echo(i));
+  if (items.length === d.items.length) return d;
+  const stats = Object.fromEntries(Object.keys(d.stats).map((k) => [k, 0])) as CodeDiff['stats'];
+  for (const i of items) stats[i.status]++;
+  return { ...d, items, stats, logicChanged: stats.changed + stats.added + stats.removed > 0 };
 }
 
 const BADGE: Partial<Record<CodeStatus, string>> = { renamed: 'Renamed', renamedLocals: 'Renamed', moved: 'Moved', changed: 'Logic', added: 'Added', removed: 'Removed', formatting: 'Format', comments: 'Comments' };
@@ -74,9 +102,10 @@ function Structural({ diff, rows }: { diff: CodeDiff; rows: Row[] }) {
   const [open, setOpen] = useState<Set<number>>(new Set());
 
   const quiet = useMemo(() => {
-    const statuses = new Set<CodeStatus>(['formatting', ...(hideRenames ? (['renamed', 'renamedLocals'] as const) : []), ...(hideComments ? (['comments'] as const) : [])]);
+    // Folded: layout-only edits (and comment-only ones when hidden). Renamed locals stay visible, as in A-09.
+    const statuses = new Set<CodeStatus>(['formatting', ...(hideComments ? (['comments'] as const) : [])]);
     return diff.items.filter((i) => statuses.has(i.status));
-  }, [diff, hideRenames, hideComments]);
+  }, [diff, hideComments]);
 
   const views = useMemo<V[]>(() => {
     const inside = (r: Row, i: CodeItem) => (r.right && i.lines.after && r.right.n >= i.lines.after[0] && r.right.n <= i.lines.after[1]) || (r.left && i.lines.before && r.left.n >= i.lines.before[0] && r.left.n <= i.lines.before[1]);
@@ -86,28 +115,48 @@ function Structural({ diff, rows }: { diff: CodeDiff; rows: Row[] }) {
     const flush = () => {
       if (!buf.length) return;
       const changed = buf.filter((r) => r.type !== 'same').length;
-      if (changed) out.push({ kind: 'fold', rows: buf, reason: `${buf.length} lines reformatted, no logic change`, id: id++ });
+      if (changed) out.push({ kind: 'fold', rows: buf, reason: `${buf.length} ${buf.length === 1 ? 'line' : 'lines'} reformatted, no logic change`, id: id++ });
       else out.push(...buf.map((row) => ({ kind: 'row' as const, row })));
       buf = [];
     };
+    const renamed = hideRenames ? diff.items.filter((i) => i.status === 'renamedLocals') : [];
     for (const r of rows) {
       if (quiet.some((i) => inside(r, i))) buf.push(r);
-      else { flush(); out.push({ kind: 'row', row: r }); }
+      else {
+        flush();
+        // Hide renames: a line whose only edit is a renamed local reads as unchanged, the new name marked (A-09).
+        const asSame = r.type !== 'same' && r.left && r.right && renamed.some((i) => inside(r, i));
+        out.push({ kind: 'row', row: asSame ? { ...r, type: 'same' } : r });
+      }
     }
     flush();
     return out;
-  }, [rows, quiet]);
+  }, [rows, quiet, diff, hideRenames]);
 
   const formattingLines = diff.items.filter((i) => i.status === 'formatting').reduce((n, i) => n + ((i.lines.after?.[1] ?? 0) - (i.lines.after?.[0] ?? 0) + 1), 0);
   const listed = diff.items.filter((i) => i.status !== 'same' && i.status !== 'formatting' && !(hideComments && i.status === 'comments'));
   // X-11 / X-12: navigate, mark viewed and link to the listed items.
+  // The change id this screen last navigated to; others come from outside (the command palette).
+  const handled = useRef<string | null>(useNav.getState().changeId);
   const goTo = useCallback((k: number) => {
     if (!listed.length) return;
     const n = (k + listed.length) % listed.length;
     setCur(n);
+    handled.current = itemId(listed[n]!);
     focusChange(itemId(listed[n]!));
     requestAnimationFrame(() => document.getElementById(itemId(listed[n]!))?.focus());
   }, [listed]);
+  // The palette (and other screens) call focusChange(id): follow it here too.
+  useEffect(
+    () =>
+      useNav.subscribe((st) => {
+        const id = st.changeId;
+        if (!id || id === handled.current) return;
+        const k = listed.findIndex((i) => itemId(i) === id);
+        if (k >= 0) goTo(k);
+      }),
+    [listed, goTo],
+  );
   useCommand('next-change', useCallback(() => goTo(cur + 1), [goTo, cur]));
   useCommand('prev-change', useCallback(() => goTo(cur - 1), [goTo, cur]));
   useCommand('mark-viewed', useCallback(() => { const i = listed[cur]; if (i) toggleViewed(itemId(i)); }, [listed, cur, toggleViewed]));
@@ -128,7 +177,14 @@ function Structural({ diff, rows }: { diff: CodeDiff; rows: Row[] }) {
             <SegmentedControl label="View" size="sm" value={view} onValueChange={setView} options={[{ value: 'structural', label: 'Structural' }, { value: 'text', label: 'Text' }]} />
           </header>
           {view === 'text' ? <TextResult /> : (
-            <div className={css.code}>
+            <div
+              className={css.code}
+              role="region"
+              // Scrollable content must be reachable by keyboard (axe scrollable-region-focusable).
+              // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
+              tabIndex={0}
+              aria-label="Code"
+            >
               {views.map((v, i) =>
                 v.kind === 'row' ? <Line key={i} row={v.row} /> : open.has(v.id) ? v.rows.map((r, j) => <Line key={`${i}-${j}`} row={r} />) : (
                   <div key={i} className={css.fold}>

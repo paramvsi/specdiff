@@ -1,4 +1,4 @@
 import { expose } from 'comlink';
-import { runCompare } from './engine';
+import { runCompare, runTextDiff } from './engine';
 
-expose({ runCompare });
+expose({ runCompare, runTextDiff });

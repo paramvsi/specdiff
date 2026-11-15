@@ -7,11 +7,10 @@ import {
   Button,
   Checkbox,
   Dialog,
-  DropZone,
   ParseErrorState,
+  SegmentedControl,
   SeverityBadge,
   TextField,
-  TooLargeState,
   useToast,
 } from '@specdiff/ui';
 import * as icons from 'lucide-react';
@@ -26,11 +25,13 @@ import {
   type LoadError,
   type Source,
 } from '../lib/input';
+import { isComparisonName, readComparisonFile } from '../lib/comparison';
 import { samples } from '../lib/samples';
-import { openSample } from '../shell/boot';
+import { openPayload, openSample } from '../shell/boot';
 import { useCommand } from '../shell/commands';
 import { listHistory, loadPayload } from '../state/persist';
 import { useApp, type Side } from '../state/store';
+import { useQueuedToasts } from '../state/toasts';
 import css from './Compare.module.css';
 import { ReloadButton } from './text/ReloadButton';
 
@@ -69,9 +70,11 @@ export function Compare() {
     result,
   } = useApp();
   const { toast } = useToast();
+  useQueuedToasts();
   const [dragging, setDragging] = useState<Side | null>(null);
   const [urlFor, setUrlFor] = useState<Side | null>(null);
   const [tooLarge, setTooLarge] = useState<Source | null>(null);
+  const [tooLargeSide, setTooLargeSide] = useState<Side>('after');
   // TX-12: the patch being opened (null: show the two editors).
   const [patch, setPatch] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -79,8 +82,25 @@ export function Compare() {
 
   const accept = useCallback(
     (side: Side, s: Source) => {
+      // OUT-06: a comparison file (.specdiff.json) opens the comparison it carries, on either side.
+      if (isComparisonName(s.name) || (/\.json$/i.test(s.name) && /^\s*\{\s*"left"\s*:/.test(s.content.slice(0, 200)))) {
+        const payload = readComparisonFile(s.content);
+        if (payload) {
+          void openPayload(payload);
+          return;
+        }
+        if (isComparisonName(s.name)) {
+          toast({
+            title: `Couldn’t open ${s.name}`,
+            description: 'It isn’t a Specdiff comparison file, or it is damaged.',
+            tone: 'error',
+          });
+          return;
+        }
+      }
       if (sizeVerdict(s.size) === 'text-only') {
         setTooLarge(s);
+        setTooLargeSide(side);
         setSource(side, s);
         return;
       }
@@ -230,27 +250,24 @@ export function Compare() {
                 }}
                 onDrop={(e) => void onDrop(side, e)}
               >
-                <textarea
-                  id={id}
-                  className={css.textarea}
-                  placeholder="Paste here, or drop a file"
-                  spellCheck={false}
-                  value={
-                    src && src.content.length < 2_000_000
-                      ? src.content
-                      : src
-                        ? `${src.name} · ${formatBytes(src.size)} (too large to show here)`
-                        : ''
-                  }
-                  readOnly={!!src && src.content.length >= 2_000_000}
-                  onChange={(e) => setText(side, e.target.value)}
-                />
-                {dragging === side && (
-                  <DropZone
-                    dragging
-                    title="Drop to compare"
-                    detail="A file, a folder or a ZIP. Multi-file specs resolve their $refs inside it."
-                    className={css.overlay}
+                {dragging ? (
+                  // A-01 drag over: both sides become drop zones; a loaded side shows its file.
+                  <DropSide side={side} src={src} target={dragging === side} />
+                ) : (
+                  <textarea
+                    id={id}
+                    className={css.textarea}
+                    placeholder="Paste here, or drop a file"
+                    spellCheck={false}
+                    value={
+                      src && src.content.length < 2_000_000
+                        ? src.content
+                        : src
+                          ? `${src.name} · ${formatBytes(src.size)} (too large to show here)`
+                          : ''
+                    }
+                    readOnly={!!src && src.content.length >= 2_000_000}
+                    onChange={(e) => setText(side, e.target.value)}
                   />
                 )}
               </div>
@@ -285,7 +302,7 @@ export function Compare() {
         ref={fileInput}
         type="file"
         hidden
-        accept=".yaml,.yml,.json,.md,.markdown,.txt,.log,.zip,.ts,.tsx,.js,.jsx,.java,.py,text/*"
+        accept=".yaml,.yml,.json,.specdiff.json,.md,.markdown,.txt,.log,.zip,.ts,.tsx,.js,.jsx,.java,.py,text/*"
         onChange={async (e) => {
           const f = e.target.files?.[0];
           e.target.value = '';
@@ -356,36 +373,155 @@ export function Compare() {
         <UrlDialog
           side={urlFor}
           onClose={() => setUrlFor(null)}
-          onLoad={(s) => {
-            accept(urlFor, s);
+          onLoad={(into, s) => {
+            accept(into, s);
             setUrlFor(null);
           }}
         />
       )}
       {tooLarge && (
-        <Dialog
-          open
-          title={`${tooLarge.name} is ${formatBytes(tooLarge.size)}`}
-          onOpenChange={(o) => {
-            if (!o) setTooLarge(null);
+        <TooLargeDialog
+          file={tooLarge}
+          side={tooLargeSide}
+          other={tooLargeSide === 'before' ? after : before}
+          onClose={() => setTooLarge(null)}
+          onCompareAsText={() => {
+            setMode('text');
+            setTooLarge(null);
           }}
-        >
-          <TooLargeState
-            fileName={tooLarge.name}
-            size={formatBytes(tooLarge.size)}
-            limit="25 MB"
-            onCompareAsText={() => {
-              setMode('text');
-              setTooLarge(null);
-            }}
-            onChooseAnother={() => {
-              setTooLarge(null);
-              pick('after');
-            }}
-          />
-        </Dialog>
+          onChooseAnother={() => {
+            setTooLarge(null);
+            pick(tooLargeSide);
+          }}
+        />
       )}
     </div>
+  );
+}
+
+const SIDE_LABEL: Record<Side, string> = { before: 'Before', after: 'After' };
+
+function describeSource(src: Source): string {
+  const d = detectMode(src.name, src.content.slice(0, 65536));
+  const kind =
+    d.mode === 'openapi' && d.specVersion
+      ? `${d.specVersion.startsWith('2') ? 'Swagger' : 'OpenAPI'} ${d.specVersion.split('.').slice(0, 2).join('.')}`
+      : DETECTED[d.mode];
+  return `${kind} · ${formatBytes(src.size)}`;
+}
+
+/** A-01 drag over: the target side turns into the drop zone; the other shows its file, or an empty zone. */
+function DropSide({ side, src, target }: { side: Side; src: Source | null; target: boolean }) {
+  if (target)
+    return (
+      <div className={css.zone} data-target="">
+        <icons.ArrowUpToLine size={24} aria-hidden="true" />
+        <p className={css.zoneTitle}>Drop to use as {SIDE_LABEL[side]}</p>
+        <p className={css.zoneDetail}>
+          One file, a folder, or a ZIP of a split spec. External $refs inside the folder are resolved.
+        </p>
+      </div>
+    );
+  return (
+    <div className={css.zone}>
+      {src?.content ? (
+        <>
+          <icons.File size={22} aria-hidden="true" />
+          <p className={css.zoneFile}>{src.name}</p>
+          <p className={css.zoneDetail}>
+            {SIDE_LABEL[side]} · {describeSource(src)}
+          </p>
+        </>
+      ) : (
+        <p className={css.zoneDetail}>Drop to use as {SIDE_LABEL[side]}</p>
+      )}
+    </div>
+  );
+}
+
+/** O-08 File too large: both files with sizes, two options, and the CLI for files this big (B-11). */
+function TooLargeDialog({
+  file,
+  side,
+  other,
+  onClose,
+  onCompareAsText,
+  onChooseAnother,
+}: {
+  file: Source;
+  side: Side;
+  other: Source | null;
+  onClose: () => void;
+  onCompareAsText: () => void;
+  onChooseAnother: () => void;
+}) {
+  const ext = /\.ya?ml$/i.test(file.name) ? 'yaml' : 'json';
+  const format = ext === 'yaml' ? 'YAML' : 'JSON';
+  const files = (side === 'before' ? [file, other] : [other, file]) as Array<Source | null>;
+  return (
+    <Dialog
+      open
+      title={`${file.name} is ${formatBytes(file.size)}`}
+      onOpenChange={(o) => {
+        if (!o) onClose();
+      }}
+      className={css.wideDialog}
+      actions={
+        <div className={css.band}>
+          <span className={css.bandNote}>
+            Run large files from your terminal:{' '}
+            <code className={css.cmd}>npx specdiff-cli a.{ext} b.{ext}</code>
+          </span>
+          <Button variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+        </div>
+      }
+    >
+      <div className={css.tooLarge}>
+        <span className={css.warnTile} aria-hidden="true">
+          <icons.TriangleAlert size={20} />
+        </span>
+        <p className={css.tooLargeBody}>
+          Structural {format} comparison works up to 25 MB in the browser. Above that, building the
+          tree uses more memory than most tabs allow and the page can freeze.
+        </p>
+        <dl className={css.sizes}>
+          {files.map((f, i) =>
+            f ? (
+              <div key={i}>
+                <dt>{i ? 'After' : 'Before'}</dt>
+                <dd>
+                  {f.name} · {formatBytes(f.size)}
+                </dd>
+              </div>
+            ) : null,
+          )}
+        </dl>
+        <div className={css.optionCard}>
+          <div>
+            <p className={css.optionTitle}>Compare as text</p>
+            <p className={css.optionText}>
+              Line and word diff only. Key order and array matching are not available.
+            </p>
+          </div>
+          <Button variant="brand" onClick={onCompareAsText}>
+            Compare as text
+          </Button>
+        </div>
+        <div className={css.optionCard} data-tone="raised">
+          <div>
+            <p className={css.optionTitle}>Use smaller files</p>
+            <p className={css.optionText}>
+              Split the export, or remove fields you don’t need, then compare again.
+            </p>
+          </div>
+          <Button variant="secondary" onClick={onChooseAnother}>
+            Choose another file
+          </Button>
+        </div>
+      </div>
+    </Dialog>
   );
 }
 
@@ -396,7 +532,7 @@ function UrlDialog({
 }: {
   side: Side;
   onClose: () => void;
-  onLoad: (s: Source) => void;
+  onLoad: (into: Side, s: Source) => void;
 }) {
   const [url, setUrl] = useState('');
   const [into, setInto] = useState<Side>(side);
@@ -408,7 +544,7 @@ function UrlDialog({
     setBusy(true);
     setErr(null);
     try {
-      onLoad(await loadUrl(url));
+      onLoad(into, await loadUrl(url));
     } catch (e) {
       const le = e as LoadError;
       setErr(
@@ -420,24 +556,35 @@ function UrlDialog({
       setBusy(false);
     }
   };
-  void into;
   return (
     <Dialog
       open
       title="Load from URL"
       description="Paste a link to a raw file or a GitHub file page."
+      className={css.wideDialog}
       onOpenChange={(o) => {
         if (!o) onClose();
       }}
       actions={
-        <>
-          <Button variant="ghost" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button variant="brand" disabled={!url.trim() || busy} onClick={() => void submit()}>
-            {busy ? 'Loading…' : 'Load file'}
-          </Button>
-        </>
+        <div className={css.band}>
+          <span className={css.bandNote}>
+            <icons.Shield size={13} aria-hidden="true" /> The file goes from that server to this tab
+            only.
+          </span>
+          <span className={css.bandActions}>
+            <Button variant="secondary" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button
+              variant="brand"
+              icon={<icons.Download size={15} />}
+              disabled={!url.trim() || busy}
+              onClick={() => void submit()}
+            >
+              {busy ? 'Loading…' : 'Load file'}
+            </Button>
+          </span>
+        </div>
       }
     >
       <form
@@ -449,10 +596,10 @@ function UrlDialog({
       >
         <TextField
           label="File URL"
+          mono
           value={url}
           onChange={(e) => setUrl(e.target.value)}
           placeholder="https://github.com/acme/payments-api/blob/main/openapi.yaml"
-         
           inputMode="url"
         />
         {github && (
@@ -460,23 +607,33 @@ function UrlDialog({
             GitHub link detected. We’ll fetch <code>{raw.replace(/^https:\/\//, '')}</code>.
           </p>
         )}
-        <fieldset className={css.into}>
-          <legend>Load into</legend>
-          {(['before', 'after'] as const).map((s) => (
-            <label key={s}>
-              <input type="radio" name="into" checked={into === s} onChange={() => setInto(s)} />{' '}
-              {s === 'before' ? 'Before' : 'After'}
-            </label>
-          ))}
-        </fieldset>
+        <div className={css.into}>
+          <span className={css.intoLabel} id="load-into">
+            Load into
+          </span>
+          <div className={css.intoTrack}>
+            <SegmentedControl
+              label="Load into"
+              value={into}
+              onValueChange={setInto}
+              options={[
+                { value: 'before', label: 'Before' },
+                { value: 'after', label: 'After' },
+              ]}
+            />
+          </div>
+        </div>
         {err && (
           <p role="alert" className={css.error}>
             {err}
           </p>
         )}
-        <p className={css.note}>
-          Your browser fetches the file directly. If the server doesn’t allow cross-origin requests,
-          download the file and drop it in instead. The file goes from that server to this tab only.
+        <p className={css.cors}>
+          <icons.TriangleAlert size={14} aria-hidden="true" className={css.corsIcon} />
+          <span>
+            Your browser fetches the file directly. If the server doesn’t allow cross-origin
+            requests, download the file and drop it in instead.
+          </span>
         </p>
       </form>
     </Dialog>

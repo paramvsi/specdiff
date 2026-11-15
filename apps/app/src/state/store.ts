@@ -19,6 +19,8 @@ export interface Settings {
 }
 
 export const STEPS: Step[] = ['detect', 'parse', 'resolve', 'normalise', 'compare'];
+/** IN-08: comparisons that finish sooner than this never show the Parsing screen (no flash). */
+export const PARSING_DELAY_MS = 300;
 
 interface State {
   screen: Screen;
@@ -41,7 +43,11 @@ interface State {
   setMode: (m: Mode | 'auto') => void;
   updateConfig: (fn: (c: ConfigInput) => ConfigInput) => void;
   setSettings: (s: Partial<Settings>) => void;
-  compare: () => Promise<void>;
+  /**
+   * Run the comparison. `background` (TX-10 live re-diff): keep the current screen and result visible and swap the
+   * result in when it is ready; no Parsing screen and no new history entry.
+   */
+  compare: (opts?: { background?: boolean }) => Promise<void>;
   cancel: () => void;
   decide: (
     fingerprint: string,
@@ -89,21 +95,41 @@ export const useApp = create<State>((set, get) => ({
   updateConfig: (fn) =>
     set((s) => ({ settings: { ...s.settings, config: fn(s.settings.config) } })),
   setSettings: (p) => set((s) => ({ settings: { ...s.settings, ...p } })),
-  compare: async () => {
+  compare: async (opts = {}) => {
     const { before, after, mode, settings } = get();
     if (!before || !after) return;
     get().job?.cancel();
+    const background = !!opts.background && get().screen === 'result';
     const job = startCompare({ before, after, mode, config: Config.parse(settings.config) }, (p) =>
-      set((s) => ({ progress: { ...s.progress, [p.step]: p } })),
+      background ? undefined : set((s) => ({ progress: { ...s.progress, [p.step]: p } })),
     );
-    set({ job, progress: {}, error: null, screen: 'parsing', viewed: {}, comparedConfig: settings.config });
+    if (background) set({ job, comparedConfig: settings.config });
+    else {
+      set({ job, progress: {}, error: null, viewed: {}, comparedConfig: settings.config });
+      // IN-08: show the Parsing screen only when the work takes long enough to notice.
+      setTimeout(() => {
+        if (get().job === job) set({ screen: 'parsing' });
+      }, PARSING_DELAY_MS);
+    }
     try {
       const result = await job.promise;
+      if (get().job !== job) return; // superseded by a newer comparison
+      if (background) {
+        // A failed parse while editing keeps the last good result on screen.
+        if (!('kind' in result)) set({ result, job: null });
+        else set({ job: null });
+        return;
+      }
       set({ result, job: null, screen: 'kind' in result ? 'compare' : 'result' });
       if (!('kind' in result)) void saveHistory(before, after, result).catch(() => {});
     } catch (e) {
+      if (get().job !== job && get().job !== null) return;
       if (e instanceof DOMException && e.name === 'AbortError') {
-        set({ job: null, screen: 'compare' });
+        if (!background) set({ job: null, screen: 'compare' });
+        return;
+      }
+      if (background) {
+        set({ job: null });
         return;
       }
       set({ job: null, error: e instanceof Error ? e.message : String(e), screen: 'compare' });

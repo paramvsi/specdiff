@@ -72,7 +72,7 @@
   padding: 0 5px;
   border-radius: var(--sd-radius-pill);
   background: var(--sd-ink);
-  color: var(--sd-on-inverse);
+  color: var(--sd-surface);
   font-size: 11px;
   display: inline-grid;
   place-items: center;
@@ -471,4 +471,19 @@
   margin-left: var(--sd-space-3);
   font-size: 13px;
   color: var(--sd-ink);
+}
+
+/* Touch targets ≥ 44 px on phones and touch screens (WCAG 2.5.8; CLAUDE.md rule 4). */
+@media (max-width: 639px), (pointer: coarse) {
+  .filtersBtn,
+  .fold {
+    min-height: 44px;
+    height: 44px;
+  }
+  .filter label,
+  .filter input,
+  .filter button,
+  .addForm input {
+    min-height: 44px;
+  }
 }

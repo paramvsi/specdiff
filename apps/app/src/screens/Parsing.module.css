@@ -54,6 +54,12 @@
   font-weight: 700;
   outline: none;
 }
+/* Focus moves here programmatically (tabIndex -1, not in the tab order): no ring on a non-interactive heading. */
+.title:focus,
+.title:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
 .lead {
   margin: -8px 0 0;
   color: var(--sd-muted);

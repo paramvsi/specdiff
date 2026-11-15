@@ -2,7 +2,7 @@
 // category, tree / side-by-side / raw views, JSONPath per change, duplicate keys, export panel.
 import { Config, type Change, type Kind } from '@specdiff/core';
 import { humanPath, stable } from '@specdiff/core/json';
-import { diffText } from '@specdiff/core/text';
+import type { Row } from '@specdiff/core/text';
 import {
   IdenticalState,
   Button,
@@ -17,6 +17,8 @@ import {
 } from '@specdiff/ui';
 import * as icons from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { VirtualList, type RowSlot, type VirtualListApi } from '../../lib/VirtualList';
+import { startTextDiff } from '../../worker/client';
 import { useCommand } from '../../shell/commands';
 import { changeLink, focusChange, readChangeHash, useNav } from '../../shell/nav';
 import { useApp } from '../../state/store';
@@ -34,14 +36,26 @@ const memo: { tab: string; view: View; format: JsonExportKind } = {
   format: 'patch',
 };
 
-const KINDS: Array<{ kind: Kind; label: string; stat: keyof JsonResultData['diff']['stats'] }> = [
-  { kind: 'added', label: 'Added', stat: 'added' },
-  { kind: 'removed', label: 'Removed', stat: 'removed' },
-  { kind: 'changed', label: 'Changed', stat: 'changed' },
-  { kind: 'typeChanged', label: 'Type changed', stat: 'typeChanged' },
-  { kind: 'moved', label: 'Moved', stat: 'moved' },
+/** Chip categories: the change kinds, plus null ≠ missing as its own (A-07). */
+type ChipKind = Kind | 'nullMissing';
+const CHIPS: Array<{ kind: ChipKind; label: string }> = [
+  { kind: 'added', label: 'Added' },
+  { kind: 'removed', label: 'Removed' },
+  { kind: 'changed', label: 'Changed' },
+  { kind: 'typeChanged', label: 'Type changed' },
+  { kind: 'moved', label: 'Moved' },
+  { kind: 'nullMissing', label: 'Null vs missing' },
 ];
-const SYMBOL: Record<Kind, string> = {
+const isNullMissing = (c: Change) =>
+  (c.kind === 'removed' && c.before === null) || (c.kind === 'added' && c.after === null);
+const chipOf = (c: Change): ChipKind => (isNullMissing(c) ? 'nullMissing' : c.kind);
+/** Scalar values in a document ("7 differences in 226 values"). */
+function countValues(v: unknown): number {
+  if (Array.isArray(v)) return v.reduce<number>((n, x) => n + countValues(x), 0);
+  if (v && typeof v === 'object') return Object.values(v).reduce<number>((n, x) => n + countValues(x), 0);
+  return v === undefined ? 0 : 1;
+}
+const SYMBOL_BASE: Record<Kind, string> = {
   added: '+',
   removed: '−',
   changed: '~',
@@ -49,6 +63,8 @@ const SYMBOL: Record<Kind, string> = {
   moved: '↕',
   renamed: '~',
 };
+const SYMBOL = SYMBOL_BASE;
+const CHIP_SYMBOL: Record<ChipKind, string> = { ...SYMBOL_BASE, nullMissing: '≠' };
 const MARKER: Record<Kind, DiffKind> = {
   added: 'added',
   removed: 'removed',
@@ -66,9 +82,64 @@ function fmt(v: unknown): string {
   const s = JSON.stringify(v);
   return s.length > 80 ? `${s.slice(0, 79)}…` : s;
 }
-const LAST = /(\.[^.[\]]+|\['(?:[^'\\]|\\.)*'\]|\[[^\]]*\])$/;
-const parentOf = (p: string) => p.replace(LAST, '') || '$';
-const depthOf = (p: string) => (p.match(/\.[^.[\]]+|\[[^\]]*\]/g) ?? []).length;
+
+/** A path inside a key-matched array item: `$.flags[?(@.key=="x")].enabled` → array, key, value, rest. */
+const KEYED = /^(.*?)\[\?\(@\.(\w+)==("?)(.*?)\3\)\](.*)$/;
+const INDEX = /^(.*)\[(\d+)\]$/;
+
+/** Read a value at a JSONPath made by core (`.k`, `['k']`, `[n]`, `[?(@.k==v)]`). */
+export function valueAt(doc: unknown, path: string): unknown {
+  const steps = path.replace(/^\$/, '').match(/\.[^.[\]]+|\['(?:[^'\\]|\\.)*'\]|\[\?\(@\.\w+==(?:"[^"]*"|[^)]*)\)\]|\[\d+\]/g) ?? [];
+  let cur: unknown = doc;
+  for (const st of steps) {
+    if (cur === null || typeof cur !== 'object') return undefined;
+    const filter = /^\[\?\(@\.(\w+)==("?)(.*?)\2\)\]$/.exec(st);
+    if (filter) {
+      cur = Array.isArray(cur)
+        ? cur.find((it) => it && typeof it === 'object' && String((it as Record<string, unknown>)[filter[1]!]) === filter[3])
+        : undefined;
+    } else if (st.startsWith('[') && !st.startsWith("['")) cur = (cur as unknown[])[Number(st.slice(1, -1))];
+    else {
+      const k = st.startsWith('.') ? st.slice(1) : st.slice(2, -2).replace(/\\(.)/g, '$1');
+      cur = (cur as Record<string, unknown>)[k];
+    }
+  }
+  return cur;
+}
+
+export interface TreeEntry {
+  /** The array (or object) this row sits in. */
+  group: string;
+  matchKey?: string | undefined;
+  /** The row's label: `[key=checkout_v2]` for a keyed item, the key otherwise. */
+  label: string;
+  /** For changes inside a keyed item: the sub-path (`enabled`). */
+  inner?: string | undefined;
+  /** For keyed moves: index before → after. */
+  move?: { from: number; to: number } | undefined;
+}
+
+/** Where a change sits in the A-07 tree: keyed items under their array, shown by key (never by index). */
+export function treeEntry(c: Change, data: Pick<JsonResultData, 'before' | 'diff'>): TreeEntry {
+  const path = c.jsonPath ?? '$';
+  const keyFor = (arr: string) =>
+    data.diff.matchKeys[`${arr.replace(/\[[^\]]*\]/g, '[*]')}[*]`] ?? data.diff.matchKeys[`${arr}[*]`];
+  const k = KEYED.exec(path);
+  if (k) {
+    const rest = k[5]!.replace(/^\./, '');
+    if (!rest && c.kind === 'moved' && typeof c.before === 'number' && typeof c.after === 'number')
+      return { group: k[1]!, matchKey: k[2], label: `[${k[2]}=${k[4]}]`, move: { from: c.before, to: c.after } };
+    return { group: k[1]!, matchKey: k[2], label: `[${k[2]}=${k[4]}]`, ...(rest ? { inner: humanPath(`$.${rest}`).replace(/ › /g, '.') } : {}) };
+  }
+  const ix = INDEX.exec(path);
+  const key = ix ? keyFor(ix[1]!) : undefined;
+  if (ix && key && c.kind === 'moved' && typeof c.before === 'number' && typeof c.after === 'number') {
+    const item = (valueAt(data.before, ix[1]!) as unknown[] | undefined)?.[c.before] as Record<string, unknown> | undefined;
+    return { group: ix[1]!, matchKey: key, label: `[${key}=${String(item?.[key] ?? c.before)}]`, move: { from: c.before, to: c.after } };
+  }
+  // Everything else sits at the top level under its dotted path ("limits.maxUpload"), as in the design.
+  return { group: '$', label: humanPath(path).replace(/ › /g, '.') };
+}
 
 function canonical(v: unknown, sortKeys: boolean): string {
   if (!sortKeys) return JSON.stringify(v, null, 2) ?? '';
@@ -150,7 +221,7 @@ function DiffTab({
 }) {
   const { toast } = useToast();
   const [view, setView] = useState<View>(memo.view);
-  const [filter, setFilter] = useState<Set<Kind>>(new Set());
+  const [filter, setFilter] = useState<Set<ChipKind>>(new Set());
   const changeId = useNav((s) => s.changeId);
   const rowRefs = useRef(new Map<string, HTMLLIElement>());
 
@@ -160,13 +231,48 @@ function DiffTab({
     return m;
   }, [data]);
   const visible = useMemo(
-    () => data.changes.filter((c) => !filter.size || filter.has(c.kind)),
+    () => data.changes.filter((c) => !filter.size || filter.has(chipOf(c))),
     [data, filter],
   );
+  const counts = useMemo(() => {
+    const n: Record<ChipKind, number> = { added: 0, removed: 0, changed: 0, typeChanged: 0, moved: 0, renamed: 0, nullMissing: 0 };
+    for (const c of data.changes) n[chipOf(c)]++;
+    return n;
+  }, [data]);
+  const values = useMemo(() => Math.max(countValues(data.before), countValues(data.after)), [data]);
   const current = Math.max(
     0,
     visible.findIndex((c) => c.id === changeId),
   );
+  // Tree (A-07): changes grouped under their container, each group's header once ("flags [ 24 items ] · matched
+  // by key"), groups in order of their first change. Keyed items show by key, moves as "index 3 → 11".
+  const tree = useMemo(() => {
+    const groups = new Map<string, Array<{ c: Change; e: TreeEntry }>>();
+    for (const c of visible) {
+      const e = treeEntry(c, data);
+      const list = groups.get(e.group);
+      if (list) list.push({ c, e });
+      else groups.set(e.group, [{ c, e }]);
+    }
+    const out: Array<
+      | { type: 'group'; path: string; matchKey?: string | undefined; size: string }
+      | { type: 'change'; c: Change; e: TreeEntry }
+    > = [];
+    for (const [g, list] of groups) {
+      if (g !== '$') {
+        const v = valueAt(data.after, g) ?? valueAt(data.before, g);
+        out.push({ type: 'group', path: g, matchKey: list.find((x) => x.e.matchKey)?.e.matchKey, size: fmt(v) });
+      }
+      for (const x of list) out.push({ type: 'change', ...x });
+    }
+    return out;
+  }, [visible, data]);
+  const treeApi = useRef<VirtualListApi>(null);
+  const rootKeys =
+    data.after && typeof data.after === 'object' && !Array.isArray(data.after)
+      ? Object.keys(data.after).length
+      : null;
+
 
   const go = useCallback(
     (i: number) => {
@@ -178,13 +284,17 @@ function DiffTab({
         memo.view = 'tree';
         setView('tree');
       }
-      requestAnimationFrame(() => {
+      treeApi.current?.scrollToIndex(tree.findIndex((t) => t.type === 'change' && t.c.id === c.id));
+      let tries = 0;
+      const tick = () => {
         const el = rowRefs.current.get(c.id);
+        if (!el && tries++ < 10) return void requestAnimationFrame(tick);
         el?.scrollIntoView({ block: 'nearest' });
         el?.focus({ preventScroll: true });
-      });
+      };
+      requestAnimationFrame(tick);
     },
-    [visible, view],
+    [visible, view, tree],
   );
   useCommand(
     'next-change',
@@ -223,17 +333,22 @@ function DiffTab({
     }, [visible, current, toggleViewed]),
   );
 
-  const sideRows = useMemo(
-    () =>
-      view === 'side'
-        ? diffText(
-            canonical(data.before, options.ignoreKeyOrder),
-            canonical(data.after, options.ignoreKeyOrder),
-            Config.parse({}).text,
-          ).rows
-        : [],
-    [view, data, options.ignoreKeyOrder],
-  );
+  // X-02: the side-by-side line diff runs in a worker; the page stays responsive on large documents.
+  const [side, setSide] = useState<{ key: unknown; rows: Row[] } | null>(null);
+  const sideKey = useMemo(() => ({ data, order: options.ignoreKeyOrder }), [data, options.ignoreKeyOrder]);
+  useEffect(() => {
+    if (view !== 'side' || side?.key === sideKey) return;
+    const job = startTextDiff(canonical(data.before, options.ignoreKeyOrder), canonical(data.after, options.ignoreKeyOrder));
+    let live = true;
+    void job.promise.then((rows) => {
+      if (live) setSide({ key: sideKey, rows });
+    }).catch(() => {});
+    return () => {
+      live = false;
+      job.cancel();
+    };
+  }, [view, sideKey, side, data, options.ignoreKeyOrder]);
+  const sideRows = side?.key === sideKey ? side.rows : null;
 
   const total = data.changes.length;
   const seen = data.changes.filter((c) => viewed[c.id]).length;
@@ -251,30 +366,15 @@ function DiffTab({
     );
   };
 
-  // Tree: changes in document order, with a header row each time the parent container changes.
-  const tree: Array<
-    { type: 'group'; path: string; matchKey?: string } | { type: 'change'; c: Change }
-  > = [];
-  let lastParent = '';
-  for (const c of visible) {
-    const p = parentOf(c.jsonPath ?? '$');
-    if (p !== lastParent && p !== '$') {
-      const general = p.replace(/\[[^\]]*\]/g, '[*]');
-      const key = data.diff.matchKeys[`${p}[*]`] ?? data.diff.matchKeys[`${general}[*]`];
-      tree.push({ type: 'group', path: p, ...(key ? { matchKey: key } : {}) });
-    }
-    lastParent = p;
-    tree.push({ type: 'change', c });
-  }
-
   return (
     <div className={css.diffTab}>
       <header className={css.head}>
         <h1 className={css.h1}>
           {total ? `${total} difference${total === 1 ? '' : 's'}` : 'No differences'}
+          {values ? ` in ${values} values` : ''}
         </h1>
         <div className={css.chips} role="group" aria-label="Show only">
-          {KINDS.map((k) => (
+          {CHIPS.map((k) => (
             <button
               key={k.kind}
               type="button"
@@ -289,11 +389,16 @@ function DiffTab({
               }}
             >
               <span aria-hidden="true" className={css.chipSym}>
-                {SYMBOL[k.kind]}
+                {CHIP_SYMBOL[k.kind]}
               </span>
-              {k.label} <span className={css.chipCount}>{data.diff.stats[k.stat]}</span>
+              {k.label} <span className={css.chipCount}>{counts[k.kind]}</span>
             </button>
           ))}
+          {values > 0 && (
+            <span className={css.chip} data-static="">
+              Unchanged <span className={css.chipCount}>{Math.max(0, values - total)}</span>
+            </span>
+          )}
         </div>
       </header>
 
@@ -360,15 +465,29 @@ function DiffTab({
 
           {view === 'tree' &&
             (tree.length ? (
-              <ul className={css.tree} aria-label="Changes by path">
-                {tree.map((t) =>
-                  t.type === 'group' ? (
+              <VirtualList
+                as="ul"
+                count={tree.length + (rootKeys !== null ? 1 : 0)}
+                estimate={66}
+                label="Changes by path, scrollable"
+                listLabel="Changes by path"
+                listClassName={css.tree}
+                apiRef={treeApi}
+                render={(i, slot) => {
+                  if (rootKeys !== null && i === 0)
+                    return (
+                      <li key="root" className={css.group} {...slotProps(slot)}>
+                        <span className={css.muted}>$</span> {`{ ${rootKeys} key${rootKeys === 1 ? '' : 's'} }`}
+                      </li>
+                    );
+                  const t = tree[i - (rootKeys !== null ? 1 : 0)]!;
+                  return t.type === 'group' ? (
                     <li
                       key={`g${t.path}`}
                       className={css.group}
-                      style={{ paddingLeft: `calc(${depthOf(t.path) - 1} * 20px + 16px)` }}
+                      {...slotProps(slot, { paddingLeft: 'calc(20px + 16px)' })}
                     >
-                      {humanPath(t.path)}
+                      {humanPath(t.path).replace(/ › /g, '.')} <span className={css.size}>{t.size}</span>
                       {t.matchKey && (
                         <span className={css.muted}>
                           {' '}
@@ -380,19 +499,22 @@ function DiffTab({
                     <ChangeRow
                       key={t.c.id}
                       c={t.c}
+                      e={t.e}
+                      slot={slot}
                       from={fromOf.get(`${t.c.kind}|${t.c.jsonPath}`)}
                       selected={t.c.id === changeId}
                       viewed={!!viewed[t.c.id]}
                       onViewed={() => toggleViewed(t.c.id)}
                       onCopy={() => void copyPath(t.c.jsonPath ?? '$')}
                       refCb={(el) => {
+                        slot?.measure(el);
                         if (el) rowRefs.current.set(t.c.id, el);
                         else rowRefs.current.delete(t.c.id);
                       }}
                     />
-                  ),
-                )}
-              </ul>
+                  );
+                }}
+              />
             ) : (
               <p className={css.none}>
                 {total
@@ -400,7 +522,12 @@ function DiffTab({
                   : 'The documents are equal with these options.'}
               </p>
             ))}
-          {view === 'side' && (
+          {view === 'side' && !sideRows && (
+            <p className={css.none} role="status">
+              Preparing the side-by-side view…
+            </p>
+          )}
+          {view === 'side' && sideRows && (
             <DiffRows
               rows={sideRows}
               beforeName={names.before}
@@ -424,8 +551,19 @@ function DiffTab({
   );
 }
 
+/** Spread a virtual row's position (and any own style) on a row's root element. */
+function slotProps(slot: RowSlot | undefined, style?: React.CSSProperties) {
+  return slot
+    ? { 'data-index': slot['data-index'], ref: slot.measure, style: { ...slot.style, ...style } }
+    : style
+      ? { style }
+      : {};
+}
+
 function ChangeRow({
   c,
+  e,
+  slot,
   from,
   selected,
   viewed,
@@ -434,6 +572,8 @@ function ChangeRow({
   refCb,
 }: {
   c: Change;
+  e: TreeEntry;
+  slot: RowSlot | undefined;
   from: string | undefined;
   selected: boolean;
   viewed: boolean;
@@ -442,26 +582,40 @@ function ChangeRow({
   refCb: (el: HTMLLIElement | null) => void;
 }) {
   const path = c.jsonPath ?? '$';
-  const nullMissing =
-    (c.kind === 'removed' && c.before === null) || (c.kind === 'added' && c.after === null);
+  const nullMissing = isNullMissing(c);
   return (
     // tabIndex -1: the row is a focus target for J/K; its controls are the buttons inside.
     <li
       ref={refCb}
+      {...(slot ? { 'data-index': slot['data-index'] } : {})}
       className={css.row}
       data-kind={c.kind}
       data-viewed={viewed || undefined}
       aria-current={selected || undefined}
       tabIndex={-1}
-      style={{ paddingLeft: `calc(${depthOf(path) - 1} * 20px + 16px)` }}
+      style={{ ...slot?.style, paddingLeft: e.group === '$' ? 'calc(20px + 16px)' : 'calc(2 * 20px + 16px)' }}
     >
       <span className={css.sym} aria-hidden="true">
         {SYMBOL[c.kind]}
       </span>
       <span className={css.main}>
         <span className={css.line}>
-          <span className={css.key}>{humanPath(path).split(' › ').pop()}</span>{' '}
-          <Value c={c} from={from} />
+          <span className={css.key}>{e.label}</span>{' '}
+          {e.inner ? (
+            <>
+              <span className={css.muted}>{'{ … }'}</span> <span className={css.key}>{e.inner}:</span>{' '}
+            </>
+          ) : null}
+          {e.move ? (
+            <span className={css.value}>
+              {'{ … }'}{' '}
+              <span className={css.muted}>
+                index {e.move.from} → {e.move.to}, moved, not a change
+              </span>
+            </span>
+          ) : (
+            <Value c={c} from={from} />
+          )}
         </span>
         <span className={css.path}>
           <code>{path}</code>
@@ -484,8 +638,7 @@ function ChangeRow({
             {typeOf(c.before)} → {typeOf(c.after)}
           </span>
         )}
-        {nullMissing && <span className={css.nullPill}>null ≠ missing</span>}
-        <DiffMarker kind={MARKER[c.kind]} />
+        {nullMissing ? <span className={css.nullPill}>null ≠ missing</span> : <DiffMarker kind={MARKER[c.kind]} />}
         <button
           type="button"
           className={css.viewed}
@@ -505,6 +658,20 @@ function ChangeRow({
 }
 
 function Value({ c, from }: { c: Change; from: string | undefined }) {
+  if (isNullMissing(c))
+    return (
+      <span className={css.value}>
+        {c.kind === 'removed' ? (
+          <>
+            <del className={css.del}>null</del> → <ins className={css.ins}>(missing)</ins>
+          </>
+        ) : (
+          <>
+            <del className={css.del}>(missing)</del> → <ins className={css.ins}>null</ins>
+          </>
+        )}
+      </span>
+    );
   if (c.kind === 'changed' || c.kind === 'typeChanged')
     return (
       <span className={css.value}>

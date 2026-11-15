@@ -18,7 +18,7 @@ import * as icons from 'lucide-react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useCommand } from '../../shell/commands';
-import { changeLink, focusChange, readChangeHash } from '../../shell/nav';
+import { changeLink, focusChange, readChangeHash, useNav } from '../../shell/nav';
 import { useApp } from '../../state/store';
 import { languageFor, MAX_BYTES, MAX_ROWS, tokenize, type Token } from './highlight';
 import { ReloadButton } from './ReloadButton';
@@ -52,6 +52,9 @@ export function TextResult() {
   const [gotoOpen, setGotoOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const scroller = useRef<HTMLDivElement>(null);
+  // TX-07: the row Go to line asked for; scrolled to once the views include it (after a fold expands).
+  const pendingRow = useRef<number | null>(null);
+  const [gotoTick, setGotoTick] = useState(0);
 
   const setText2 = (patch: Partial<typeof opts>) => {
     updateConfig((c) => ({ ...c, text: { ...c.text, ...patch } }));
@@ -61,7 +64,8 @@ export function TextResult() {
   const comparedText = useApp((s) => s.comparedConfig?.text);
   useEffect(() => {
     if (settings.config.text === comparedText) return;
-    const t = setTimeout(() => void compare(), 250);
+    // TX-10: re-diff in the background; the current result stays on screen until the new one is ready.
+    const t = setTimeout(() => void compare({ background: true }), 250);
     return () => clearTimeout(t);
   }, [settings.config.text, comparedText, compare]);
 
@@ -74,7 +78,9 @@ export function TextResult() {
   const blockAt = useMemo(() => new Map(text?.blocks.map((b, i) => [b, i]) ?? []), [text]);
 
   // TX-03: highlight lazily; off for plain text, logs and very large comparisons.
-  const lang = languageFor(after?.name, detectedLanguage) ?? languageFor(before?.name, detectedLanguage);
+  // Code mode reports display names ("TypeScript"); Shiki ids are lower case.
+  const detectedId = detectedLanguage?.toLowerCase();
+  const lang = languageFor(after?.name, detectedId) ?? languageFor(before?.name, detectedId);
   const tooBig =
     !!text && (text.rows.length > MAX_ROWS || (before?.size ?? 0) + (after?.size ?? 0) > MAX_BYTES);
   const [tokens, setTokens] = useState<Tokens | null>(null);
@@ -135,16 +141,34 @@ export function TextResult() {
     },
     [v],
   );
+  // The change id this screen last navigated to; others come from outside (the command palette).
+  const handled = useRef<string | null>(useNav.getState().changeId);
   const go = useCallback(
     (i: number, focus = false) => {
       if (!blockView.length) return;
       const n = (i + blockView.length) % blockView.length;
       setCurrent(n);
+      handled.current = blockId(n);
       focusChange(blockId(n)); // X-12: #change=t-<n>
       reveal(blockView[n]!, focus ? `sd-${blockId(n)}` : undefined);
     },
     [blockView, reveal],
   );
+  useEffect(() => {
+    const ri = pendingRow.current;
+    if (ri === null) return;
+    const vi = views.findIndex((x) => x.kind === 'row' && x.index === ri);
+    if (vi < 0) return;
+    pendingRow.current = null;
+    v.scrollToIndex(vi, { align: 'start' });
+  }, [views, gotoTick, v]);
+  // The palette (and other screens) call focusChange(id): follow it here too.
+  const navChange = useNav((s) => s.changeId);
+  useEffect(() => {
+    if (!navChange || navChange === handled.current) return;
+    const m = /^t-(\d+)$/.exec(navChange);
+    if (m && Number(m[1]) < blockView.length) go(Number(m[1]), true);
+  }, [navChange, blockView, go]);
   // X-12: open the block in the URL hash once, on first render.
   const linked = useRef(false);
   useEffect(() => {
@@ -545,17 +569,18 @@ export function TextResult() {
           max={Math.max(...text.rows.map((r) => r.right?.n ?? 0))}
           onClose={() => setGotoOpen(false)}
           onGo={(n) => {
-            const vi = views.findIndex((x) => x.kind === 'row' && (x.row.right?.n ?? 0) >= n);
-            if (vi < 0) {
-              const fold = views.findIndex((x) => x.kind === 'fold');
-              if (fold >= 0)
-                setExpanded(
-                  new Set(
-                    views.filter((x) => x.kind === 'fold').map((x) => (x as { from: number }).from),
-                  ),
-                );
+            // TX-07: the first row at or after line n of the after file; expand the fold that hides it.
+            const ri = text.rows.findIndex((r) => (r.right?.n ?? 0) >= n);
+            if (ri < 0) {
+              setGotoOpen(false);
+              return;
             }
-            v.scrollToIndex(Math.max(0, vi), { align: 'start' });
+            const fold = views.find(
+              (x): x is Extract<TView, { kind: 'fold' }> => x.kind === 'fold' && ri >= x.from && ri < x.to,
+            );
+            if (fold) setExpanded(new Set(expanded).add(fold.from));
+            pendingRow.current = ri;
+            setGotoTick((t) => t + 1);
             setGotoOpen(false);
           }}
         />
@@ -565,9 +590,10 @@ export function TextResult() {
 }
 
 let timer: ReturnType<typeof setTimeout> | undefined;
-function scheduleRediff(compare: () => Promise<void>) {
+function scheduleRediff(compare: (o?: { background?: boolean }) => Promise<void>) {
   clearTimeout(timer);
-  timer = setTimeout(() => void compare(), 400);
+  // TX-10: live re-diff keeps this screen (and the editor) open.
+  timer = setTimeout(() => void compare({ background: true }), 400);
 }
 
 /** Text with word highlights; ‹name› placeholders render as masked pills (TX-08). */

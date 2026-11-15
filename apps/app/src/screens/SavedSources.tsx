@@ -1,28 +1,17 @@
-// A-13 Saved sources (IN-11). Re-fetched when this screen opens, compared with the snapshot saved in
-// this browser. No background work, no server: the browser fetches each URL directly.
+// A-13 Saved sources (IN-11). Re-fetched when the app opens (lib/saved.ts) and when this screen opens, compared
+// with the snapshot saved in this browser. No background work, no server: the browser fetches each URL directly.
 import type { SavedSource } from '@specdiff/core';
 import { detectMode } from '@specdiff/core/detect';
 import { Button, Dialog, EmptyState, ModeBadge, TextField } from '@specdiff/ui';
 import * as icons from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { loadUrl, type LoadError } from '../lib/input';
-import {
-  deleteSaved,
-  getSnapshot,
-  listSaved,
-  pushSnapshot,
-  putSaved,
-  sha256,
-} from '../state/persist';
+import { loadUrl } from '../lib/input';
+import { checkSource as check, explainFetch as explain, lastTwo, openedChecks, type SavedRow } from '../lib/saved';
+import { deleteSaved, getSnapshot, listSaved, pushSnapshot, putSaved, sha256 } from '../state/persist';
 import { useApp } from '../state/store';
 import css from './SavedSources.module.css';
 
-type Status = 'checking' | 'changed' | 'same' | 'new' | 'error';
-interface Row {
-  source: SavedSource;
-  status: Status;
-  message?: string;
-}
+type Row = SavedRow;
 
 const MODE: Record<SavedSource['mode'], string> = {
   openapi: 'OpenAPI',
@@ -43,38 +32,6 @@ function checked(iso?: string) {
   return `Checked ${days === 1 ? 'yesterday' : `${days} days ago`}`;
 }
 
-function explain(e: unknown): { kind: 'cors' | 'network'; message: string } {
-  const le = e as LoadError;
-  if (le?.kind === 'cors')
-    return {
-      kind: 'cors',
-      message: `${le.message} Download the file and drop it into Compare instead.`,
-    };
-  return { kind: 'network', message: le?.message ?? 'The file couldn’t be fetched.' };
-}
-
-/** Fetch one source and compare its hash with the saved snapshot. */
-async function check(s: SavedSource): Promise<Row> {
-  try {
-    const src = await loadUrl(s.url);
-    const hash = await sha256(src.content);
-    const now = new Date().toISOString();
-    const first = !s.lastSnapshotHash;
-    const changed = !first && hash !== s.lastSnapshotHash;
-    if (first || changed) await pushSnapshot(s.id, { content: src.content, hash, fetchedAt: now });
-    const { lastError: _e, ...rest } = s;
-    void _e;
-    const next: SavedSource = { ...rest, lastFetchedAt: now, lastSnapshotHash: hash };
-    await putSaved(next);
-    return { source: next, status: changed ? 'changed' : first ? 'new' : 'same' };
-  } catch (e) {
-    const x = explain(e);
-    const next: SavedSource = { ...s, lastError: x.kind };
-    await putSaved(next);
-    return { source: next, status: 'error', message: x.message };
-  }
-}
-
 export default function SavedSources() {
   const { setSource, setMode, compare, setScreen } = useApp();
   const [rows, setRows] = useState<Row[] | null>(null);
@@ -84,6 +41,7 @@ export default function SavedSources() {
   const checkOne = useCallback(async (s: SavedSource) => {
     setRows((r) => r?.map((x) => (x.source.id === s.id ? { ...x, status: 'checking' } : x)) ?? r);
     const row = await check(s);
+    openedChecks.delete(s.id);
     setRows((r) => r?.map((x) => (x.source.id === s.id ? row : x)) ?? [row]);
   }, []);
 
@@ -91,17 +49,18 @@ export default function SavedSources() {
     if (started.current) return;
     started.current = true;
     void listSaved().then((list) => {
-      setRows(list.map((source) => ({ source, status: 'checking' as const })));
-      list.forEach((s) => void checkOne(s));
+      // Sources the app already checked when it opened keep that result (a refetch would find no change).
+      setRows(list.map((source) => openedChecks.get(source.id) ?? { source, status: 'checking' as const }));
+      list.forEach((s) => {
+        if (!openedChecks.has(s.id)) void checkOne(s);
+      });
     });
   }, [checkOne]);
 
   const compareWithLast = async (s: SavedSource) => {
-    const [prev, cur] = await Promise.all([
-      getSnapshot(s.id, 'previous'),
-      getSnapshot(s.id, 'current'),
-    ]);
-    if (!prev || !cur) return;
+    const two = await lastTwo(s);
+    if (!two) return;
+    const { prev, cur } = two;
     const src = (name: string, content: string) => ({
       name,
       content,
@@ -132,7 +91,7 @@ export default function SavedSources() {
         <div>
           <h1 className={css.h1}>Saved sources</h1>
           <p className={css.lead}>
-            Specdiff re-fetches these URLs when you open this page and compares them with the copy
+            Specdiff re-fetches these URLs when you open the app and compares them with the copy
             saved in this browser. Nothing runs in the background or on a server.
           </p>
         </div>
@@ -164,7 +123,7 @@ export default function SavedSources() {
             </Button>
           }
         >
-          Save a spec URL and Specdiff checks it for changes each time you open this page.
+          Save a spec URL and Specdiff checks it for changes each time you open the app.
         </EmptyState>
       ) : (
         <ul className={css.list}>
@@ -180,7 +139,7 @@ export default function SavedSources() {
                 {status === 'checking' && 'Checking…'}
                 {status === 'changed' && (
                   <>
-                    <icons.CircleDot size={14} aria-hidden="true" /> Changed since your last visit
+                    <span aria-hidden="true" className={css.dot} /> Changed since your last visit
                   </>
                 )}
                 {status === 'same' && 'No changes'}
@@ -199,7 +158,7 @@ export default function SavedSources() {
               <div className={css.actions}>
                 {status === 'changed' ? (
                   <Button variant="brand" onClick={() => void compareWithLast(s)}>
-                    Compare with last visit
+                    See what changed
                   </Button>
                 ) : status === 'error' ? (
                   <Button
@@ -278,7 +237,7 @@ function AddDialog({ onClose, onAdded }: { onClose: () => void; onAdded: (r: Row
     <Dialog
       open
       title="Add a saved source"
-      description="Specdiff fetches it now and again each time you open Saved sources."
+      description="Specdiff fetches it now and again each time you open the app."
       onOpenChange={(o) => {
         if (!o) onClose();
       }}

@@ -27,7 +27,7 @@ test('X-12 JSON: J writes a deep link that reopens the same change', async ({ pa
   await page.keyboard.press('j');
   await expect(page).toHaveURL(/#change=c-0002$/);
   await page.keyboard.press('v');
-  await expect(page.getByText('1 of 3 viewed')).toBeVisible();
+  await expect(page.getByText('1 of 7 viewed')).toBeVisible();
   await page.goto('/app/?sample=json#change=c-0002');
   await expect(page.locator('[aria-current="true"]').first()).toBeFocused();
 });
@@ -46,8 +46,8 @@ test('X-11 / X-12 Code: items can be viewed and linked', async ({ page }) => {
   await page.goto('/app/?sample=code');
   await expect(page.getByRole('heading', { name: 'What changed' })).toBeVisible();
   await page.keyboard.press('j');
-  await expect(page).toHaveURL(/#change=k-pay$/);
+  await expect(page).toHaveURL(/#change=k-PaymentService\.create$/);
   await page.keyboard.press('v');
-  await expect(page.getByText('1 of 1 viewed')).toBeVisible();
+  await expect(page.getByText('1 of 3 viewed')).toBeVisible();
   await expectAxeClean(page);
 });

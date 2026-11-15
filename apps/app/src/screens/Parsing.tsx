@@ -16,26 +16,34 @@ const LABEL: Record<Step, string> = {
 };
 
 export function Parsing() {
-  const { before, after, progress, cancel } = useApp();
+  const { before, after, progress, cancel, mode } = useApp();
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => heading.current?.focus(), []);
+  // OpenAPI shows all five stages (A-02); other modes have no $refs to resolve or versions to normalise.
   const isOpenApi =
+    mode === 'openapi' ||
     progress.detect?.detail?.startsWith('OpenAPI') ||
     progress.detect?.detail?.startsWith('Swagger');
   const steps = STEPS.filter((s) => isOpenApi || (s !== 'resolve' && s !== 'normalise'));
   const done = steps.filter((s) => progress[s]?.state === 'done').length;
   const fileState = (side: 'before' | 'after') => {
+    // Per file: Before is parsed once the After side starts parsing; After once parsing is done.
     const parsed =
-      progress.parse?.state === 'done' || (progress.parse?.side === 'after' && side === 'before');
-    if (progress.compare?.state === 'done' || (parsed && side === 'before'))
-      return { pct: 100, status: 'Parsed', ok: true };
+      progress.parse?.state === 'done' ||
+      progress.compare?.state === 'done' ||
+      (side === 'before' && progress.parse?.side === 'after');
     const running = steps.find((s) => progress[s]?.state === 'running');
+    if (parsed && (side === 'before' || !running || running === 'parse'))
+      return { pct: 100, status: 'Parsed', ok: true };
+    const parsingThis = running === 'parse' && (progress.parse?.side ?? 'before') === side;
+    // The file's bar: half for its own parse, the rest for the shared stages after it.
+    const pct = Math.round(((done + (parsed || parsingThis ? 0.5 : 0)) / steps.length) * 100);
     return {
-      pct: Math.round((done / steps.length) * 100),
+      pct: Math.min(99, pct),
       status:
         running === 'resolve'
           ? 'Resolving references…'
-          : running
+          : running && (running !== 'parse' || parsingThis)
             ? `${LABEL[running]}…`
             : 'Waiting…',
       ok: false,

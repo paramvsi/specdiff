@@ -373,3 +373,52 @@
 }
 .viewedBtn { float: right; display: inline-flex; align-items: center; gap: 4px; min-height: 28px; margin: 0 0 4px 8px; padding: 0 8px; border: 1px solid var(--sd-line); border-radius: var(--sd-radius-sm); background: var(--sd-surface); color: var(--sd-muted); font-size: 12px; cursor: pointer; }
 .viewedBtn[aria-pressed='true'] { color: var(--sd-safe); border-color: var(--sd-safe); }
+
+/* A-08 side by side: two wide panes and the Checks card; the outline and summary step aside. */
+.page[data-view='side'] {
+  grid-template-columns: minmax(0, 1fr) 300px;
+}
+.page[data-view='side'] .outline,
+.page[data-view='side'] .summary {
+  display: none;
+}
+@media (max-width: 1023px) {
+  .page[data-view='side'] {
+    grid-template-columns: 1fr;
+  }
+}
+.sbsCell {
+  position: relative;
+}
+.sbsCell :global(pre) {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+/* X-06: a visible + / − / ~ beside each changed block in side by side. */
+.sbsGutter {
+  position: absolute;
+  left: 6px;
+  top: 6px;
+  font-family: var(--sd-font-mono);
+  font-weight: 700;
+  color: var(--sd-muted);
+}
+.sbsRow[data-status='removed'] .sbsGutter {
+  color: var(--sd-removed-strong);
+}
+.sbsRow[data-status='added'] .sbsGutter {
+  color: var(--sd-added-strong);
+}
+.sbsRow[data-status='edited'] .sbsGutter {
+  color: var(--sd-changed);
+}
+/* X-02: a long document scrolls inside the card (virtualised). */
+.docScroll .doc,
+.docScroll .sbs {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+.docScroll .doc > * {
+  left: var(--sd-space-8) !important;
+  right: var(--sd-space-8) !important;
+}

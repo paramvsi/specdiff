@@ -181,9 +181,9 @@ test('X-05 text identical state in dark: "New comparison" link is readable, axe 
 test('X-04 palette lists Files and the current result’s changes in every mode', async ({ page }) => {
   test.skip(test.info().project.name !== 'desktop');
   const cases = [
-    ['json', /\$\.retries/, 'retries'],
+    ['json', /beta_banner/, 'timeoutMs'],
     ['markdown', /Create a payment/, 'guide'],
-    ['code', /function pay/, 'pay'],
+    ['code', /PaymentService/, 'create'],
     ['text', /db pool size/, 'checkout'],
     ['openapi', /./, 'endpoint removed'],
   ] as const;
@@ -199,7 +199,7 @@ test('X-04 palette lists Files and the current result’s changes in every mode'
     await page.getByRole('combobox').fill(query);
     await expect(changes.first()).toBeVisible();
     for (const t of await dialog.getByRole('option').allTextContents())
-      expect(t.toLowerCase()).toContain(query.split(' ')[0]);
+      expect(t.toLowerCase()).toContain(query.split(' ')[0]!.toLowerCase());
     await page.keyboard.press('Escape');
   }
 });

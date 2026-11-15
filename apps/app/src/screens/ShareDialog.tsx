@@ -23,6 +23,8 @@ export interface ShareInput {
   includeRules: boolean;
   includeDecisions: boolean;
   changeId: string | null;
+  /** The tab the change is open on (OUT-05: the link opens there). */
+  tab?: string | undefined;
 }
 
 export function sharePayload(i: ShareInput): SharePayload {
@@ -40,7 +42,7 @@ export function sharePayload(i: ShareInput): SharePayload {
     ...(i.includeDecisions && Object.keys(i.decisions.decisions).length
       ? { decisions: i.decisions }
       : {}),
-    ...(i.changeId ? { view: { changeId: i.changeId } } : {}),
+    ...(i.changeId ? { view: { changeId: i.changeId, ...(i.tab ? { tab: i.tab } : {}) } } : {}),
   };
 }
 
@@ -63,7 +65,12 @@ function changeTitle(r: CompareResult | null, id: string | null): string | null 
       : (c.changelogLine ?? c.path);
   }
   if ('json' in r) return r.json.changes.find((x) => x.id === id)?.path ?? null;
-  return null;
+  // Text, Markdown and Code changes (X-12 ids t-<n>, m-<n>, k-<name>).
+  const m = /^([tmk])-(.+)$/.exec(id);
+  if (!m) return null;
+  if (m[1] === 'k') return 'code' in r ? m[2]! : null;
+  if (m[1] === 'm') return 'markdown' in r ? `Block ${Number(m[2]) + 1}` : null;
+  return 'text' in r && r.text.blocks.length > Number(m[2]) ? `Change ${Number(m[2]) + 1} of ${r.text.blocks.length}` : null;
 }
 
 const kb = (n: number) => `${(n / 1024).toFixed(1)} KB`;
@@ -77,6 +84,9 @@ export function ShareDialog({
 }) {
   const { before, after, result, mode, settings, decisions } = useApp();
   const changeId = useNav((s) => s.changeId);
+  // OUT-05: a change is shown in the Workspace (OpenAPI); other modes have one view, so the tab is the same.
+  const navTab = useNav((s) => s.tab);
+  const tab = navTab && navTab !== 'summary' ? navTab : 'workspace';
   const { toast } = useToast();
   const [includeRules, setIncludeRules] = useState(true);
   const [openOnChange, setOpenOnChange] = useState(true);
@@ -101,9 +111,10 @@ export function ShareDialog({
             includeRules,
             includeDecisions,
             changeId: openOnChange && title ? changeId : null,
+            tab,
           }
         : null,
-    [before, after, result, mode, settings, decisions, includeRules, includeDecisions, openOnChange, title, changeId],
+    [before, after, result, mode, settings, decisions, includeRules, includeDecisions, openOnChange, title, changeId, tab],
   );
 
   // The link belongs to one request; a stale one is never shown.
@@ -137,6 +148,20 @@ export function ShareDialog({
     if (!input) return;
     const f = comparisonFile(input);
     download(f.name, f.content, f.type);
+    saved.current = true;
+  };
+  // O-13: closing the dialog with a link too long for many chat apps, and no file saved, offers the file.
+  const saved = useRef(false);
+  const close = (o: boolean) => {
+    if (!o && over && !saved.current)
+      toast({
+        title: 'Link is long',
+        description: `Some apps cut links over ${kb(SHARE_WARN_BYTES).replace('.0', '')}.`,
+        tone: 'warning',
+        action: { label: 'Download file', onClick: saveFile },
+      });
+    if (!o) saved.current = false;
+    onOpenChange(o);
   };
   const fileLink = (
     <button
@@ -165,7 +190,7 @@ export function ShareDialog({
   return (
     <Dialog
       open={open}
-      onOpenChange={onOpenChange}
+      onOpenChange={close}
       title="Share this comparison"
       description="Both files travel inside the link. Nothing is stored on a server."
       className={css.dialog}
@@ -177,7 +202,7 @@ export function ShareDialog({
               ? 'Encrypted in this browser with AES-GCM before the link is made.'
               : 'Compressed in this browser. Anyone with the link can see both files.'}
           </span>
-          <Button variant="secondary" onClick={() => onOpenChange(false)}>
+          <Button variant="secondary" onClick={() => close(false)}>
             Done
           </Button>
         </div>
@@ -216,7 +241,7 @@ export function ShareDialog({
             </p>
             <p className={css.sub}>The link only opens for people who know it.</p>
           </div>
-          <Switch label="Lock" checked={locked} onCheckedChange={setLocked} className={css.switch} />
+          <Switch label="Lock" hideLabel checked={locked} onCheckedChange={setLocked} className={css.switch} />
         </div>
         {locked && (
           <div className={css.passBox}>

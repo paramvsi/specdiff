@@ -2,9 +2,12 @@
 import type { Mode, SharePayload } from '@specdiff/core';
 import { decodeShare, isLocked } from '@specdiff/core/share';
 import { useEffect, useRef } from 'react';
-import { samples, SAMPLE_FILTERS } from '../lib/samples';
+import { isComparisonName, readComparisonFile } from '../lib/comparison';
+import { samples, SAMPLE_FILTERS, SAMPLE_JSON_IGNORE_KEYS } from '../lib/samples';
+import { lastTwo, recheckOnOpen } from '../lib/saved';
 import { loadSettings, saveSettings } from '../state/persist';
 import { defaultSettings, useApp } from '../state/store';
+import { useNotices } from '../state/toasts';
 import { useNav } from './nav';
 
 export const usePending = { hash: '' };
@@ -21,13 +24,14 @@ export async function openPayload(p: SharePayload) {
   s.setMode(p.mode as Mode);
   if (p.options) s.updateConfig(() => p.options as never);
   if (p.decisions) s.setDecisions(p.decisions);
+  // OUT-05: a link shared from a change opens on that change, in the Workspace, unless it names a tab.
   if (p.view)
-    useNav
-      .getState()
-      .set({
-        ...(p.view.changeId ? { changeId: p.view.changeId } : {}),
-        ...(p.view.tab ? { tab: p.view.tab } : {}),
-      });
+    useNav.getState().set({
+      ...(p.view.changeId ? { changeId: p.view.changeId } : {}),
+      ...(p.view.tab ? { tab: p.view.tab } : p.view.changeId ? { tab: 'workspace' } : {}),
+    });
+  // Text, Markdown, JSON and Code screens open the change named in #change=<id> (X-12); the share hash is spent.
+  if (p.view?.changeId) history.replaceState(null, '', `#change=${encodeURIComponent(p.view.changeId)}`);
   await s.compare();
 }
 
@@ -42,6 +46,8 @@ export function useBoot() {
       useApp.subscribe((s, prev) => {
         if (s.settings !== prev.settings) void saveSettings(s.settings).catch(() => {});
       });
+      afterFirstPaint(checkSavedSources);
+      consumeLaunchedFiles();
 
       const hash = location.hash;
       if (hash.startsWith('#v=')) {
@@ -95,5 +101,58 @@ export async function openSample(id: string) {
       ...c,
       text: { ...c.text, filters: SAMPLE_FILTERS, ignoreWhitespace: true },
     }));
+  if (sm.id === 'json')
+    s.updateConfig((c) => ({ ...c, json: { ...c.json, ignoreKeys: SAMPLE_JSON_IGNORE_KEYS } }));
   await s.compare();
+}
+
+/** Run once the first frame is on screen (two animation frames), so the check never delays first paint. */
+function afterFirstPaint(fn: () => void) {
+  requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(fn, 0)));
+}
+
+/** IN-11: re-fetch saved sources when the app opens; a toast says which changed (O-13). No timers after this. */
+export async function checkSavedSources() {
+  const changed = await recheckOnOpen();
+  if (!changed.length) return;
+  const first = changed[0]!.source;
+  useNotices.getState().push({
+    title: 'Saved source changed',
+    description:
+      changed.length === 1
+        ? `${first.name} changed since your last visit.`
+        : `${changed.length} saved sources changed since your last visit.`,
+    tone: 'info',
+    action: {
+      label: 'Review',
+      onClick: () => {
+        if (changed.length > 1) {
+          useApp.getState().setScreen('saved');
+          return;
+        }
+        void lastTwo(first).then(async (two) => {
+          if (!two) return useApp.getState().setScreen('saved');
+          const s = useApp.getState();
+          const src = (name: string, content: string) => ({ name, content, size: new Blob([content]).size });
+          s.setSource('before', src(`${first.name} (last visit)`, two.prev.content));
+          s.setSource('after', src(first.name, two.cur.content));
+          s.setMode(first.mode);
+          await s.compare();
+        });
+      },
+    },
+  });
+}
+
+/** OUT-06: a comparison file the app was opened with (installed PWA file handler, where the browser has one). */
+function consumeLaunchedFiles() {
+  const lq = (window as { launchQueue?: { setConsumer: (cb: (p: { files: FileSystemFileHandle[] }) => void) => void } })
+    .launchQueue;
+  lq?.setConsumer(async ({ files }) => {
+    const handle = files.find((f) => isComparisonName(f.name));
+    if (!handle) return;
+    const payload = readComparisonFile(await (await handle.getFile()).text());
+    if (payload) await openPayload(payload);
+    else useApp.setState({ error: `${handle.name} isn’t a Specdiff comparison file.` });
+  });
 }

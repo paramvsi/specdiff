@@ -60,3 +60,21 @@ it('builds a share link whose hash decodeShare round-trips', async () => {
   expect(payload.options).toEqual({});
   expect(document.body.textContent).toContain('Link size');
 });
+
+it('OUT-05: "open on the current change" puts the change id and its tab in the payload', async () => {
+  const { sharePayload } = await import('./ShareDialog');
+  const src = (name: string, content: string) => ({ name, content, size: content.length });
+  const p = sharePayload({
+    before: src('a.yaml', 'openapi: 3.1.0\n'),
+    after: src('b.yaml', 'openapi: 3.1.0\n'),
+    result: null,
+    mode: 'openapi',
+    settings: useApp.getState().settings,
+    decisions: { version: 1, decisions: {} },
+    includeRules: false,
+    includeDecisions: false,
+    changeId: 'c-0003',
+    tab: 'workspace',
+  });
+  expect(p.view).toEqual({ changeId: 'c-0003', tab: 'workspace' });
+});

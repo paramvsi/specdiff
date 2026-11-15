@@ -35,9 +35,9 @@ for (const scheme of ['light', 'dark'] as const) {
     await page.goto('/app/?sample=json');
     await expect(page.getByRole('heading', { name: /\d+ differences?/ })).toBeVisible();
     const tree = page.getByRole('list', { name: 'Changes by path' });
-    await expect(tree.getByText('$.retries')).toBeVisible();
+    await expect(tree.getByText('$.limits.timeoutMs')).toBeVisible();
     await expect(tree.getByText('~ changed').first()).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Copy JSONPath $.retries' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Copy JSONPath $.limits.timeoutMs' })).toBeVisible();
     await expect(page.getByText(/Auto-detected|Auto: tried/)).toBeVisible();
     await expectAxeClean(page);
 
@@ -55,15 +55,15 @@ for (const scheme of ['light', 'dark'] as const) {
     const preview = page.getByRole('region', { name: 'Export preview' });
     await expect(preview).toContainText('"op": "replace"');
     await expect(preview).toContainText(
-      'Applying this patch to config.prod.json gives config.next.json exactly.',
+      'Applying this patch to flags.prod.json gives flags.staging.json exactly.',
     );
     await page.getByRole('radio', { name: /Merge Patch/ }).click();
-    await expect(preview).toContainText('config.prod.merge-patch.json');
+    await expect(preview).toContainText('flags.prod.merge-patch.json');
     await page.getByRole('radio', { name: /JSONPath list/ }).click();
-    await expect(preview).toContainText('$.retries');
+    await expect(preview).toContainText('$.limits.timeoutMs');
     const download = page.waitForEvent('download');
     await preview.getByRole('button', { name: 'Download' }).click();
-    expect((await download).suggestedFilename()).toBe('config.prod.jsonpaths.txt');
+    expect((await download).suggestedFilename()).toBe('flags.prod.jsonpaths.txt');
     await expectAxeClean(page);
   });
 
@@ -72,12 +72,12 @@ for (const scheme of ['light', 'dark'] as const) {
     await page.goto('/app/?sample=markdown');
     const outline = page.getByRole('navigation', { name: 'Outline' });
     await expect(outline.getByRole('button', { name: 'Payments API' })).toBeVisible();
-    await expect(page.getByRole('button', { name: /Link changed: guide/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Link changed: integration guide/ })).toBeVisible();
     await expect(page.getByText('https://docs.example.com/v1').first()).toBeVisible();
     await expect(page.locator('ins').first()).toBeVisible();
     await expectAxeClean(page);
     await page.getByRole('radio', { name: 'Side by side' }).click();
-    await expect(page.locator('p', { hasText: 'The currency field is required.' })).toBeVisible();
+    await expect(page.locator('p', { hasText: 'must be an ISO 4217 code' })).toBeVisible();
     await expect(page.locator('ins').first()).toBeVisible();
     await expectAxeClean(page);
     await page.getByRole('radio', { name: 'Source' }).click();
@@ -115,7 +115,7 @@ for (const scheme of ['light', 'dark'] as const) {
     await other.getByLabel('Passphrase').fill('correct horse battery staple');
     await other.getByRole('button', { name: 'Unlock' }).click();
     await expect(other.getByRole('heading', { name: /\d+ differences?/ })).toBeVisible();
-    await expect(other.getByText('config.next.json').first()).toBeVisible();
+    await expect(other.getByText('flags.staging.json').first()).toBeVisible();
   });
 
   test(`A-11 history: entry, pin, delete, clear, empty (${scheme})`, async ({ page }) => {
@@ -129,16 +129,16 @@ for (const scheme of ['light', 'dark'] as const) {
     await open(page, 'History');
     await expect(page.getByRole('heading', { name: 'History' })).toBeVisible();
     await expect(page.getByText('2 comparisons', { exact: false })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Open config.prod.json → config.next.json' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Open flags.prod.json → flags.staging.json' })).toBeVisible();
     await expectAxeClean(page);
 
-    await page.getByRole('button', { name: 'Pin config.prod.json → config.next.json' }).click();
+    await page.getByRole('button', { name: 'Pin flags.prod.json → flags.staging.json' }).click();
     await expect(
-      page.getByRole('button', { name: 'Unpin config.prod.json → config.next.json' }),
+      page.getByRole('button', { name: 'Unpin flags.prod.json → flags.staging.json' }),
     ).toHaveAttribute('aria-pressed', 'true');
     await expect(page.getByRole('rowheader', { name: 'Pinned' })).toBeVisible();
 
-    await page.getByRole('button', { name: 'Delete README.md → README.md (new)' }).click();
+    await page.getByRole('button', { name: 'Delete README.md → README.md (edited)' }).click();
     await expect(page.getByText('1 comparison,', { exact: false })).toBeVisible();
 
     await page.getByRole('button', { name: 'Clear history' }).click();
@@ -179,7 +179,7 @@ for (const scheme of ['light', 'dark'] as const) {
     await open(page, 'Saved sources');
     await expect(page.getByText('1 of your saved sources changed since your last visit')).toBeVisible();
     await expectAxeClean(page);
-    await page.getByRole('button', { name: 'Compare with last visit' }).click();
+    await page.getByRole('button', { name: 'See what changed' }).click();
     await expect(page.getByRole('heading', { name: /\d+ differences?/ })).toBeVisible();
   });
 }
