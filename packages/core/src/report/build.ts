@@ -8,7 +8,7 @@ import { Engine, type Finding } from '../openapi/engine';
 import { fnv1a64, stableStringify } from '../openapi/hash';
 import { type Input, type LoadedSpec, type Loc, chainToArray, loadSpec } from '../openapi/load';
 import { compareDocument } from '../rules/operations';
-import { fillTemplate, getRule } from '../rules/catalogue';
+import { fillChangelog, fillTemplate, getRule } from '../rules/catalogue';
 import { versionCheck } from './version';
 
 // The report names the package version that produced it (Changesets bumps package.json).
@@ -217,7 +217,7 @@ function toChange(f: Finding, usageSet: Set<string>, severity: Severity, b: Load
       see: f.note ? `${see} ${f.note}` : see,
       avoid: fillTemplate(rule.explanation.avoid, vars),
     },
-    changelogLine: fillTemplate(rule.changelog, vars),
+    changelogLine: fillChangelog(rule.changelog, vars),
   };
   if (f.before !== undefined) change.before = before;
   if (f.after !== undefined) change.after = after;

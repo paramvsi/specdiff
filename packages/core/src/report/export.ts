@@ -41,7 +41,8 @@ export function reportToMarkdown(report: Report): string {
     out.push(`## ${SEVERITY_SYMBOL[level]} ${SEVERITY_LABEL[level]} (${list.length})`, '');
     for (const c of list) {
       out.push(`### ${code(c.path)}`, '');
-      out.push(`- ${mdText(c.changelogLine ?? '')}`);
+      // changelogLine is already Markdown with spec values fenced or escaped (fillChangelog).
+      out.push(`- ${c.changelogLine ?? ''}`);
       out.push(`- Rule: ${code(c.ruleId ?? '')} · ${c.direction ?? 'both'} · ${code(c.id)} · fingerprint ${code(c.fingerprint)}`);
       out.push(`- Where: ${code(where(c))}${c.jsonPath ? ` · ${code(c.jsonPath)}` : ''}`);
       if (c.sharedSchema) {

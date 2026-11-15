@@ -141,3 +141,23 @@ describe('OUT-03 exports', () => {
     expect(bad).not.toMatch(/ on\w+=/i);
   });
 });
+
+describe('OUT-01 hostile spec text in Markdown outputs', () => {
+  const X = '<img src=x onerror=alert(1)>';
+  const spec = (after: boolean) => ({ name: 'a.yaml', content: stringify({ openapi: '3.1.0', info: { title: 'T', version: '1' }, paths: {
+    ['/p/{id}|x`y']: { get: { parameters: [{ name: `q${X}`, in: 'query', required: after, schema: { type: 'string' } }], responses: { '200': { description: 'ok' } } } },
+  } }) });
+  const r = compareOpenApi(spec(false), spec(true));
+  // Strip code spans the CommonMark way (a run of N backticks closes only on N), then look for raw HTML.
+  const outsideCode = (md: string) => md.replace(/(`+)([\s\S]*?[^`])\1(?!`)/g, '');
+  it('keeps spec values inside their code spans in every changelog format and the report', () => {
+    const outputs = [reportToMarkdown(r), ...(['release-notes', 'keep-a-changelog', 'slack', 'pr-comment'] as const).map((t) => buildChangelog(r, t, {}))];
+    for (const md of outputs) expect(outsideCode(md)).not.toMatch(/<img/i);
+  });
+  it("shows a changelog line's value literally inside code (no &lt; entities inside the span)", () => {
+    const line = r.changes.find((c) => c.ruleId === 'request-param-became-required')!.changelogLine!;
+    expect(line).toContain('`q<img src=x onerror=alert(1)>`');
+    expect(line).toContain('`` GET /p/{id}|x`y ``');
+    expect(reportToMarkdown(r)).toContain(`- ${line}`);
+  });
+});

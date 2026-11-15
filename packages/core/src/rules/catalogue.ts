@@ -597,3 +597,21 @@ export function getRule(id: string): RuleMeta {
 export function fillTemplate(template: string, vars: Record<string, string>): string {
   return template.replace(/\{(\w+)\}/g, (m, k: string) => vars[k] ?? m);
 }
+
+/** Inline code that survives backticks in the value (CommonMark: fence longer than any run inside). */
+export function mdCode(s: string): string {
+  const longest = Math.max(0, ...[...s.matchAll(/`+/g)].map((m) => m[0].length));
+  const fence = '`'.repeat(longest + 1);
+  return longest || s.startsWith(' ') || s.endsWith(' ') ? `${fence} ${s} ${fence}` : `${fence}${s}${fence}`;
+}
+
+/**
+ * Fill a changelog template as Markdown (OUT-01). Values come from the spec, so a backtick in a path
+ * must not close its code span early, and text outside code spans must not carry raw HTML into a
+ * PR comment or release notes: `{x}` placeholders get a safe fence, bare ones escape & < >.
+ */
+export function fillChangelog(template: string, vars: Record<string, string>): string {
+  return template
+    .replace(/`\{(\w+)\}`/g, (m, k: string) => (vars[k] === undefined ? m : mdCode(vars[k])))
+    .replace(/\{(\w+)\}/g, (m, k: string) => (vars[k] === undefined ? m : vars[k].replace(/[&<>]/g, (c) => (c === '&' ? '&amp;' : c === '<' ? '&lt;' : '&gt;'))));
+}
