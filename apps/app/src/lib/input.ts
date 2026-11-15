@@ -109,10 +109,22 @@ export function pickEntry(files: Record<string, string>): string | undefined {
   )[0];
 }
 
+/** A ZIP may unpack to at most this much in total, and this many files (zip bombs reuse data across entries). */
+export const ZIP_MAX_TOTAL_BYTES = 64 * 1024 * 1024;
+const ZIP_MAX_FILES = 10_000;
+
 export function fromZip(name: string, bytes: Uint8Array): Source {
+  let total = 0;
+  let count = 0;
   const entries = unzipSync(bytes, {
-    filter: (f) =>
-      !f.name.endsWith('/') && !f.name.startsWith('__MACOSX/') && f.originalSize < TEXT_ONLY_BYTES,
+    // fflate inflates each entry into a buffer of its declared size, so declared sizes bound the work.
+    filter: (f) => {
+      if (f.name.endsWith('/') || f.name.startsWith('__MACOSX/') || f.originalSize >= TEXT_ONLY_BYTES) return false;
+      total += f.originalSize;
+      if (++count > ZIP_MAX_FILES || total > ZIP_MAX_TOTAL_BYTES)
+        throw { kind: 'invalid', message: `${name}.zip unpacks to too much: more than ${ZIP_MAX_TOTAL_BYTES / 1024 / 1024} MB or ${ZIP_MAX_FILES.toLocaleString('en')} files.` } satisfies LoadError;
+      return true;
+    },
   });
   const files: Record<string, string> = {};
   for (const [p, data] of Object.entries(entries)) files[p] = strFromU8(data);

@@ -42,3 +42,16 @@ describe('input', () => {
     expect(Object.keys(s.files!).sort()).toEqual(['api/openapi.yaml', 'api/schemas/card.yaml']);
   });
 });
+
+describe('ZIP size limits (IN-04)', () => {
+  it('refuses a ZIP whose entries add up past the total limit, though each is under 25 MB', () => {
+    const big = new Uint8Array(23 * 1024 * 1024); // zeros compress to almost nothing: a small upload
+    const zip = zipSync({ 'openapi.yaml': strToU8('openapi: 3.1.0\n'), 'a.yaml': big, 'b.yaml': big, 'c.yaml': big });
+    expect(zip.length).toBeLessThan(1024 * 1024);
+    expect(() => fromZip('bomb', zip)).toThrow(expect.objectContaining({ kind: 'invalid', message: expect.stringMatching(/too much|MB/) }));
+  });
+  it('still opens a normal multi-file ZIP', () => {
+    const zip = zipSync({ 'openapi.yaml': strToU8('openapi: 3.1.0\ninfo: {title: T, version: "1"}\npaths: {}\n'), 'schemas/pet.yaml': strToU8('type: object\n') });
+    expect(fromZip('ok', zip).name).toBe('ok/openapi.yaml');
+  });
+});
