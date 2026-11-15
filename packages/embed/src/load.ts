@@ -16,7 +16,8 @@ export function parseSpecText(text: string): object {
   if (t.startsWith('{')) {
     try { return JSON.parse(t) as object; } catch { /* fall through: YAML is a superset */ }
   }
-  const doc = parse(text, { maxAliasCount: 100 }) as unknown;
+  // merge: YAML `<<` keys, as core's parser applies them when comparing.
+  const doc = parse(text, { maxAliasCount: 100, merge: true }) as unknown;
   if (!doc || typeof doc !== 'object' || Array.isArray(doc)) throw new Error('The file does not contain an object.');
   return doc as object;
 }

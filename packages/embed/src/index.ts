@@ -97,7 +97,10 @@ export function mount(el: HTMLElement, options: MountOptions): Mounted {
     const raw = v.spec as { swagger?: unknown } | undefined;
     if (raw && typeof raw.swagger === 'string' && raw.swagger.startsWith('2')) {
       const mod = await loadCompareModule();
-      if (mod) v = { ...v, spec: mod.upgradeSpec(raw) };
+      if (mod) {
+        try { v = { ...v, spec: mod.upgradeSpec(raw) }; }
+        catch (e) { v = { label: v.label, source: v.source, error: { kind: 'parse', message: `Could not convert this Swagger 2.0 file: ${e instanceof Error ? e.message : String(e)}` } }; }
+      }
     }
     const other = versions[slot === 0 ? 1 : 0];
     if (other && other.label === v.label) v = { ...v, label: `${v.label} (${slot === 0 ? 'current' : 'compared'})` };
