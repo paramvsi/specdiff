@@ -1,7 +1,14 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "tasks": {
-    "build": { "dependsOn": ["^build"], "outputs": ["dist/**"] },
-    "typecheck": {}
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**"]
+    },
+    "typecheck": {},
+    "specdiff-cli#build": {
+      "dependsOn": ["^build", "@specdiff/app#build"],
+      "outputs": ["dist/**"]
+    }
   }
 }

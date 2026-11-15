@@ -1,6 +1,7 @@
 {
   "name": "@specdiff/viewer",
-  "version": "0.0.0",
+  "version": "0.1.0",
+  "description": "Specdiff Viewer: a version-aware OpenAPI reference that shows what changed between versions.",
   "license": "MIT",
   "type": "module",
   "sideEffects": [
@@ -38,5 +39,25 @@
     "@types/react-dom": "19.3.0",
     "react": "19.3.1",
     "react-dom": "19.3.1"
-  }
+  },
+  "author": "Paramveer Singh",
+  "homepage": "https://specdiff.netlify.app/docs/packages/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/paramvsi/specdiff.git",
+    "directory": "packages/viewer"
+  },
+  "bugs": {
+    "url": "https://github.com/paramvsi/specdiff/issues"
+  },
+  "keywords": [
+    "openapi",
+    "api",
+    "diff",
+    "breaking-changes",
+    "changelog",
+    "semver",
+    "swagger",
+    "react"
+  ]
 }

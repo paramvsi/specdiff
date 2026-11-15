@@ -1,6 +1,7 @@
 {
   "name": "@specdiff/express",
-  "version": "0.0.0",
+  "version": "0.1.0",
+  "description": "Serve the Specdiff Viewer from Express or Fastify.",
   "license": "MIT",
   "type": "module",
   "sideEffects": false,
@@ -40,5 +41,24 @@
   "devDependencies": {
     "@types/node": "26.6.6",
     "fastify": "5.12.7"
-  }
+  },
+  "author": "Paramveer Singh",
+  "homepage": "https://specdiff.netlify.app/docs/express-fastify/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/paramvsi/specdiff.git",
+    "directory": "packages/express"
+  },
+  "bugs": {
+    "url": "https://github.com/paramvsi/specdiff/issues"
+  },
+  "keywords": [
+    "openapi",
+    "api",
+    "diff",
+    "breaking-changes",
+    "changelog",
+    "semver",
+    "swagger"
+  ]
 }

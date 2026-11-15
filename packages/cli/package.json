@@ -1,6 +1,6 @@
 {
   "name": "specdiff-cli",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "license": "MIT",
   "type": "module",
   "bin": {
@@ -22,11 +22,30 @@
     "yaml": "2.9.1"
   },
   "devDependencies": {
-    "@types/node": "26.6.6",
-    "@specdiff/app": "workspace:*"
+    "@types/node": "26.6.6"
   },
   "engines": {
     "node": ">=22"
   },
-  "description": "See what changed between two OpenAPI specs: breaking changes, explanations, version check. Runs locally; nothing is uploaded."
+  "description": "See what changed between two OpenAPI specs: breaking changes, explanations, version check. Runs locally; nothing is uploaded.",
+  "author": "Paramveer Singh",
+  "homepage": "https://specdiff.netlify.app/docs/cli/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/paramvsi/specdiff.git",
+    "directory": "packages/cli"
+  },
+  "bugs": {
+    "url": "https://github.com/paramvsi/specdiff/issues"
+  },
+  "keywords": [
+    "openapi",
+    "api",
+    "diff",
+    "breaking-changes",
+    "changelog",
+    "semver",
+    "swagger",
+    "cli"
+  ]
 }

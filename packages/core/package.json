@@ -1,6 +1,7 @@
 {
   "name": "@specdiff/core",
-  "version": "0.0.0",
+  "version": "0.1.0",
+  "description": "Diff engine for OpenAPI, JSON/YAML, Markdown, code and text: breaking-change rules, explanations, version check and changelogs. Runs in Node and the browser.",
   "license": "MIT",
   "type": "module",
   "sideEffects": false,
@@ -90,5 +91,24 @@
     "tree-sitter-javascript": "0.25.0",
     "tree-sitter-python": "0.25.0",
     "tree-sitter-typescript": "0.23.2"
-  }
+  },
+  "author": "Paramveer Singh",
+  "homepage": "https://specdiff.netlify.app/docs/packages/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/paramvsi/specdiff.git",
+    "directory": "packages/core"
+  },
+  "bugs": {
+    "url": "https://github.com/paramvsi/specdiff/issues"
+  },
+  "keywords": [
+    "openapi",
+    "api",
+    "diff",
+    "breaking-changes",
+    "changelog",
+    "semver",
+    "swagger"
+  ]
 }
