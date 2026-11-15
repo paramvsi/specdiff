@@ -1,0 +1,71 @@
+import { expect, test } from '@playwright/test';
+import { expectAxeClean } from './a11y';
+
+for (const scheme of ['light', 'dark'] as const) {
+  test(`A-04 summary shows the payments numbers (${scheme})`, async ({ page }) => {
+    await page.emulateMedia({ colorScheme: scheme });
+    await page.goto('/app/?sample=openapi');
+    await expect(page.getByRole('tab', { name: 'Summary', selected: true })).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Breaking: 4' })).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Possibly breaking: 1' })).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Safe: 14' })).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Docs only: 9' })).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Suggested version' })).toContainText('2.0.0');
+    await expect(page.getByRole('heading', { name: 'Where the 28 changes are' })).toBeVisible();
+    await expectAxeClean(page);
+  });
+}
+
+test('A-05 review a whole comparison with the keyboard only', async ({ page }) => {
+  // The drawer fades in; check contrast on its final state.
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/app/?sample=openapi');
+  await expect(page.getByRole('tab', { name: 'Summary' })).toBeVisible();
+  await page.keyboard.press('2');
+  await expect(page.getByRole('tab', { name: 'Workspace', selected: true })).toBeVisible();
+  await expect(page.getByText('0 of 5 decided')).toBeVisible();
+  for (let i = 0; i < 5; i++) {
+    await page.keyboard.press('a');
+    await page.keyboard.press('n');
+  }
+  await expect(page.getByText('5 of 5 decided')).toBeVisible();
+  await page.keyboard.press('r');
+  await expect(page.getByText('4 accepted · 1 rejected · 0 open')).toBeVisible();
+  await page.keyboard.press('v');
+  await expect(page.getByRole('checkbox', { name: 'Mark as viewed' })).toBeChecked();
+  await page.keyboard.press('e');
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await expectAxeClean(page);
+  await page.keyboard.press('Escape');
+  await expectAxeClean(page);
+});
+
+test('A-06 raw diff markers link to changes', async ({ page }) => {
+  await page.goto('/app/?sample=openapi');
+  await page.getByRole('tab', { name: 'Raw diff' }).click();
+  await expect(page.getByRole('heading', { name: 'Changes in this file' })).toBeVisible();
+  await page.getByRole('heading', { name: 'Changes in this file' }).locator('..').getByRole('button', { name: /Endpoint removed/ }).click();
+  await expect(page.getByRole('note')).toContainText('Endpoint removed');
+  await expectAxeClean(page);
+  await page.getByRole('note').getByRole('button', { name: 'Open in workspace' }).click();
+  await expect(page.getByRole('tab', { name: 'Workspace', selected: true })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 2, name: /Endpoint removed/ })).toBeVisible();
+});
+
+test('A-10 changelog templates and A-12 settings', async ({ page }) => {
+  await page.goto('/app/?sample=openapi');
+  await page.getByRole('tab', { name: 'Changelog' }).click();
+  await expect(page.getByLabel('Changelog text')).toHaveValue(/currency/);
+  await page.getByRole('tab', { name: 'Slack message' }).click();
+  await expectAxeClean(page);
+  await page.getByRole('button', { name: 'More' }).click();
+  await page.getByRole('menuitem', { name: 'Rules and settings' }).click();
+  await expect(page.getByRole('heading', { name: 'Rules' })).toBeVisible();
+  await page.getByRole('combobox', { name: 'Severity for response-property-enum-value-added' }).selectOption('breaking');
+  await expect(page.getByText('1 changed by you')).toBeVisible();
+  await expectAxeClean(page);
+  const dl = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Export' }).last().click();
+  // Browsers drop the leading dot of a downloaded name; the UI says to rename it.
+  expect((await dl).suggestedFilename()).toBe('specdiff.yaml');
+});

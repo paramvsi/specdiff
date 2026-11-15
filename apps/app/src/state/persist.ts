@@ -1,5 +1,5 @@
 // IndexedDB storage (OUT-07, IN-11, settings). Payloads are stored separately so history rows stay small.
-import type { HistoryEntry, Summary } from '@specdiff/core';
+import type { HistoryEntry, SavedSource, Summary } from '@specdiff/core';
 import { createStore, del, entries, get, set } from 'idb-keyval';
 import type { Source } from '../lib/input';
 import type { CompareResult } from '../worker/protocol';
@@ -65,3 +65,40 @@ export async function clearHistory() {
 
 export const loadSettings = () => get<Settings>('settings', prefs);
 export const saveSettings = (s: Settings) => set('settings', s, prefs);
+
+// Saved sources (IN-11, docs/07 §6). One store: source rows under their id, snapshots under `snap:<id>:<which>`.
+// The snapshot content is kept so "Compare with last visit" has both sides without refetching.
+const saved = createStore('specdiff-saved', 'sources');
+export interface Snapshot {
+  content: string;
+  hash: string;
+  fetchedAt: string;
+}
+const snapKey = (id: string, which: 'current' | 'previous') => `snap:${id}:${which}`;
+
+export async function listSaved(): Promise<SavedSource[]> {
+  return (await entries<string, SavedSource>(saved))
+    .filter(([k]) => !k.startsWith('snap:'))
+    .map(([, v]) => v)
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+export const putSaved = (s: SavedSource) => set(s.id, s, saved);
+export const getSnapshot = (id: string, which: 'current' | 'previous') =>
+  get<Snapshot>(snapKey(id, which), saved);
+/** Store a new current snapshot; the old current becomes the previous one. */
+export async function pushSnapshot(id: string, snap: Snapshot) {
+  const cur = await getSnapshot(id, 'current');
+  if (cur) await set(snapKey(id, 'previous'), cur, saved);
+  await set(snapKey(id, 'current'), snap, saved);
+}
+export async function deleteSaved(id: string) {
+  await del(id, saved);
+  await del(snapKey(id, 'current'), saved);
+  await del(snapKey(id, 'previous'), saved);
+}
+
+/** SHA-256 of the text as hex (WebCrypto). */
+export async function sha256(text: string): Promise<string> {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}

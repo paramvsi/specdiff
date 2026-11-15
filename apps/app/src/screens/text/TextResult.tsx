@@ -38,16 +38,14 @@ export function TextResult() {
   const setText2 = (patch: Partial<typeof opts>) => {
     updateConfig((c) => ({ ...c, text: { ...c.text, ...patch } }));
   };
-  // Re-diff when options change (TX-10 covers edits too).
-  const first = useRef(true);
+  // Re-diff when the options differ from the ones this result was made with (TX-10 covers edits too).
+  // Comparing with comparedConfig (not a "first run" ref) keeps StrictMode's double effects from looping.
+  const comparedText = useApp((s) => s.comparedConfig?.text);
   useEffect(() => {
-    if (first.current) {
-      first.current = false;
-      return;
-    }
+    if (settings.config.text === comparedText) return;
     const t = setTimeout(() => void compare(), 250);
     return () => clearTimeout(t);
-  }, [settings.config.text, compare]);
+  }, [settings.config.text, comparedText, compare]);
 
   const views: View[] = useMemo(
     () => (text ? foldRows(text.rows, 3, expanded) : []),

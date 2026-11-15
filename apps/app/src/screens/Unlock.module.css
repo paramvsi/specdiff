@@ -1,0 +1,64 @@
+.page {
+  display: grid;
+  place-items: center;
+  min-height: 60vh;
+  padding: var(--sd-space-8) 0;
+}
+.card {
+  width: min(480px, 100%);
+  background: var(--sd-surface);
+  border: 1px solid var(--sd-line);
+  border-radius: var(--sd-radius-2xl);
+  box-shadow: var(--sd-shadow-overlay);
+  overflow: hidden;
+}
+.inner {
+  padding: var(--sd-space-6) var(--sd-space-6) var(--sd-space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sd-space-3);
+}
+.icon {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--sd-radius-lg);
+  background: var(--sd-brand-tint);
+  color: var(--sd-ink);
+}
+.h1 {
+  margin: var(--sd-space-2) 0 0;
+  font-size: 22px;
+  line-height: 1.25;
+  letter-spacing: -0.4px;
+  font-weight: 700;
+}
+.lead {
+  margin: 0;
+  color: var(--sd-muted);
+  font-size: 14.5px;
+  line-height: 1.6;
+}
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sd-space-4);
+  margin-top: var(--sd-space-2);
+}
+.actions {
+  display: flex;
+  gap: var(--sd-space-2);
+  flex-wrap: wrap;
+}
+.foot {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--sd-space-2);
+  padding: var(--sd-space-3) var(--sd-space-6);
+  background: var(--sd-raised);
+  border-top: 1px solid var(--sd-line);
+  color: var(--sd-muted);
+  font-size: 13px;
+}

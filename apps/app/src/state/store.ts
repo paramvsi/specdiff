@@ -29,6 +29,8 @@ interface State {
   progress: Partial<Record<Step, Progress>>;
   job: Job | null;
   result: CompareResult | null;
+  /** The settings.config the current result was made with (screens re-compare only when it differs). */
+  comparedConfig: ConfigInput | null;
   error: string | null;
   decisions: DecisionsFile;
   viewed: Record<string, true>;
@@ -65,6 +67,7 @@ export const useApp = create<State>((set, get) => ({
   progress: {},
   job: null,
   result: null,
+  comparedConfig: null,
   error: null,
   decisions: { version: 1, decisions: {} },
   viewed: {},
@@ -92,7 +95,7 @@ export const useApp = create<State>((set, get) => ({
     const job = startCompare({ before, after, mode, config: Config.parse(settings.config) }, (p) =>
       set((s) => ({ progress: { ...s.progress, [p.step]: p } })),
     );
-    set({ job, progress: {}, error: null, screen: 'parsing', viewed: {} });
+    set({ job, progress: {}, error: null, screen: 'parsing', viewed: {}, comparedConfig: settings.config });
     try {
       const result = await job.promise;
       set({ result, job: null, screen: 'kind' in result ? 'compare' : 'result' });
