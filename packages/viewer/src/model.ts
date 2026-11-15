@@ -20,7 +20,8 @@ export interface Model {
   title: string; version: string; description?: string;
   servers: Array<{ url: string; description?: string }>;
   securitySchemes: Record<string, Json>;
-  tags: Array<{ name: string; description?: string; ops: Op[] }>;
+  /** `title` is what the reader sees: `x-displayName`, else the name with a capital first letter. */
+  tags: Array<{ name: string; title: string; description?: string; ops: Op[] }>;
   ops: Op[];
   schemas: SchemaEntry[];
 }
@@ -84,7 +85,13 @@ export function buildModel(spec: Json): Model {
   }
   const tagOrder: string[] = (spec.tags ?? []).map((t: Json) => t.name);
   const tagNames = [...new Set([...tagOrder, ...ops.flatMap((o) => o.tags)])];
-  const tags = tagNames.map((name) => ({ name, ...(spec.tags?.find((t: Json) => t.name === name)?.description ? { description: spec.tags.find((t: Json) => t.name === name).description } : {}), ops: ops.filter((o) => o.tags.includes(name)) })).filter((t) => t.ops.length);
+  // Each operation is listed once, under its first tag: GET /v1/customers/{id}/cards tagged
+  // [customers, cards] no longer repeats in a one-row "cards" group (V-01 round 3).
+  const tags = tagNames.map((name) => {
+    const def = spec.tags?.find((t: Json) => t.name === name);
+    const shown = typeof def?.['x-displayName'] === 'string' && def['x-displayName'].trim() ? def['x-displayName'].trim() : name.charAt(0).toUpperCase() + name.slice(1);
+    return { name, title: shown, ...(def?.description ? { description: def.description } : {}), ops: ops.filter((o) => o.tags[0] === name) };
+  }).filter((t) => t.ops.length);
 
   // "Used in": which operations reference each component schema, directly or through other schemas.
   const schemaDefs = spec.components?.schemas ?? {};

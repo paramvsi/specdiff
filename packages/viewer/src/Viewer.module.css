@@ -118,6 +118,8 @@
 }
 .picker {
   appearance: none;
+  /* Size to the chosen version ("v2.0.0"), not to the longest option ("+ Add a version…"). */
+  field-sizing: content;
   min-height: 38px;
   max-width: 220px;
   padding: 0 34px 0 var(--sd-space-3);
@@ -139,6 +141,9 @@
 .phoneHeader .picker {
   min-height: 44px;
   max-width: 120px;
+  /* M-04: a compact "v2.0.0 ▾" chip, not a wide select. */
+  width: auto;
+  padding-left: var(--sd-space-3);
 }
 
 /* ---- Layout ---------------------------------------------------------------------------- */
@@ -276,9 +281,15 @@
 .navLabel {
   flex: 1;
   min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  /* Long summaries wrap instead of cutting to "List paymen…" (V-01 round 3). The badge floats
+     right on the first line, so the following lines use the full width. */
+  padding: 7px 0;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.navLabel .navBadge {
+  float: right;
+  margin: 1px 0 0 var(--sd-space-2);
 }
 .navCount {
   font-family: var(--sd-font-mono);
@@ -547,7 +558,8 @@
 }
 .opRow {
   display: grid;
-  grid-template-columns: 60px minmax(0, 1.3fr) minmax(0, 1fr) auto;
+  /* Fixed badge column: the description column starts at the same x on every row (V-01). */
+  grid-template-columns: 60px minmax(0, 1.3fr) minmax(0, 1fr) 104px;
   align-items: center;
   gap: var(--sd-space-3);
   min-height: 46px;
@@ -571,6 +583,10 @@
   color: var(--sd-muted);
   font-size: 14px;
 }
+.summaryText {
+  max-width: 72ch;
+  margin: 0;
+}
 .opBadge {
   justify-self: end;
 }
@@ -582,7 +598,7 @@
   font-family: var(--sd-font-mono);
   font-size: 12px;
   color: var(--sd-muted);
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 .phoneSince {
   display: flex;
@@ -662,10 +678,14 @@
   gap: var(--sd-space-2);
 }
 .changeList li {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
+  /* Badge, then the text in its own column: wrapped text stays beside the badge, not under it. */
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: baseline;
   gap: var(--sd-space-3);
+}
+.calloutCard {
+  padding: var(--sd-space-3) var(--sd-space-4);
 }
 .fieldList {
   list-style: none;
@@ -1019,6 +1039,17 @@ summary.responseHead::-webkit-details-marker {
 /* Auth dialog */
 .authDialog {
   width: min(560px, calc(100vw - 32px));
+  /* V02-Auth: anchored 120 px from the top, not centred over the page. */
+  top: 120px;
+  transform: translateX(-50%);
+  max-height: calc(100vh - 140px);
+  animation-name: sdRiseTop;
+}
+@keyframes sdRiseTop {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+  }
 }
 .fieldset {
   margin: 0;
@@ -1038,8 +1069,12 @@ summary.responseHead::-webkit-details-marker {
   border-radius: var(--sd-radius-lg);
   background: var(--sd-possibly-bg);
 }
+.rememberBox label {
+  font-weight: 600;
+}
+/* The helper sits right under the label, aligned with its text (checkbox 18 px + 10 px gap). */
 .rememberText {
-  margin: var(--sd-space-1) 0 0;
+  margin: -8px 0 0 28px;
   font-size: 13px;
 }
 
@@ -1122,7 +1157,7 @@ summary.responseHead::-webkit-details-marker {
 }
 .changeRow {
   display: grid;
-  grid-template-columns: 120px minmax(0, 1fr);
+  grid-template-columns: 140px minmax(0, 1fr);
   gap: var(--sd-space-4);
   padding: var(--sd-space-3) 0;
   border-bottom: 1px solid var(--sd-line);
@@ -1139,6 +1174,45 @@ summary.responseHead::-webkit-details-marker {
 .changeTitle {
   margin: var(--sd-space-1) 0 0;
   font-weight: 600;
+}
+/* V-04: safe and docs-only changes folded into one row each. */
+.changeGroup {
+  border-bottom: 1px solid var(--sd-line);
+}
+.changeGroup:last-child {
+  border-bottom: 0;
+}
+.changeGroupHead {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: var(--sd-space-4);
+  min-height: 44px;
+  padding: var(--sd-space-3) 0;
+  border-radius: var(--sd-radius-sm);
+  cursor: pointer;
+  list-style: none;
+}
+.changeGroupHead::-webkit-details-marker {
+  display: none;
+}
+.changeGroupHead .changeTitle {
+  margin: 0;
+}
+.changeGroupHead .chev {
+  align-self: center;
+}
+.changeGroup details[open] .changeGroupHead .chev {
+  transform: rotate(90deg);
+}
+.changeGroup .changeRows {
+  margin-left: var(--sd-space-5);
+}
+.bodyPhone .changeGroupHead {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+.bodyPhone .changeGroupHead > :first-child {
+  grid-column: 1 / -1;
 }
 .effortCard {
   display: grid;
@@ -1371,6 +1445,10 @@ summary.responseHead::-webkit-details-marker {
 .bodyPhone .pointBtn {
   min-height: 44px;
 }
+/* M-04: "curl https://api.example.com/v1/payments \" fits one 390 px line. */
+.bodyPhone .pre {
+  font-size: 12px;
+}
 .bodyPhone .darkTab {
   min-height: 44px;
 }
@@ -1387,4 +1465,33 @@ summary.responseHead::-webkit-details-marker {
   .chev {
     transition: none;
   }
+}
+
+/* ---- V-02 Docs / History: underline tabs (the design), over the ui Tabs' segmented look ---- */
+.underlineTabs {
+  gap: var(--sd-space-4);
+}
+.underlineTabs [role='tablist'] {
+  align-self: stretch;
+  gap: var(--sd-space-5);
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid var(--sd-line);
+  border-radius: 0;
+  background: transparent;
+}
+.underlineTabs [role='tab'] {
+  min-height: 40px;
+  padding: 0 2px;
+  margin-bottom: -1px;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  font-size: 15px;
+  font-weight: 500;
+}
+.underlineTabs [role='tab'][data-state='active'] {
+  border-bottom-color: var(--sd-ink);
+  background: transparent;
+  color: var(--sd-ink);
+  font-weight: 600;
 }

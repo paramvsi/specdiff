@@ -101,7 +101,7 @@ test('V-04 what changed: timeline, checklist and HAR filter (VW-10)', async ({ p
 
 test('V-04 "Pick my endpoints" narrows the list to the picked endpoints, breaking first', async ({ page }) => {
   await ready(page, `${H}#/changes`);
-  const rows = page.locator('ul[class*="changeRows"] > li');
+  const rows = page.locator('li[class*="changeRow"]');
   await expect(rows.first()).toBeVisible();
   const total = await rows.count();
   await page.getByRole('button', { name: 'Pick my endpoints' }).click();
@@ -133,7 +133,7 @@ test('V-04 with the design\'s 5 endpoints: fixes = Breaking rows, a short filter
   await dialog.locator('input[type=file]').setInputFiles({ name: 'checkout-session.har', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(har)) });
   await dialog.getByRole('button', { name: 'Show my changes' }).click();
   await expect(page.getByRole('heading', { name: 'Showing changes for the 5 endpoints you use' })).toBeVisible();
-  const rows = page.locator('ul[class*="changeRows"] > li');
+  const rows = page.locator('li[class*="changeRow"]');
   const badges = await rows.evaluateAll((els) => els.map((e) => e.querySelector('span')?.textContent?.replace(/^[!?+¶]\s*/, '').trim() ?? ''));
   const breaking = badges.filter((b) => b === 'Breaking').length;
   const possibly = badges.filter((b) => b === 'Possibly breaking').length;

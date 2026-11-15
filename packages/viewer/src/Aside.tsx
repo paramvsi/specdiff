@@ -5,7 +5,7 @@ import { useMemo, useState } from 'react';
 import { useViewer } from './context';
 import { mediaOf, opMarkdown } from './fields';
 import { deref, type Json, type Op } from './model';
-import { CodePanel, CopyButton, DarkTabs } from './parts';
+import { CodePanel, CopyButton, DarkTabs, cx } from './parts';
 import { exampleFor, sample, type Lang, type SampleInput } from './samples';
 import { TryIt } from './TryIt';
 import css from './Viewer.module.css';
@@ -54,8 +54,9 @@ export function CodeSamples({ op }: { op: Op }) {
   return (
     <section className={css.codePanel} aria-label="Code samples">
       <DarkTabs label="Code sample language" tabs={v.isPhone ? LANGS_PHONE : LANGS} value={lang} onChange={setLang} trailing={<CopyButton text={code} label={`Copy ${lang} sample`} />}>
+        {/* Long lines wrap (Java's .uri(…), a long URL) instead of being cut at the panel edge. */}
         {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex */}
-        <pre className={css.pre} tabIndex={0}><code>{code}</code></pre>
+        <pre className={cx(css.pre, css.preWrap)} tabIndex={0}><code>{code}</code></pre>
       </DarkTabs>
     </section>
   );

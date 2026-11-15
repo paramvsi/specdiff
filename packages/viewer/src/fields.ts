@@ -68,7 +68,7 @@ export function overviewMarkdown(m: Model, version: string): string {
   const out = [`# ${m.title} ${version}`, '', ...(m.description ? [m.description, ''] : [])];
   if (m.servers.length) out.push('## Servers', '', ...m.servers.map((s) => `- ${s.url}${s.description ? ` (${s.description})` : ''}`), '');
   for (const t of m.tags) {
-    out.push(`## ${t.name}`, '', ...t.ops.map((o) => `- \`${o.key}\`${o.summary ? `: ${o.summary}` : ''}${o.deprecated ? ' (deprecated)' : ''}`), '');
+    out.push(`## ${t.title}`, '', ...t.ops.map((o) => `- \`${o.key}\`${o.summary ? `: ${o.summary}` : ''}${o.deprecated ? ' (deprecated)' : ''}`), '');
   }
   return out.join('\n').trim() + '\n';
 }

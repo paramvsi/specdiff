@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { compareOpenApi, parseDocument } from '@specdiff/core';
 import { describe, expect, it } from 'vitest';
-import { bySeverity, checklist, displayKeyOf, fieldNames, filterByEndpoints, indexChanges, shortTitle } from './change-index';
+import { bySeverity, changeLine, checklist, displayKeyOf, fieldNames, filterByEndpoints, indexChanges, shortTitle, summarySentence } from './change-index';
 import { buildModel } from './model';
 
 const dir = join(__dirname, '../../../fixtures/samples');
@@ -72,5 +72,27 @@ describe('V-04 short titles and the checklist for picked endpoints', () => {
       '- [ ] Stop reading card.last4',
       '- [ ] Handle status = disputed',
     ]);
+  });
+});
+
+describe('round 3 copy (V-01, V-02)', () => {
+  const names = fieldNames(parseDocument(after, 'payments-v2.yaml').value);
+  it('summarises the breaking changes as one prose sentence, then what is new', () => {
+    expect(summarySentence(report.changes, cur, names)).toBe(
+      'Currency is now required on POST /v1/payments, limit on GET /v1/payments now allows at most 50, DELETE /v1/refunds/{id} was removed, and card.last4 is gone. Payouts are new.',
+    );
+    expect(summarySentence(report.changes, cur, names, 2)).toMatch(/, and 2 more breaking changes\. Payouts are new\.$/);
+    expect(summarySentence([], cur, names)).toBe('');
+  });
+  it('drops the shared-schema echo: "`PaymentStatus` in `PaymentStatus` responses" names the field once', () => {
+    const lines = report.changes.filter((c) => c.path === 'components.schemas.PaymentStatus').map((c) => changeLine(c, names));
+    expect(lines).toEqual(['`status` accepts `disputed`.', '`status` in responses can now be `disputed`.']);
+    for (const c of report.changes) expect(changeLine(c, names)).not.toMatch(/`([^`]+)` (in|on) `\1`/);
+  });
+  it('lists each operation once, under its first tag, with a capitalised title', () => {
+    expect(cur.tags.map((t) => t.title)).toEqual(['Payments', 'Refunds', 'Customers', 'Payouts']);
+    const keys = cur.tags.flatMap((t) => t.ops.map((o) => o.key));
+    expect(keys).toHaveLength(new Set(keys).size);
+    expect(keys.sort()).toEqual(cur.ops.map((o) => o.key).sort());
   });
 });

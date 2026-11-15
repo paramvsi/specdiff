@@ -3,7 +3,7 @@ import type { Change } from '@specdiff/core';
 import { SeverityBadge, Tabs, ViewerBadge } from '@specdiff/ui';
 import { ChevronRight, Clock } from 'lucide-react';
 import { useMemo } from 'react';
-import { changeTitle, opKeysOf } from './change-index';
+import { bySeverity, changeLine, fieldNames, opKeysOf, shortTitle } from './change-index';
 import { useViewer, type Loaded } from './context';
 import { PARAM_SECTIONS, fieldsOf, mediaOf } from './fields';
 import { useReports } from './hooks';
@@ -29,7 +29,8 @@ export function useOpHistory(op: Op): { entries: Array<{ v: Loaded; changes: Cha
     const added = !before || !before.model.ops.some((o) => o.key === op.key);
     const st = i > 0 ? states[i - 1] : undefined;
     const changes = st?.status === 'ready' ? st.report.changes.filter((c) => opKeysOf(c).includes(op.key) && c.ruleId !== 'endpoint-added') : [];
-    if (added || changes.length) entries.push({ v, changes, added });
+    // Within a version: Breaking → Possibly → Safe → Docs only (V02-History).
+    if (added || changes.length) entries.push({ v, changes: bySeverity(changes), added });
   });
   return { entries: entries.reverse(), pending: states.some((s) => s?.status === 'loading') };
 }
@@ -39,19 +40,36 @@ export function Endpoint({ op, tab }: { op: Op; tab: 'docs' | 'history' }) {
   const { spec } = v.cur;
   const badge = v.index.ops.get(op.key);
   const history = useOpHistory(op);
-  const opChanges = (v.index.opChanges.get(op.key) ?? []).filter((c) => c.severity !== 'docs');
+  const opChanges = bySeverity((v.index.opChanges.get(op.key) ?? []).filter((c) => c.severity !== 'docs'));
   const replacement = (deref(spec, spec.paths?.[op.path])?.[op.method] ?? {})['x-replacement'] as string | undefined;
+  const names = useMemo(() => fieldNames(spec), [spec]);
+  const phoneCallouts = opChanges.filter((c) => c.severity === 'breaking' || c.severity === 'possibly');
 
   const docs = (
     <div className={css.stack}>
-      {opChanges.length && v.prev ? (
+      {v.isPhone ? (
+        // M-04: a one-line callout per change that needs action ("! Breaking  currency is now required since 2.0.0.").
+        phoneCallouts.length && v.prev ? (
+          <section className={cx(css.card, css.calloutCard)} aria-labelledby="sd-changed-since">
+            <h2 id="sd-changed-since" className={css.srOnly}>Changed since {v.prev.label}</h2>
+            <ul className={css.changeList}>
+              {phoneCallouts.map((c) => (
+                <li key={c.id}>
+                  {c.severity ? <SeverityBadge severity={c.severity} /> : null}
+                  <span>{shortTitle(c, names)} since {v.cur.label}.</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null
+      ) : opChanges.length && v.prev ? (
         <section className={css.card} aria-labelledby="sd-changed-since">
           <h2 id="sd-changed-since" className={css.h4}>Changed since {v.prev.label}</h2>
           <ul className={css.changeList}>
             {opChanges.slice(0, 8).map((c) => (
               <li key={c.id}>
                 {c.severity ? <SeverityBadge severity={c.severity} /> : null}
-                <span><InlineText text={c.changelogLine ?? changeTitle(c)} /></span>
+                <span><InlineText text={changeLine(c, names)} /></span>
               </li>
             ))}
           </ul>
@@ -101,6 +119,7 @@ export function Endpoint({ op, tab }: { op: Op; tab: 'docs' | 'history' }) {
         docs
       ) : (
         <Tabs
+          className={css.underlineTabs}
           label="Endpoint"
           value={tab}
           onValueChange={(t) => v.go({ page: 'op', slug: op.slug, tab: t === 'history' ? 'history' : 'docs' })}
@@ -202,9 +221,11 @@ function Responses({ op }: { op: Op }) {
 
 function History({ history }: { history: ReturnType<typeof useOpHistory> }) {
   const v = useViewer();
+  const names = useMemo(() => fieldNames(v.cur.spec), [v.cur.spec]);
   if (!v.compareAvailable && v.loaded.length > 1) return <p className={css.muted}>{v.compareNote ?? 'History needs the comparison engine.'}</p>;
   return (
     <div>
+      {/* Short titles, as in V02-History ("currency is now required"); the page names the endpoint. */}
       <p className={css.muted}>Every change to this endpoint across the versions you loaded, newest first.</p>
       {history.pending ? <p className={css.muted} role="status">Comparing versions…</p> : null}
       <ol className={css.timelineV}>
@@ -216,7 +237,7 @@ function History({ history }: { history: ReturnType<typeof useOpHistory> }) {
               <ul className={css.changeList}>
                 {e.added ? <li><SeverityBadge severity="safe" /><span>Endpoint added</span></li> : null}
                 {e.changes.map((c) => (
-                  <li key={c.id}>{c.severity ? <SeverityBadge severity={c.severity} /> : null}<span><InlineText text={c.changelogLine ?? changeTitle(c)} /></span></li>
+                  <li key={c.id}>{c.severity ? <SeverityBadge severity={c.severity} /> : null}<span>{shortTitle(c, names)}</span></li>
                 ))}
               </ul>
             </div>

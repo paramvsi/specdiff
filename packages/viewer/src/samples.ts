@@ -43,7 +43,11 @@ export function sample(lang: Lang, i: SampleInput): string {
   const headers = { ...i.headers, ...(i.body ? { 'Content-Type': 'application/json' } : {}) };
   const hs = Object.entries(headers);
   if (lang === 'curl') {
-    return [`curl -X ${m} ${sh(url)}`, ...hs.map(([k, v]) => `  -H ${sh(`${k}: ${v}`)}`), ...(i.body ? [`  --data ${sh(i.body)}`] : [])].join(' \\\n');
+    // V-02: one short line each, so nothing is cut at the panel edge. curl sends GET, or POST
+    // when there is a body, without -X; the JSON body is pretty-printed over several lines.
+    const implied = m === 'GET' || (m === 'POST' && !!i.body);
+    // The URL is quoted only when the shell needs it (?, &, spaces…), as in the design.
+    return [`curl ${/^[\w.:/@%+=,~-]+$/.test(url) ? url : sh(url)}`, ...(implied ? [] : [`  -X ${m}`]), ...hs.map(([k, v]) => `  -H ${sh(`${k}: ${v}`)}`), ...(i.body ? [`  -d ${sh(pretty(i.body).replace(/\n/g, '\n  '))}`] : [])].join(' \\\n');
   }
   if (lang === 'javascript') {
     const opts = [`  method: ${js(m)},`, ...(hs.length ? [`  headers: {\n${hs.map(([k, v]) => `    ${js(k)}: ${js(v)},`).join('\n')}\n  },`] : []), ...(i.body ? [`  body: JSON.stringify(${i.body}),`] : [])];
@@ -56,6 +60,10 @@ export function sample(lang: Lang, i: SampleInput): string {
   const builder = [`HttpRequest request = HttpRequest.newBuilder()`, `    .uri(URI.create(${js(url)}))`, ...hs.map(([k, v]) => `    .header(${js(k)}, ${js(v)})`),
     `    .method(${js(m)}, ${i.body ? `HttpRequest.BodyPublishers.ofString(${js(i.body)})` : 'HttpRequest.BodyPublishers.noBody()'})`, `    .build();`];
   return `HttpClient client = HttpClient.newHttpClient();\n${builder.join('\n')}\nHttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());`;
+}
+
+function pretty(json: string): string {
+  try { return JSON.stringify(JSON.parse(json), null, 2); } catch { return json; }
 }
 
 function toPython(json: string): string {

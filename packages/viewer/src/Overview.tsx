@@ -2,8 +2,8 @@
 // Authentication page.
 import { Button, Skeleton, ViewerBadge } from '@specdiff/ui';
 import { ChevronRight, KeyRound, RefreshCw, TriangleAlert, Upload } from 'lucide-react';
-import { createContext, useContext, useRef } from 'react';
-import { changeTitle } from './change-index';
+import { createContext, useContext, useMemo, useRef } from 'react';
+import { fieldNames, summarySentence } from './change-index';
 import { useViewer } from './context';
 import { schemeSummary } from './fields';
 import { Method, cx } from './parts';
@@ -15,12 +15,19 @@ export function authSummary(schemes: Record<string, Record<string, unknown>>): s
   return names.length ? names.join(' · ') : 'None';
 }
 
+/** A path that wraps after a "/" rather than mid-word ("/cards" stays whole on phones, M-05). */
+function breakablePath(path: string) {
+  return path.split(/(?<=\/)/).map((seg, i) => (i ? <span key={i}><wbr />{seg}</span> : seg));
+}
+
 export function Overview() {
   const v = useViewer();
   const { cur, prev, index, report, isPhone } = v;
   const m = cur.model;
   const specVersion = String(cur.spec.openapi ?? cur.spec.swagger ?? '').split('.').slice(0, 2).join('.');
-  const breakingLines = (report?.status === 'ready' ? report.report.changes : []).filter((c) => c.severity === 'breaking').slice(0, 3).map(changeTitle);
+  const names = useMemo(() => fieldNames(cur.spec), [cur.spec]);
+  // One prose sentence (V-01), not the changelog lines joined with " · ".
+  const summary = useMemo(() => (report?.status === 'ready' ? summarySentence(report.report.changes, m, names) : ''), [report, m, names]);
   const total = report?.status === 'ready' ? report.report.summary.total : 0;
   // V01-Overview-Error: while a version failed to load, the overview shows the error over skeleton cards.
   if (v.versions.some((x) => x.error && !x.spec)) {
@@ -83,7 +90,7 @@ export function Overview() {
                       <span key={k} className={css.countItem}><ViewerBadge kind={k} /> {index.counts[k]}</span>
                     ))}
                   </p>
-                  {breakingLines.length ? <p className={css.muted}>{breakingLines.join(' · ')}</p> : null}
+                  {summary ? <p className={cx(css.muted, css.summaryText)}>{summary}</p> : null}
                   {!v.compareAvailable ? <p className={css.muted}>{v.compareNote ?? 'Breaking and Changed badges need the comparison engine; only New and Deprecated are shown.'}</p> : null}
                 </>
               ) : report?.status === 'error' ? (
@@ -98,7 +105,7 @@ export function Overview() {
 
       {m.tags.map((t) => (
         <section key={t.name} className={cx(css.card, css.lazyCard)} aria-labelledby={`sd-tag-${t.name}`}>
-          <h2 id={`sd-tag-${t.name}`} className={css.h3}>{t.name}</h2>
+          <h2 id={`sd-tag-${t.name}`} className={css.h3}>{t.title}</h2>
           <ul className={css.opList}>
             {t.ops.map((o) => {
               const badge = index.ops.get(o.key);
@@ -109,7 +116,7 @@ export function Overview() {
                     {isPhone ? (
                       <span className={css.opStack}>
                         <span>{o.summary ?? o.path}</span>
-                        <span className={css.opPathSmall}>{o.path}</span>
+                        <span className={css.opPathSmall}>{breakablePath(o.path)}</span>
                       </span>
                     ) : (
                       <>

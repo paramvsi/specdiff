@@ -2,7 +2,7 @@
 // and the upgrade checklist.
 import type { Change } from '@specdiff/core';
 import { Button, SeverityBadge } from '@specdiff/ui';
-import { Copy } from 'lucide-react';
+import { ChevronRight, Copy } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { bySeverity, changeAdvice, checklist, displayKeyOf, fieldNames, filterByEndpoints, shortTitle } from './change-index';
 import { useViewer } from './context';
@@ -73,6 +73,26 @@ export function Changes() {
   const { all, shown } = useFilteredChanges();
   const names = useFieldNames();
   const ops = new Map([...v.cur.model.ops, ...(v.prev?.model.ops ?? [])].map((o) => [o.key, o]));
+  const row = (c: Change) => {
+    const key = displayKeyOf(c, v.myEndpoints);
+    const op = key ? ops.get(key) : undefined;
+    const [method, path] = key ? [key.split(' ')[0]!, key.slice(key.indexOf(' ') + 1)] : ['', ''];
+    return (
+      <li key={c.id} className={css.changeRow}>
+        <span>{c.severity ? <SeverityBadge severity={c.severity} /> : null}</span>
+        <div>
+          {key ? (
+            <p className={css.changeOp}>
+              <Method method={method} />
+              {op && v.cur.model.ops.includes(op) ? <a className={css.usedLink} href={v.href({ page: 'op', slug: op.slug, tab: 'docs' })}>{path}</a> : <span className={css.mono}>{path}</span>}
+            </p>
+          ) : null}
+          <p className={css.changeTitle}>{shortTitle(c, names)}</p>
+          <p className={css.small}><InlineText text={changeAdvice(c)} /></p>
+        </div>
+      </li>
+    );
+  };
   return (
     <div className={css.page}>
       <h1 className={css.h1}>What changed</h1>
@@ -107,23 +127,25 @@ export function Changes() {
             <h2 id="sd-change-list" className={css.h3}>{v.prev.label} → {v.cur.label} · {v.myEndpoints ? 'affects you' : 'all changes'}</h2>
             {shown.length ? (
               <ul className={css.changeRows}>
-                {shown.map((c) => {
-                  const key = displayKeyOf(c, v.myEndpoints);
-                  const op = key ? ops.get(key) : undefined;
-                  const [method, path] = key ? [key.split(' ')[0]!, key.slice(key.indexOf(' ') + 1)] : ['', ''];
+                {shown.filter((c) => c.severity === 'breaking' || c.severity === 'possibly').map(row)}
+                {/* V-04: safe and docs-only changes fold into one row each; a single one shows as is. */}
+                {(['safe', 'docs'] as const).map((sev) => {
+                  const group = shown.filter((c) => (c.severity ?? 'docs') === sev);
+                  if (group.length < 2) return group.map(row);
+                  const titles = [...new Set(group.map((c) => shortTitle(c, names)))].map((t, i) => (i && /^(Description|Summary|Example|Tags|Endpoint) /.test(t) ? t[0]!.toLowerCase() + t.slice(1) : t));
                   return (
-                    <li key={c.id} className={css.changeRow}>
-                      <span>{c.severity ? <SeverityBadge severity={c.severity} /> : null}</span>
-                      <div>
-                        {key ? (
-                          <p className={css.changeOp}>
-                            <Method method={method} />
-                            {op && v.cur.model.ops.includes(op) ? <a className={css.usedLink} href={v.href({ page: 'op', slug: op.slug, tab: 'docs' })}>{path}</a> : <span className={css.mono}>{path}</span>}
-                          </p>
-                        ) : null}
-                        <p className={css.changeTitle}>{shortTitle(c, names)}</p>
-                        <p className={css.small}><InlineText text={changeAdvice(c)} /></p>
-                      </div>
+                    <li key={sev} className={css.changeGroup}>
+                      <details>
+                        <summary className={css.changeGroupHead}>
+                          <span><SeverityBadge severity={sev} /></span>
+                          <div>
+                            <p className={css.changeTitle}>{group.length} {sev === 'safe' ? 'safe changes' : 'docs-only changes'}</p>
+                            <p className={css.small}>{titles.slice(0, 3).join(', ')}{titles.length > 3 ? `, and ${titles.length - 3} more` : ''}. {sev === 'safe' ? 'Nothing to avoid.' : 'No action needed.'}</p>
+                          </div>
+                          <ChevronRight aria-hidden="true" size={16} className={css.chev} />
+                        </summary>
+                        <ul className={css.changeRows}>{group.map(row)}</ul>
+                      </details>
                     </li>
                   );
                 })}

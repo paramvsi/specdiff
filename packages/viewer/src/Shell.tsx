@@ -34,7 +34,7 @@ export function Nav({ route, onSearch, onNavigate }: { route: Route; onSearch: (
     { kind: 'top', label: 'Overview', route: { page: 'overview' } },
     ...(v.loaded.length > 1 || v.prev || v.compareWith ? [{ kind: 'top' as const, label: 'What changed', route: { page: 'changes' } as Route, count: changeCount }] : []),
     { kind: 'top', label: 'Authentication', route: { page: 'auth' } },
-    ...m.tags.flatMap((t): NavRow[] => [{ kind: 'group', label: t.name }, ...t.ops.map((op): NavRow => ({ kind: 'op', op }))]),
+    ...m.tags.flatMap((t): NavRow[] => [{ kind: 'group', label: t.title }, ...t.ops.map((op): NavRow => ({ kind: 'op', op }))]),
     ...(m.schemas.length ? [{ kind: 'group' as const, label: 'Schemas' }, ...m.schemas.map((s): NavRow => ({ kind: 'schema', s }))] : []),
   ];
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -56,10 +56,13 @@ export function Nav({ route, onSearch, onNavigate }: { route: Route; onSearch: (
         onClick={onNavigate}
       >
         {row.kind === 'op' ? <NavMethod method={row.op.method} /> : null}
-        <span className={css.navLabel}>{row.kind === 'top' ? row.label : row.kind === 'op' ? row.op.summary ?? row.op.path : row.s.name}</span>
+        <span className={css.navLabel}>
+          {/* V-04: endpoints outside "my endpoints" are dimmed and drop their badge. */}
+          {!dim && badge ? <ViewerBadge kind={badge} className={css.navBadge} /> : null}
+          {row.kind === 'top' ? row.label : row.kind === 'op' ? row.op.summary ?? row.op.path : row.s.name}
+        </span>
         {row.kind === 'top' && row.count !== undefined ? <span className={css.navCount}>{row.count}</span> : null}
-        {/* V-04: endpoints outside "my endpoints" are dimmed and drop their badge. */}
-        {dim ? <span className={css.srOnly}> (not used by your app)</span> : badge ? <ViewerBadge kind={badge} className={css.navBadge} /> : null}
+        {dim ? <span className={css.srOnly}> (not used by your app)</span> : null}
       </a>
     );
   };

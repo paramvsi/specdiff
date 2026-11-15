@@ -303,3 +303,61 @@ export function chronological<T extends { label: string }>(versions: readonly T[
     })
     .map((x) => x.v);
 }
+
+/**
+ * A change's changelog line for a page that renders inline code, without the shared-schema echo
+ * core produces for enum schemas: "`PaymentStatus` in `PaymentStatus` responses can now be
+ * `disputed`" reads "`status` in responses can now be `disputed`" (V-02 round 3).
+ */
+export function changeLine(c: Change, names?: FieldNames): string {
+  const line = c.changelogLine ?? changeTitle(c);
+  return line.replace(/^`([^`]+)` (in|on) `\1`( responses)?/, (_m, _n: string, _p: string, resp: string | undefined) => {
+    const f = fieldName(c, names) || _n;
+    return resp ? `\`${f}\` in responses` : `\`${f}\``;
+  });
+}
+
+const BOUND_WORDS: Record<string, string> = { maximum: 'at most', exclusiveMaximum: 'below', maxLength: 'at most', maxItems: 'at most', minimum: 'at least', exclusiveMinimum: 'above', minLength: 'at least', minItems: 'at least' };
+
+/** One clause of the overview summary for a breaking change (V-01). */
+function breakingClause(c: Change, names?: FieldNames): string {
+  const f = fieldName(c, names);
+  const r = c.ruleId ?? '';
+  const op = opKeysOf(c)[0] ?? '';
+  if (r.startsWith('endpoint-removed')) return `${op} was removed`;
+  if (f) {
+    if (/became-required|added-required/.test(r)) return `${f} is now required on ${op}`;
+    if (c.kind === 'removed') return `${f} is gone`;
+    if (/constraint-tightened/.test(r)) {
+      const a = boundOn(c, 'after');
+      const w = a ? BOUND_WORDS[a[0]] : undefined;
+      return a && w ? `${f} on ${op} now allows ${w} ${text(a[1])}` : `${f} on ${op} is stricter`;
+    }
+    if (/enum-value-removed/.test(r)) return `${f} no longer accepts ${text(c.before) || 'a value'}`;
+    if (c.kind === 'typeChanged' && text(c.after)) return `${f} is now ${text(c.after)}`;
+  }
+  return plain(shortTitle(c, names));
+}
+
+const joinAnd = (xs: string[]) => (xs.length < 2 ? xs.join('') : xs.length === 2 ? `${xs[0]} and ${xs[1]}` : `${xs.slice(0, -1).join(', ')}, and ${xs.at(-1)}`);
+const upperFirst = (s: string) => (s ? s[0]!.toUpperCase() + s.slice(1) : s);
+
+/**
+ * The overview's "Since 1.5.0" summary as prose (V-01): the breaking changes in one sentence,
+ * then what is new. "Currency is now required on POST /v1/payments, …, and DELETE /v1/refunds/{id}
+ * was removed. Payouts are new."
+ */
+export function summarySentence(changes: Change[], current: Model, names?: FieldNames, max = 4): string {
+  const clauses = [...new Set(changes.filter((c) => c.severity === 'breaking').map((c) => breakingClause(c, names)))];
+  const shown = clauses.slice(0, max);
+  const more = clauses.length - shown.length;
+  const out: string[] = [];
+  if (shown.length) out.push(`${upperFirst(joinAnd(more ? [...shown, `${more} more breaking ${more === 1 ? 'change' : 'changes'}`] : shown))}.`);
+  const added = new Set(changes.filter((c) => c.ruleId === 'endpoint-added').flatMap(opKeysOf));
+  if (added.size) {
+    const tags = current.tags.filter((t) => t.ops.some((o) => added.has(o.key)));
+    const whole = tags.length === 1 && tags[0]!.ops.every((o) => added.has(o.key));
+    out.push(whole ? `${tags[0]!.title} ${tags[0]!.ops.length === 1 ? 'is' : 'are'} new.` : `${added.size} new ${added.size === 1 ? 'endpoint' : 'endpoints'}.`);
+  }
+  return out.join(' ');
+}

@@ -51,7 +51,10 @@ describe('samples', () => {
     expect(exampleFor(spec, spec.components.schemas.Card)).toEqual({ last4: 'string', self: null });
   });
   it('renders curl, fetch, python and java', () => {
-    expect(sample('curl', input)).toBe(`curl -X POST 'https://api.example.com/v1/payments' \\\n  -H 'Authorization: Bearer sk_test' \\\n  -H 'Content-Type: application/json' \\\n  --data '{"amount":1200,"currency":"AED"}'`);
+    // One short line each (V-02): POST with a body needs no -X; the body is pretty-printed.
+    expect(sample('curl', input)).toBe(`curl https://api.example.com/v1/payments \\\n  -H 'Authorization: Bearer sk_test' \\\n  -H 'Content-Type: application/json' \\\n  -d '{\n    "amount": 1200,\n    "currency": "AED"\n  }'`);
+    expect(sample('curl', { ...input, op: { ...op, method: 'patch' } })).toContain(`curl https://api.example.com/v1/payments \\\n  -X PATCH \\\n`);
+    expect(sample('curl', { ...input, query: { limit: '5', status: 'paid' }, body: undefined as never })).toMatch(/^curl 'https:\/\/api\.example\.com\/v1\/payments\?limit=5&status=paid' \\/);
     expect(sample('javascript', input)).toContain('body: JSON.stringify({"amount":1200,"currency":"AED"})');
     expect(sample('python', input)).toContain('json={"amount":1200,"currency":"AED"}');
     expect(sample('java', input)).toContain('HttpRequest.BodyPublishers.ofString(');
