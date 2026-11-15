@@ -9,14 +9,11 @@
     "typecheck": "tsc -p ."
   },
   "dependencies": {
-    "@monaco-editor/react": "4.7.0",
-    "@pierre/diffs": "1.6.2",
     "@specdiff/core": "workspace:*",
     "@specdiff/ui": "workspace:*",
     "comlink": "4.4.2",
     "fflate": "0.8.3",
     "idb-keyval": "6.3.0",
-    "monaco-editor": "0.57.0",
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "shiki": "4.5.0",
