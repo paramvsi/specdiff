@@ -173,25 +173,27 @@ export function diffCode(before: string, after: string, lang: CodeLang, language
     const twin = unmatchedB.find((x) => x.kind === r.kind && eq(x.bodyTokens, r.bodyTokens));
     if (twin) { unmatchedB.splice(unmatchedB.indexOf(twin), 1); twins.set(r, twin); }
   }
-  const within = (d: Decl, parent: Decl) => d.name.startsWith(`${parent.name}.`) || (d.node.startIndex >= parent.node.startIndex && d.node.endIndex <= parent.node.endIndex && d !== parent);
+  // Every declaration rename (old → new simple name). Uses of the old name elsewhere, at the same place in
+  // the token stream, are call sites that follow the rename (CD-03): `g()` → `gee()`, `self.g()` → `self.gee()`.
+  const sub = new Map<string, string>();
+  for (const [r, t] of twins) if (r.simple !== t.simple) sub.set(r.simple, t.simple);
+  const declNames = new Set([...A.decls, ...B.decls].map((d) => d.simple));
 
   for (const a of A.decls) {
     const b = byName.get(a.name);
     if (!b) { removed.push(a); continue; }
     matched.add(b.name);
-    // Rename the identifiers of renamed declarations nested in this one, then compare.
-    const sub = new Map<string, string>();
-    for (const [r, t] of twins) if (within(r, a) && within(t, b) && r.simple !== t.simple) sub.set(r.simple, t.simple);
-    const subst = (toks: string[]) => (sub.size ? toks.map((x) => sub.get(x) ?? x) : toks);
-    const aTokens = subst(a.tokens);
+    // Apply the declaration renames where the other side has the new name, then compare.
+    const subst = (toks: string[], other: string[]) => (sub.size ? toks.map((x, i) => (sub.get(x) === other[i] ? other[i]! : x)) : toks);
+    const aTokens = subst(a.tokens, b.tokens);
     let status: CodeStatus;
-    const renames = eq(aTokens, b.tokens) ? undefined : consistentRenames(aTokens, b.tokens);
+    const renames = eq(aTokens, b.tokens) ? undefined : consistentRenames(aTokens, b.tokens, declNames);
     const commentsDiffer = a.comments.join('\n') !== b.comments.join('\n');
     let hidden: HiddenEdit[] | undefined;
     if (renames) status = 'renamedLocals';
     else if (!eq(aTokens, b.tokens)) status = 'changed';
     else if (commentsDiffer) status = 'comments';
-    else if (!eq(subst(a.raw), b.raw)) { status = 'formatting'; hidden = hiddenEdits(subst(a.raw), b.raw, lang); }
+    else if (!eq(subst(a.raw, b.raw), b.raw)) { status = 'formatting'; hidden = hiddenEdits(subst(a.raw, b.raw), b.raw, lang); }
     else if (renameText(a.node.text, sub) !== b.node.text) { status = 'formatting'; hidden = ['whitespace']; }
     else status = stayed.has(a.name) ? 'same' : 'moved';
     if (status === 'same' || status === 'formatting' || status === 'comments') if (!stayed.has(a.name)) status = status === 'same' ? 'moved' : status;
@@ -245,7 +247,7 @@ const IDENT = /^[A-Za-z_$][\w$]*$/;
 
 /** Token streams equal except for a consistent, one-to-one renaming of identifiers (e.g. amount → amt).
  *  Member names (after `.`, `->`, `::`) are not locals: a change there is a logic change. */
-function consistentRenames(a: string[], b: string[]): CodeItem['renames'] | undefined {
+function consistentRenames(a: string[], b: string[], declNames: ReadonlySet<string>): CodeItem['renames'] | undefined {
   if (a.length !== b.length) return undefined;
   const member = (t: string[], i: number) => ['.', '->', '::', '?.'].includes(t[i - 1] ?? '');
   const fwd = new Map<string, string>(), back = new Map<string, string>(), uses = new Map<string, number>();
@@ -254,6 +256,8 @@ function consistentRenames(a: string[], b: string[]): CodeItem['renames'] | unde
     if (x === y) continue;
     if (member(a, i) || member(b, i)) return undefined;
     if (!IDENT.test(x) || !IDENT.test(y) || KEYWORDS.has(x) || KEYWORDS.has(y)) return undefined;
+    // Calling a different declared function is a logic change, not a renamed local.
+    if ((declNames.has(x) || declNames.has(y)) && (a[i + 1] === '(' || b[i + 1] === '(')) return undefined;
     if ((fwd.get(x) ?? y) !== y || (back.get(y) ?? x) !== x) return undefined;
     fwd.set(x, y); back.set(y, x);
     uses.set(x, (uses.get(x) ?? 0) + 1);

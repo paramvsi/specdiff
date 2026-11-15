@@ -30,6 +30,31 @@ describe('CD-03 method rename', () => {
     expect(by(d).A).toBe('same');
     expect(by(d)['A.gee']).toBe('renamed');
   });
+  // Round 3: the call site in the caller follows the declaration rename; it is not a local rename or a logic change.
+  it('Java: the caller A.h stays same (not "g → gee, 1 use in A.h")', () => {
+    const d = run('class A {\n  int g() { return 1; }\n  int h() { return g() + this.g(); }\n}\n', 'class A {\n  int gee() { return 1; }\n  int h() { return gee() + this.gee(); }\n}\n', 'java');
+    expect(by(d)).toEqual({ A: 'same', 'A.gee': 'renamed', 'A.h': 'same' });
+    expect(d.items.find((i) => i.name === 'A.h')!.renames).toBeUndefined();
+    expect(d.logicChanged).toBe(false);
+  });
+  it('TypeScript: a caller of a renamed function stays same', () => {
+    const d = run('function f() { return 1 }\nfunction h() { return f() }\n', 'function ff() { return 1 }\nfunction h() { return ff() }\n', 'typescript');
+    expect(by(d)).toEqual({ ff: 'renamed', h: 'same' });
+    expect(d.logicChanged).toBe(false);
+  });
+  it('Python: self.g() in P.h is not a logic change', () => {
+    const d = run('class P:\n    def g(self):\n        return 1\n    def h(self):\n        return self.g()\n', 'class P:\n    def gee(self):\n        return 1\n    def h(self):\n        return self.gee()\n', 'python');
+    expect(by(d)).toEqual({ P: 'same', 'P.gee': 'renamed', 'P.h': 'same' });
+    expect(d.logicChanged).toBe(false);
+  });
+  it('a genuine local rename in the caller is still reported next to the call-site rename', () => {
+    const d = run('function f() { return 1 }\nfunction h(a: number) { return f() + a }\n', 'function ff() { return 1 }\nfunction h(b: number) { return ff() + b }\n', 'typescript');
+    expect(d.items.find((i) => i.name === 'h')).toMatchObject({ status: 'renamedLocals', renames: [{ from: 'a', to: 'b', uses: 2 }] });
+  });
+  it('a call to a different function in the caller is still a logic change', () => {
+    const d = run('function f() { return 1 }\nfunction k() { return 2 }\nfunction h() { return f() }\n', 'function ff() { return 1 }\nfunction k() { return 2 }\nfunction h() { return k() }\n', 'typescript');
+    expect(by(d).h).toBe('changed');
+  });
 });
 
 describe('CD-06 hidden edits', () => {

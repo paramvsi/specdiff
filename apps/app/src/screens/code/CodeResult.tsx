@@ -1,6 +1,6 @@
 // A-09 Code diff (Beta; CD-01..CD-06) and A-09 fallback to text (CD-04).
 import type { CodeDiff, CodeItem, CodeStatus } from '@specdiff/core/code';
-import type { Row } from '@specdiff/core/text';
+import type { Row, Seg } from '@specdiff/core/text';
 import { BetaLabel, Button, Checkbox, IdenticalState, SegmentedControl, useToast } from '@specdiff/ui';
 import * as icons from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -9,6 +9,7 @@ import { changeLink, focusChange, readChangeHash, useNav } from '../../shell/nav
 import { useApp } from '../../state/store';
 import { TextResult } from '../text/TextResult';
 import css from './CodeResult.module.css';
+import { structuralRows } from './rows';
 
 /** A name the user gave (a file), not the "Before"/"After" placeholder of pasted text. */
 const realName = (n: string | undefined) => (n && n !== 'Before' && n !== 'After' ? n : undefined);
@@ -43,7 +44,7 @@ export default function CodeResult() {
     );
   }
   if (outcome.items.every((i) => i.status === 'same')) return <IdenticalState ignoredLines={0} />;
-  return <Structural diff={withoutContainerEcho(outcome)} rows={result.text.rows} />;
+  return <Structural diff={withoutContainerEcho(outcome)} />;
 }
 
 /**
@@ -83,11 +84,9 @@ function title(d: CodeDiff): string {
   return parts.length ? parts.join(', ') : s.formatting || s.comments ? 'No logic change' : 'No changes';
 }
 
-type V = { kind: 'row'; row: Row } | { kind: 'fold'; rows: Row[]; reason: string; id: number };
-
 const itemId = (i: CodeItem) => `k-${i.name}`;
 
-function Structural({ diff, rows }: { diff: CodeDiff; rows: Row[] }) {
+function Structural({ diff }: { diff: CodeDiff }) {
   const { before, after, viewed, toggleViewed } = useApp();
   const { toast } = useToast();
   // X-12: start on the change named in the URL hash, if any.
@@ -101,37 +100,11 @@ function Structural({ diff, rows }: { diff: CodeDiff; rows: Row[] }) {
   const [hideComments, setHideComments] = useState(false);
   const [open, setOpen] = useState<Set<number>>(new Set());
 
-  const quiet = useMemo(() => {
-    // Folded: layout-only edits (and comment-only ones when hidden). Renamed locals stay visible, as in A-09.
-    const statuses = new Set<CodeStatus>(['formatting', ...(hideComments ? (['comments'] as const) : [])]);
-    return diff.items.filter((i) => statuses.has(i.status));
-  }, [diff, hideComments]);
-
-  const views = useMemo<V[]>(() => {
-    const inside = (r: Row, i: CodeItem) => (r.right && i.lines.after && r.right.n >= i.lines.after[0] && r.right.n <= i.lines.after[1]) || (r.left && i.lines.before && r.left.n >= i.lines.before[0] && r.left.n <= i.lines.before[1]);
-    const out: V[] = [];
-    let buf: Row[] = [];
-    let id = 0;
-    const flush = () => {
-      if (!buf.length) return;
-      const changed = buf.filter((r) => r.type !== 'same').length;
-      if (changed) out.push({ kind: 'fold', rows: buf, reason: `${buf.length} ${buf.length === 1 ? 'line' : 'lines'} reformatted, no logic change`, id: id++ });
-      else out.push(...buf.map((row) => ({ kind: 'row' as const, row })));
-      buf = [];
-    };
-    const renamed = hideRenames ? diff.items.filter((i) => i.status === 'renamedLocals') : [];
-    for (const r of rows) {
-      if (quiet.some((i) => inside(r, i))) buf.push(r);
-      else {
-        flush();
-        // Hide renames: a line whose only edit is a renamed local reads as unchanged, the new name marked (A-09).
-        const asSame = r.type !== 'same' && r.left && r.right && renamed.some((i) => inside(r, i));
-        out.push({ kind: 'row', row: asSame ? { ...r, type: 'same' } : r });
-      }
-    }
-    flush();
-    return out;
-  }, [rows, quiet, diff, hideRenames]);
+  // A-09: per-declaration rows; moved methods as ↕ rows; formatting, hidden comments and hidden renames fold (CD-06).
+  const views = useMemo(
+    () => structuralRows(diff, before?.content ?? '', after?.content ?? '', { hideRenames, hideComments }),
+    [diff, before?.content, after?.content, hideRenames, hideComments],
+  );
 
   const formattingLines = diff.items.filter((i) => i.status === 'formatting').reduce((n, i) => n + ((i.lines.after?.[1] ?? 0) - (i.lines.after?.[0] ?? 0) + 1), 0);
   const listed = diff.items.filter((i) => i.status !== 'same' && i.status !== 'formatting' && !(hideComments && i.status === 'comments'));
@@ -174,7 +147,7 @@ function Structural({ diff, rows }: { diff: CodeDiff; rows: Row[] }) {
         <section className={css.pane} aria-label="Code diff">
           <header className={css.paneHead}>
             <span className={css.file}>{after?.name}</span>
-            <SegmentedControl label="View" size="sm" value={view} onValueChange={setView} options={[{ value: 'structural', label: 'Structural' }, { value: 'text', label: 'Text' }]} />
+ <SegmentedControl className={css.viewSwitch} label="View" size="sm" value={view} onValueChange={setView} options={[{ value: 'structural', label: 'Structural' }, { value: 'text', label: 'Text' }]} />
           </header>
           {view === 'text' ? <TextResult /> : (
             <div
@@ -186,7 +159,7 @@ function Structural({ diff, rows }: { diff: CodeDiff; rows: Row[] }) {
               aria-label="Code"
             >
               {views.map((v, i) =>
-                v.kind === 'row' ? <Line key={i} row={v.row} /> : open.has(v.id) ? v.rows.map((r, j) => <Line key={`${i}-${j}`} row={r} />) : (
+                v.kind === 'row' ? <Line key={i} row={v.row} /> : v.kind === 'moved' ? <MovedLine key={i} n={v.n} from={v.from} segs={v.segs} first={v.first} /> : open.has(v.id) ? v.rows.map((r, j) => <Line key={`${i}-${j}`} row={r} />) : (
                   <div key={i} className={css.fold}>
                     <icons.Check size={14} aria-hidden="true" className={css.ok} /> {v.reason}
                     <button type="button" className={css.show} onClick={() => setOpen(new Set(open).add(v.id))}>Show</button>
@@ -202,7 +175,7 @@ function Structural({ diff, rows }: { diff: CodeDiff; rows: Row[] }) {
             {listed.map((i) => (
               <li key={`${i.status}-${i.name}`} id={itemId(i)} tabIndex={-1} className={css.item} data-current={listed[cur] === i || undefined}>
                 <span className={css.badge} data-status={i.status}>{BADGE[i.status]}</span>
-                <span>{i.status === 'renamedLocals' ? <>{i.renames!.map((r, k) => <span key={r.from}>{k ? ', ' : ''}<code>{r.from}</code> → <code>{r.to}</code>, {r.uses} use{r.uses === 1 ? '' : 's'}</span>)} <span className={css.muted2}>in {i.name}</span></> : i.status === 'renamed' ? <><code>{i.from}</code> → <code>{i.name}</code></> : i.status === 'moved' ? <><code>{i.name}</code>, line {i.lines.before?.[0]} → {i.lines.after?.[0]}</> : <><code>{i.name}</code> {i.status === 'added' ? 'added' : i.status === 'removed' ? 'removed' : i.status === 'comments' ? 'comments changed' : 'changed'}</>}</span>
+                <span className={css.desc}>{i.status === 'renamedLocals' ? <>{i.renames!.map((r, k) => <span key={r.from}>{k ? ', ' : ''}<code>{r.from}</code> → <code>{r.to}</code>, {r.uses} use{r.uses === 1 ? '' : 's'}</span>)} <span className={css.muted2}>in {i.name}</span></> : i.status === 'renamed' ? <><code>{i.from}</code> → <code>{i.name}</code></> : i.status === 'moved' ? <><code>{i.name}</code>, line {i.lines.before?.[0]} → {i.lines.after?.[0]}</> : <><code>{i.name}</code> {i.status === 'added' ? 'added' : i.status === 'removed' ? 'removed' : i.status === 'comments' ? 'comments changed' : 'changed'}</>}</span>
                 <button type="button" className={css.viewed} aria-pressed={!!viewed[itemId(i)]} aria-label={`Mark ${i.name} as viewed`} onClick={() => toggleViewed(itemId(i))}>
                   {viewed[itemId(i)] ? <icons.CheckSquare size={14} aria-hidden="true" /> : <icons.Square size={14} aria-hidden="true" />}
                 </button>
@@ -211,8 +184,8 @@ function Structural({ diff, rows }: { diff: CodeDiff; rows: Row[] }) {
             {listed.length > 0 && <li className={css.item}><span className={css.muted2}>{seen} of {listed.length} viewed</span></li>}
             {formattingLines > 0 && <li className={css.item}><span className={css.badge} data-status="formatting">Format</span><span>{formattingLines} lines, hidden</span></li>}
           </ul>
-          <Checkbox label="Hide renames" checked={hideRenames} onCheckedChange={setHideRenames} />
-          <Checkbox label="Hide comment-only changes" checked={hideComments} onCheckedChange={setHideComments} />
+          <Checkbox label="Hide renames" checked={hideRenames} onCheckedChange={(c) => { setHideRenames(c); setOpen(new Set()); }} />
+          <Checkbox label="Hide comment-only changes" checked={hideComments} onCheckedChange={(c) => { setHideComments(c); setOpen(new Set()); }} />
           <p className={css.note}>{before?.name} → {after?.name}</p>
         </aside>
       </div>
@@ -230,6 +203,21 @@ function Line({ row }: { row: Row }) {
       <span className={css.num}>{row.right?.n ?? ''}</span>
       <span className={css.gutter} aria-hidden="true">{kind === 'del' ? '−' : kind === 'add' ? '+' : ''}</span>
       <span className={css.text}>{segs.map((s, i) => (s.kind === 'same' ? <span key={i}>{s.text}</span> : <mark key={i} className={s.kind === 'add' ? css.wAdd : css.wDel}>{s.text}</mark>))}{kind !== 'same' && <span className="sd-visually-hidden">{kind === 'del' ? ' (removed)' : ' (added)'}</span>}</span>
+    </div>
+  );
+}
+
+/** A line of a moved declaration at its new place: `↕`, the changed colours, "moved from line N" on the first line. */
+function MovedLine({ n, from, segs, first }: { n: number; from: number; segs: Seg[]; first: boolean }) {
+  return (
+    <div className={css.line} data-kind="moved">
+      <span className={css.num} />
+      <span className={css.num}>{n}</span>
+      <span className={css.gutter} aria-hidden="true">↕</span>
+      <span className={css.text}>
+        {segs.map((s) => s.text).join('')}
+        {first ? <span className={css.movedNote}>   moved from line {from}</span> : <span className="sd-visually-hidden"> (moved from line {from})</span>}
+      </span>
     </div>
   );
 }
