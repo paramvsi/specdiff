@@ -14,7 +14,8 @@ function compile(ops: Operation[]) {
     .map((o) => {
       const segs = o.path.split('/').filter(Boolean);
       const re = new RegExp('^/' + segs.map((s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\\\{[^}]+?\\\}/g, '[^/]+')).join('/') + '/?$');
-      const literal = segs.filter((s) => !s.startsWith('{')).length;
+      // A segment with any literal text ({id}.json) is more specific than a bare {param}.
+      const literal = segs.filter((s) => !/^\{[^}]+\}$/.test(s)).length;
       return { op: o, re, literal, len: segs.length };
     })
     .sort((a, b) => b.literal - a.literal || b.len - a.len || byCodePoint(key(a.op), key(b.op)));

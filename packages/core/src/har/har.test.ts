@@ -47,6 +47,10 @@ describe('OA-22 HAR matching edge cases', () => {
     const r = matchHar(har('https://a.io/files/7.json', 'https://a.io/reports/2026-11'), ops, []);
     expect(r.matches.map((m) => m.operationKey)).toEqual(['GET /files/{id}.json', 'GET /reports/{year}-{month}']);
   });
+  it('prefers /files/{name}.json over /files/{name} for 7.json, whatever the names', () => {
+    const r = matchHar(har('https://a.io/files/7.json'), [{ method: 'get', path: '/files/{a}' }, { method: 'get', path: '/files/{z}.json' }], []);
+    expect(r.matches.map((m) => m.operationKey)).toEqual(['GET /files/{z}.json']);
+  });
   it('a server URL with variables still strips its base path', () => {
     const r = matchHar(har('https://eu.api.x.com/v1/users'), [{ method: 'get', path: '/users' }], ['https://{region}.api.x.com/v1']);
     expect(r.matches.map((m) => m.operationKey)).toEqual(['GET /users']);
