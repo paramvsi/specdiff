@@ -25,6 +25,10 @@ describe('X-13 determinism', () => {
     expect(r.summary.total).toBe(0);
     expect(r.versionCheck).toMatchObject({ suggested: '1.5.0', bump: 'none', verdict: 'ok' }); // X-08
   });
+  it('names the real package version as the generator', () => {
+    const pkg = JSON.parse(readFileSync(join(__dirname, '../../package.json'), 'utf8')) as { version: string };
+    expect(report.generator).toEqual({ name: 'specdiff', version: pkg.version });
+  });
 });
 
 describe('rules catalogue', () => {

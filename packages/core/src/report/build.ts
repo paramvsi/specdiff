@@ -11,7 +11,8 @@ import { compareDocument } from '../rules/operations';
 import { fillTemplate, getRule } from '../rules/catalogue';
 import { versionCheck } from './version';
 
-export const GENERATOR_VERSION = '0.0.0';
+// The report names the package version that produced it (Changesets bumps package.json).
+import { version as GENERATOR_VERSION } from '../../package.json';
 
 export type CompareStep = 'parse' | 'resolve' | 'normalise' | 'compare';
 
