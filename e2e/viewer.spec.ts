@@ -15,6 +15,7 @@ for (const theme of ['light', 'dark'] as const) {
     await expect(page.getByRole('heading', { level: 1, name: 'Payments API' })).toBeVisible();
     const since = page.getByRole('region', { name: 'Since 1.5.0' });
     await expect(since.getByText('Breaking', { exact: true })).toBeVisible();
+    await expect(since.locator('p').first()).toContainText(/Breaking\s*4(?!\d)/);
     const payouts = page.getByRole('region', { name: 'payouts' });
     await expect(payouts.getByRole('link', { name: /POST \/v1\/payouts .*New/ })).toBeVisible();
     await expectAxeClean(page);
@@ -53,6 +54,12 @@ test('V-05 search with the keyboard (VW-04)', async ({ page }) => {
   await dialog.getByRole('combobox').fill('currency');
   await expect(dialog.getByRole('option').first()).toBeVisible();
   await expect(dialog.getByText(/results? in endpoints, fields and descriptions/)).toBeVisible();
+  // V05-Search: opens straight into the input (no title row or close button), footer names the version.
+  await expect(dialog.getByRole('button', { name: 'Close' })).toBeHidden();
+  expect((await dialog.getByRole('combobox').boundingBox())!.y).toBeLessThan(120);
+  await expect(dialog.getByText('Searches v2.0.0')).toBeVisible();
+  const chips = await dialog.getByRole('option').evaluateAll((els) => els.map((e) => Math.round(e.firstElementChild!.getBoundingClientRect().width)));
+  expect(new Set(chips).size).toBe(1);
   await expectAxeClean(page);
   await page.keyboard.press('Enter');
   await expect(dialog).toBeHidden();
@@ -63,7 +70,7 @@ test('V-05 version picker compares with nothing, then back (VW-07)', async ({ pa
   await ready(page, H);
   const compared = page.getByRole('combobox', { name: 'Compared with' });
   await expect(page.getByRole('combobox', { name: 'Version', exact: true })).toHaveValue('2.0.0');
-  await expect(compared.locator('option')).toHaveText(['1.5.0', 'Nothing']);
+  await expect(compared.locator('option')).toHaveText(['v1.5.0', 'Nothing']);
   await compared.selectOption({ label: 'Nothing' });
   await expect(page.getByRole('region', { name: 'Since 1.5.0' })).toHaveCount(0);
   await compared.selectOption('1.5.0');
@@ -80,11 +87,41 @@ test('V-04 what changed: timeline, checklist and HAR filter (VW-10)', async ({ p
   const dialog = page.getByRole('dialog', { name: 'Which endpoints does your app use?' });
   const har = { log: { entries: [{ request: { method: 'GET', url: 'https://api.example.com/v1/payments?limit=80' } }, { request: { method: 'GET', url: 'https://cdn.example.com/x.js' } }] } };
   await dialog.locator('input[type=file]').setInputFiles({ name: 'checkout-session.har', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(har)) });
-  await expect(dialog.getByText('1 requests matched 1 endpoints. 1 to other hosts ignored.')).toBeVisible();
+  await expect(dialog.getByText('1 request matched 1 endpoint. 1 to other hosts ignored.')).toBeVisible();
+  await expect(dialog.getByText('1 call', { exact: true })).toBeVisible();
   await expectAxeClean(page);
   await dialog.getByRole('button', { name: 'Show my changes' }).click();
-  await expect(page.getByRole('heading', { name: 'Showing changes for the 1 endpoints you use' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Showing changes for the endpoint you use' })).toBeVisible();
   await expect(page.getByRole('heading', { name: /1\.5\.0 → 2\.0\.0 · affects you/ })).toBeVisible();
+  // Checklist lines wrap inside the panel instead of being clipped at its edge.
+  const pre = page.getByRole('region', { name: 'Checklist' }).locator('pre');
+  const [sw, cw] = await pre.evaluate((el) => [el.scrollWidth, el.clientWidth]);
+  expect(sw).toBeLessThanOrEqual(cw);
+});
+
+test('V-04 "Pick my endpoints" narrows the list to the picked endpoints, breaking first', async ({ page }) => {
+  await ready(page, `${H}#/changes`);
+  const rows = page.locator('ul[class*="changeRows"] > li');
+  await expect(rows.first()).toBeVisible();
+  const total = await rows.count();
+  await page.getByRole('button', { name: 'Pick my endpoints' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Which endpoints does your app use?' });
+  const u = (method: string, path: string) => ({ request: { method, url: `https://api.example.com${path}` } });
+  const har = { log: { entries: [u('POST', '/v1/payments'), u('GET', '/v1/payments/pay_1')] } };
+  await dialog.locator('input[type=file]').setInputFiles({ name: 'checkout.har', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(har)) });
+  await dialog.getByRole('button', { name: 'Show my changes' }).click();
+  await expect(page.getByRole('heading', { name: 'Showing changes for the 2 endpoints you use' })).toBeVisible();
+  const shown = await rows.count();
+  expect(shown).toBeGreaterThan(0);
+  expect(shown).toBeLessThan(total);
+  await expect(page.getByText(`${total - shown} of ${total} changes hidden`)).toBeVisible();
+  // Every row names a picked endpoint (directly or through a shared schema used by it).
+  for (const t of await rows.locator('p[class*="changeOp"]').allTextContents()) expect(t).toMatch(/^(POST\/v1\/payments|GET\/v1\/payments\/\{id\})$/);
+  // Ordered Breaking → Possibly → Safe → Docs only.
+  const order = ['Breaking', 'Possibly breaking', 'Safe', 'Docs only'];
+  const sevs = (await rows.evaluateAll((els) => els.map((e) => e.querySelector('span')?.textContent ?? ''))).map((t) => order.findIndex((o) => t.includes(o)));
+  expect(sevs).toEqual([...sevs].sort((x, y) => x - y));
+  await expectAxeClean(page);
 });
 
 test('Try it sends to a mocked API and checks the response schema (VW-05)', async ({ page }) => {
@@ -135,6 +172,11 @@ test('V-01 a version that failed to load (VW-13)', async ({ page }) => {
   await ready(page, `${H}?spec=load-error`);
   await expect(page.getByRole('heading', { name: 'Couldn’t load openapi-1.5.0.yaml' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Try again' })).toBeVisible();
+  // V01-Overview-Error: skeleton cards instead of the full overview; 1.5.0 stays selected; "What changed" stays.
+  await expect(page.locator('[class*="skeletonStack"]')).toBeVisible();
+  await expect(page.getByRole('region', { name: 'payments' })).toHaveCount(0);
+  await expect(page.getByRole('combobox', { name: 'Compared with' })).toHaveValue('1.5.0');
+  await expect(page.getByRole('navigation', { name: 'API reference' }).getByRole('link', { name: 'What changed' })).toBeVisible();
   await expectAxeClean(page);
 });
 
@@ -150,6 +192,19 @@ test('Petstore 3.0 and an upgraded Swagger 2.0 render; a raw Swagger 2.0 shows a
   await expectAxeClean(page);
 });
 
+test('V-02 deprecated banner says "Deprecated." once, and the ground fills the viewport', async ({ page }) => {
+  await ready(page, `${H}?theme=dark#/op/get-v1-refunds-id`);
+  const note = page.getByRole('note');
+  await expect(note).toContainText('Deprecated.');
+  expect(((await note.textContent()) ?? '').match(/Deprecated\./g)).toHaveLength(1);
+  // A short page in a tall window: the Viewer's ground still reaches the bottom.
+  await page.setViewportSize({ width: 1440, height: 1600 });
+  await page.goto(`${H}?theme=dark#/auth`);
+  await expect(page.getByRole('heading', { level: 1, name: 'Authentication' })).toBeVisible();
+  const [rootH, vh] = await page.evaluate(() => [document.querySelector('#root > *')!.getBoundingClientRect().height, innerHeight]);
+  expect(rootH).toBeGreaterThanOrEqual(vh);
+});
+
 test('V-06 embedded look with a brand colour (VW-12)', async ({ page }) => {
   await ready(page, `${H}?brand=1#/op/post-v1-payments`);
   await expect(page.getByText('Acme · Payments API')).toBeVisible();
@@ -162,7 +217,8 @@ test.describe('phone 390 @phone', () => {
   for (const theme of ['light', 'dark'] as const) {
     test(`M-05 overview, read-only, 44 px targets (${theme}) @phone`, async ({ page }) => {
       await ready(page, `${H}?theme=${theme}`);
-      await expect(page.getByRole('link', { name: /changes since 1\.5\.0/ })).toBeVisible();
+      // B-2: the same 4 breaking as the app and CLI on payments v1.5.0 → v2.0.0.
+      await expect(page.getByRole('link', { name: /changes since 1\.5\.0/ })).toContainText('4 breaking');
       for (const name of ['Open navigation', 'Search']) {
         const box = await page.getByRole('button', { name, exact: true }).boundingBox();
         expect(box!.height).toBeGreaterThanOrEqual(44);

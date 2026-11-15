@@ -30,6 +30,16 @@ export function Overview() {
   const specVersion = String(cur.spec.openapi ?? cur.spec.swagger ?? '').split('.').slice(0, 2).join('.');
   const breakingLines = (report?.status === 'ready' ? report.report.changes : []).filter((c) => c.severity === 'breaking').slice(0, 3).map(changeTitle);
   const total = report?.status === 'ready' ? report.report.summary.total : 0;
+  // V01-Overview-Error: while a version failed to load, the overview shows the error over skeleton cards.
+  if (v.versions.some((x) => x.error && !x.spec)) {
+    return (
+      <div className={css.page}>
+        <h1 className={css.srOnly}>{m.title}</h1>
+        <LoadErrors />
+        <OverviewSkeleton />
+      </div>
+    );
+  }
   return (
     <div className={css.page}>
       <LoadErrors />
@@ -189,6 +199,31 @@ export function LoadErrorBanner({ version, partial }: { version: ViewerVersion; 
 /** Retry and file replacement come from the Viewer. */
 export const ActionsCtx = createContext<{ retry?: ((label: string) => void) | undefined; replaceFile: (label: string, f: File) => void } | null>(null);
 const useOptionalViewerActions = () => useContext(ActionsCtx);
+
+/** Placeholder cards under a load error (V01-Overview-Error): a heading card, then two list cards. */
+function OverviewSkeleton() {
+  return (
+    <div className={css.skeletonStack} aria-hidden="true">
+      <div className={css.card}>
+        <Skeleton width="29%" height={14} radius="pill" />
+        <Skeleton width="53%" height={30} radius="pill" />
+        <Skeleton width="77%" height={14} radius="pill" />
+        <Skeleton width="67%" height={14} radius="pill" />
+      </div>
+      {[0, 1].map((i) => (
+        <div key={i} className={css.card}>
+          <Skeleton width="17%" height={14} radius="pill" />
+          {[39, 53, 34].map((w) => (
+            <div key={w} className={css.skeletonRow}>
+              <Skeleton width={50} height={18} radius="pill" />
+              <Skeleton width={`${w}%`} height={18} radius="pill" />
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export function LoadingSkeleton() {
   return (

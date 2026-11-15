@@ -178,6 +178,7 @@ function ViewerInner(props: Omit<ViewerProps, 'theme'> & { theme: 'light' | 'dar
   const href = (r: Route) => hrefFor(r, basePath);
   const ctx: ViewerCtx = {
     cur, prev, versions, loaded, store, report, index,
+    compareWith: pair.compareWith && pair.compareWith !== cur.label ? pair.compareWith : undefined,
     changes: ready?.changes ?? [],
     compareAvailable: !!compare,
     compareNote: props.compareUnavailableReason,

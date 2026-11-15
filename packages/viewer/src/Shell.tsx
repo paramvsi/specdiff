@@ -32,7 +32,7 @@ export function Nav({ route, onSearch, onNavigate }: { route: Route; onSearch: (
   const changeCount = v.report?.status === 'ready' ? v.report.report.summary.total : undefined;
   const rows: NavRow[] = [
     { kind: 'top', label: 'Overview', route: { page: 'overview' } },
-    ...(v.loaded.length > 1 || v.prev ? [{ kind: 'top' as const, label: 'What changed', route: { page: 'changes' } as Route, count: changeCount }] : []),
+    ...(v.loaded.length > 1 || v.prev || v.compareWith ? [{ kind: 'top' as const, label: 'What changed', route: { page: 'changes' } as Route, count: changeCount }] : []),
     { kind: 'top', label: 'Authentication', route: { page: 'auth' } },
     ...m.tags.flatMap((t): NavRow[] => [{ kind: 'group', label: t.name }, ...t.ops.map((op): NavRow => ({ kind: 'op', op }))]),
     ...(m.schemas.length ? [{ kind: 'group' as const, label: 'Schemas' }, ...m.schemas.map((s): NavRow => ({ kind: 'schema', s }))] : []),
@@ -128,7 +128,9 @@ export function Header({ brand, theme, onTheme, onCopy, onDownload, onAddVersion
   const title = v.cur.model.title;
   const newestFirst = [...v.versions].reverse();
   // Short labels so the closed picker reads "2.0.0" like the design; details stay in the timeline.
-  const optionLabel = (x: ViewerVersion) => (x.error ? `${x.label} (failed to load)` : x.label);
+  // Version numbers read "v2.0.0" like the design; other labels ("main") stay as they are.
+  const vLabel = (label: string) => (/^\d/.test(label) ? `v${label}` : label);
+  const optionLabel = (x: ViewerVersion) => (x.error ? `${vLabel(x.label)} (failed to load)` : vLabel(x.label));
   const ADD = '\u0000add';
   const NONE = '\u0000none';
   const curPicker = (
@@ -154,10 +156,11 @@ export function Header({ brand, theme, onTheme, onCopy, onDownload, onAddVersion
       <select
         className={css.picker}
         aria-label="Compared with"
-        value={v.prev?.label ?? NONE}
+        value={v.prev?.label ?? (v.compareWith && v.versions.some((x) => x.label === v.compareWith) ? v.compareWith : NONE)}
         onChange={(e) => v.setPair(v.cur.label, e.target.value === NONE ? undefined : e.target.value)}
       >
-        {newestFirst.filter((x) => x.label !== v.cur.label).map((x) => <option key={x.label} value={x.label} disabled={!x.spec}>{optionLabel(x)}</option>)}
+        {/* A failed version stays selected (V-01 error) under its plain label; the banner explains it. */}
+        {newestFirst.filter((x) => x.label !== v.cur.label).map((x) => <option key={x.label} value={x.label} disabled={!x.spec}>{x.label === v.compareWith && !x.spec ? vLabel(x.label) : optionLabel(x)}</option>)}
         <option value={NONE}>Nothing</option>
       </select>
       <ChevronDown aria-hidden="true" size={14} className={css.pickerChevron} />

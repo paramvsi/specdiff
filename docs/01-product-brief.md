@@ -53,13 +53,13 @@ Home page with a live, animated demo, before/after slider, feature grid, Viewer 
 A modern API reference from any OpenAPI/Swagger file: overview, endpoint and schema pages, search across fields, code samples, Try it with auth, CORS guidance. Plus what no free renderer does: **version timeline, New/Changed/Breaking/Deprecated badges, per-endpoint history, "What changed for me?", and a warning when a Try it request would fail on the newer version.**
 
 ### 4.4 Packages
-`@specdiff/core` engine; embed script; React component; `specdiff` CLI (`npx specdiff`, `--ci` for any CI system, git `rev:path`, `history`); Express and Fastify middleware; **Spring Boot starter** (Maven Central) serving the Viewer at `/specdiff`; git diff driver; pre-commit hook. A local MCP server is planned for later.
+`@specdiff/core` engine; embed script; React component; `specdiff` CLI (`npx specdiff-cli`, `--ci` for any CI system, git `rev:path`, `history`); Express and Fastify middleware; **Spring Boot starter** (Maven Central) serving the Viewer at `/specdiff`; git diff driver; pre-commit hook. A local MCP server is planned for later.
 
 ## 5. Scope decisions
 
 - **Everything launches together.** Code mode, the SDK-impact view and the local MCP server are Beta or Later as labelled in `docs/02`.
 - **Frontend only.** No backend, database or accounts. Hosting: one static Netlify site and package registries.
-- **No GitHub Actions.** No Action package and no CI workflows in the repo; checks run locally and in the Netlify build. Teams can still run `npx specdiff --ci` in whatever CI they use.
+- **No GitHub Actions.** No Action package and no CI workflows in the repo; checks run locally and in the Netlify build. Teams can still run `npx specdiff-cli --ci` in whatever CI they use.
 - **Light first, dark too**, plus colour-blind and high-contrast diff themes.
 - **Open source, MIT licence.**
 - **No AI calls from Specdiff.** "Copy for LLM" and "Open in Claude" hand the content to the user's own tools.

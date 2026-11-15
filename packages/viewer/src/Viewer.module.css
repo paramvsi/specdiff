@@ -9,6 +9,13 @@
   line-height: 1.6;
   text-align: left;
 }
+/* Mounted as the page (body > .root, or body > #app > .root alone): fill the viewport so the ground
+   colour doesn't end at the content and leave a white band under short pages (V-02). */
+:global(body) > .root,
+:global(body) > :global(*) > .root:only-child {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
 .root :global(*),
 .root :global(*::before),
 .root :global(*::after) {
@@ -434,6 +441,23 @@
 .pushRight {
   margin-left: auto;
 }
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.skeletonStack {
+  display: grid;
+  gap: var(--sd-space-5);
+}
+.skeletonRow {
+  display: flex;
+  align-items: center;
+  gap: var(--sd-space-3);
+}
 .hiddenInput {
   position: absolute;
   width: 1px;
@@ -578,7 +602,8 @@
   gap: var(--sd-space-4);
   padding: var(--sd-space-5);
   background: var(--sd-surface);
-  border: 1px solid var(--sd-breaking);
+  /* Soft breaking tint, as in V01-Overview-Error. */
+  border: 1px solid color-mix(in srgb, var(--sd-breaking) 35%, var(--sd-line));
   border-radius: var(--sd-radius-xl);
 }
 .errorIcon {
@@ -815,6 +840,15 @@ summary.responseHead::-webkit-details-marker {
   line-height: 1.7;
   font-variant-ligatures: none;
   white-space: pre;
+}
+.preWrap {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.preLine {
+  display: block;
+  padding-left: 6ch;
+  text-indent: -6ch;
 }
 .iconBtnDark {
   display: inline-grid;
@@ -1199,16 +1233,23 @@ summary.responseHead::-webkit-details-marker {
 /* Search */
 .searchDialog {
   width: min(640px, calc(100vw - 32px));
-  top: 12vh;
+  top: 90px;
   transform: translateX(-50%);
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
+}
+/* V05-Search opens straight into the input: the dialog's title row is not drawn. It stays in the
+   DOM (display: none still names the dialog through aria-labelledby); Esc closes, as the hint says. */
+.searchDialog > :first-child {
+  display: none;
 }
 .searchBox {
   display: flex;
   align-items: center;
   gap: var(--sd-space-3);
-  padding: 0 var(--sd-space-3);
-  border: 1px solid var(--sd-line);
-  border-radius: var(--sd-radius-md);
+  padding: var(--sd-space-1) var(--sd-space-5);
+  border-bottom: 1px solid var(--sd-line);
 }
 .searchInput {
   flex: 1;
@@ -1220,11 +1261,9 @@ summary.responseHead::-webkit-details-marker {
 .searchInput:focus-visible {
   box-shadow: none !important;
 }
-.searchBox:focus-within {
-  box-shadow: var(--sd-shadow-focus);
-}
 .searchCount {
   margin: 0;
+  padding: var(--sd-space-4) var(--sd-space-5) var(--sd-space-1);
   color: var(--sd-muted);
   font-size: 13px;
   font-weight: 600;
@@ -1232,7 +1271,7 @@ summary.responseHead::-webkit-details-marker {
 .results {
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 0 var(--sd-space-2) var(--sd-space-2);
   max-height: 50vh;
   overflow: auto;
 }
@@ -1244,6 +1283,12 @@ summary.responseHead::-webkit-details-marker {
   padding: var(--sd-space-2) var(--sd-space-3);
   border-radius: var(--sd-radius-md);
   cursor: pointer;
+}
+.result > :first-child {
+  flex: none;
+  width: 64px;
+  justify-content: center;
+  text-align: center;
 }
 .resultActive {
   background: var(--sd-brand-tint);
@@ -1260,8 +1305,14 @@ summary.responseHead::-webkit-details-marker {
   align-items: center;
   gap: var(--sd-space-2);
   margin: 0;
+  padding: var(--sd-space-3) var(--sd-space-5);
+  border-top: 1px solid var(--sd-line);
+  background: var(--sd-raised);
   color: var(--sd-muted);
   font-size: 13px;
+}
+.searchScope {
+  margin-left: var(--sd-space-3);
 }
 
 /* ---- Phone (390 px, read-only) ------------------------------------------------------- */

@@ -62,9 +62,7 @@ const snippets: Record<Exclude<Pkg, 'cli'>, ReactNode> = {
       <K>repos</K>:{'\n'}
       {'  - repo: local\n    '}
       <K>hooks</K>:{'\n'}
-      {'      - id: specdiff\n        entry: npx specdiff-cli --ci --fail-on breaking\n               '}
-      <S>HEAD:openapi.yaml</S> <S>openapi.yaml</S>
-      {'\n        language: system\n        pass_filenames: false\n        files: '}
+      {'      - id: specdiff\n        entry: npx specdiff-cli pre-commit --fail-on breaking\n        language: system\n        files: '}
       <S>{'openapi\\.yaml$'}</S>
     </>
   ),

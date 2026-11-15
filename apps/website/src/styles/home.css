@@ -77,7 +77,8 @@
   animation: sdUp 0.8s var(--sd-ease) var(--d, 0s) both;
 }
 .hero-side {
-  flex: 1 1 340px;
+  /* Wide enough for the whole `npx specdiff-cli old.yaml new.yaml` command on one line (B-11). */
+  flex: 1 1 384px;
   min-width: 0;
   max-width: 420px;
   display: flex;
@@ -130,11 +131,11 @@
 }
 .cmd code {
   min-width: 0;
-  font: 500 14px var(--sd-font-mono);
+  font: 500 14px/1.5 var(--sd-font-mono);
   color: var(--w-term-ink);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  /* Never cut the command off: on narrow screens it wraps at a space instead. */
+  white-space: normal;
+  padding: 6px 0;
 }
 .cmd .t-prompt {
   color: var(--sd-brand);
@@ -776,8 +777,9 @@
   max-width: 46ch;
 }
 .tile-inverse {
-  background: var(--w-term-bg);
-  border-color: var(--w-term-bg);
+  /* --sd-inverse: graphite in light, the olive brand-tinted surface in dark (W01v2-Home-Dark). */
+  background: var(--sd-inverse);
+  border-color: var(--sd-inverse);
 }
 .tile-inverse h3 {
   color: var(--w-term-ink);
@@ -1007,7 +1009,7 @@
   color: var(--sd-on-inverse);
 }
 .viewer-in {
-  max-width: 1240px;
+  max-width: 1288px; /* 1240 px content + 24 px gutters */
   margin: 0 auto;
   padding: 120px 24px;
   display: flex;
@@ -1271,6 +1273,8 @@
   margin-right: 10px;
 }
 .term-type {
+  /* Never shrink: on phones the line scrolls inside the terminal instead of clipping under the cursor. */
+  flex: none;
   display: inline-block;
   overflow: hidden;
   white-space: nowrap;
@@ -1278,6 +1282,7 @@
   animation: sdType 2.2s steps(var(--n)) 0.2s 1 both;
 }
 .term-cursor {
+  flex: none;
   width: 9px;
   height: 18px;
   background: var(--sd-brand);
@@ -1356,9 +1361,6 @@
 .faq summary svg {
   transition: transform var(--sd-motion-base) var(--sd-ease);
 }
-.faq details[open] summary svg {
-  transform: rotate(45deg);
-}
 .faq details p {
   margin: 0 0 22px;
   font: 400 16px/1.65 var(--sd-font-sans);
@@ -1371,7 +1373,8 @@
   padding: 0 24px 100px;
 }
 .cta-box {
-  max-width: 1240px;
+  /* Near full-bleed: 24 px from the viewport edges (W01v2-Home). */
+  max-width: none;
   margin: 0 auto;
   border-radius: 32px;
   background: var(--sd-brand);
@@ -1501,7 +1504,7 @@
 /* ---------- Phone ---------- */
 @media (max-width: 760px) {
   .hero {
-    padding: 20px 16px 56px;
+    padding: 20px 24px 56px;
   }
   .hero-in {
     gap: 32px;
@@ -1510,8 +1513,8 @@
   .features,
   .packages,
   .faq {
-    padding-left: 16px;
-    padding-right: 16px;
+    padding-left: 24px;
+    padding-right: 24px;
   }
   .product {
     padding-top: 72px;
@@ -1521,7 +1524,7 @@
     padding-bottom: 56px;
   }
   .viewer-in {
-    padding: 72px 16px;
+    padding: 72px 24px;
   }
   .packages {
     padding-top: 72px;

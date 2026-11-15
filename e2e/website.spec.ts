@@ -1,5 +1,7 @@
 // Website (P5.1/P5.2): W-01 Home v2, W-02 Docs, W-03 Rules, W-04 Rule detail, W-06 Changelog, W-08 404.
 // The website runs on its own server (playwright.config.ts), so every URL here is absolute.
+import { readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { test, expect, type Page } from '@playwright/test';
 import { expectAxeClean } from './a11y';
 
@@ -111,7 +113,7 @@ test('package tabs switch with arrow keys and use specdiff-cli', async ({ page }
   await hydrated(page, 'packages');
   await page.keyboard.press('ArrowRight');
   await expect(tabs.nth(1)).toHaveAttribute('aria-selected', 'true');
-  await expect(page.locator('#pk-panel')).toContainText('entry: npx specdiff-cli --ci --fail-on breaking');
+  await expect(page.locator('#pk-panel')).toContainText('entry: npx specdiff-cli pre-commit --fail-on breaking');
 });
 
 test('"Try it with a sample" opens the app with the OpenAPI sample (WEB-02)', async ({ page }) => {
@@ -219,4 +221,112 @@ test('phone nav: compact bar with a menu disclosure @phone', async ({ page }, in
   await page.keyboard.press('Escape');
   await expect(page.getByRole('button', { name: 'Open menu' })).toBeFocused();
   await expect(page.locator('#phone-menu')).toBeHidden();
+});
+
+/** Every built HTML file under apps/website/dist. */
+function builtPages(): string[] {
+  const root = join(process.cwd(), 'apps/website/dist');
+  return (readdirSync(root, { recursive: true }) as string[]).filter((f) => f.endsWith('.html')).map((f) => join(root, f));
+}
+
+test('no built page shows an unfilled template placeholder (WEB-04)', () => {
+  const files = builtPages();
+  expect(files.length).toBeGreaterThan(80);
+  const hits: string[] = [];
+  for (const f of files) {
+    const html = readFileSync(f, 'utf8');
+    const rel = f.split('/dist/')[1]!;
+    // Docs pages show TX-08 masked text (‹name›, ‹time›) on purpose; rule pages never show a ‹word›.
+    // `{id}` in a path is a real path parameter, so only core's template keys count.
+    const re = rel.startsWith('rules/') ? /‹\w+›|\{(?:op|target|before|after|where)\}/g : /‹(?:operation|target|before|after|where)›|\{(?:op|target|before|after|where)\}/g;
+    for (const m of html.matchAll(re)) hits.push(`${rel}: ${m[0]}`);
+  }
+  expect(hits).toEqual([]);
+});
+
+test('rule detail fills who/avoid and the example line from the fixture (WEB-04)', async ({ page }) => {
+  await page.goto(WEB + '/rules/request-property-became-required/');
+  const body = page.locator('.rule-body');
+  await expect(body.locator('#who + p')).toContainText('POST /a');
+  await expect(body.locator('#who + p code').first()).toBeVisible();
+  await expect(body.locator('pre').last()).toContainText('`POST /a` now requires `name`');
+  for (const p of await body.locator('.p-doc').allTextContents()) expect(p).not.toContain('`');
+});
+
+test('docs severity cards show their symbol in the badge colour, not grey (W-02, rule 4)', async ({ page }) => {
+  await page.goto(WEB + '/docs/openapi/');
+  const sym = page.locator('.sev-grid .sev-breaking .sev-sym');
+  const [fg, bg] = await sym.evaluate((el) => [getComputedStyle(el).color, getComputedStyle(el.parentElement!).backgroundColor]);
+  expect(fg).toBe(bg); // symbol is drawn in the pill tint on the solid disc
+});
+
+test('titled code fences render a file-name header with a copy button (W-02)', async ({ page }) => {
+  await page.goto(WEB + '/docs/openapi/');
+  const head = page.locator('.codecard-head', { hasText: '.specdiff/decisions.json' });
+  await expect(head).toBeVisible();
+  await expect(head.getByRole('button', { name: 'Copy .specdiff/decisions.json' })).toHaveAttribute('data-copy', /"decisions"/);
+});
+
+for (const width of [1440, 390]) {
+  test(`hero npx command is shown in full at ${width}${width === 390 ? ' @phone' : ''}`, async ({ page }, info) => {
+    test.skip(info.project.name !== (width === 390 ? 'phone' : 'desktop'));
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto(WEB + '/');
+    const code = page.locator('.hero .cmd code');
+    await expect(code).toHaveText(/npx specdiff-cli old\.yaml new\.yaml/);
+    const [sw, cw] = await code.evaluate((el) => [el.scrollWidth, el.clientWidth]);
+    expect(sw).toBeLessThanOrEqual(cw);
+  });
+}
+
+test('rules table keeps rule ids whole: they wrap only at hyphens @phone', async ({ page }, info) => {
+  test.skip(info.project.name !== 'phone');
+  await page.goto(WEB + '/rules/');
+  const first = page.locator('.rules-table tbody td:first-child').first();
+  expect((await first.boundingBox())!.width).toBeGreaterThanOrEqual(220);
+  // Every rendered line of every id ends at a hyphen or at the end of the id.
+  const broken = await page.locator('.rule-id').evaluateAll((els) =>
+    els.flatMap((el) => {
+      const text = el.textContent ?? '';
+      const node = el.firstChild!;
+      const range = document.createRange();
+      const out: string[] = [];
+      let lastTop = -1;
+      for (let i = 0; i < text.length; i++) {
+        range.setStart(node, i);
+        range.setEnd(node, i + 1);
+        const top = range.getClientRects()[0]?.top ?? lastTop;
+        if (lastTop >= 0 && top > lastTop + 2 && text[i - 1] !== '-') out.push(`${text} @${i}`);
+        lastTop = top;
+      }
+      return out;
+    }),
+  );
+  expect(broken).toEqual([]);
+});
+
+test('changelog: the Latest bar spans the version column (W-06)', async ({ page }) => {
+  await page.goto(WEB + '/changelog/');
+  const w = (await page.locator('.latest').boundingBox())!.width;
+  expect(w).toBeGreaterThanOrEqual(180);
+});
+
+test('package terminal: the typed command is not clipped under the cursor @phone', async ({ page }, info) => {
+  test.skip(info.project.name !== 'phone');
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto(WEB + '/');
+  const sizes = await page.locator('#pk-panel .term-type').evaluateAll((els) => els.map((el) => [el.scrollWidth, el.clientWidth]));
+  expect(sizes.length).toBeGreaterThan(0);
+  for (const [sw, cw] of sizes) expect(sw).toBeLessThanOrEqual(cw!);
+});
+
+test('pre-commit snippets use `specdiff-cli pre-commit` and pass file names (PK-10)', async ({ request }) => {
+  // The Home tab is client-rendered; the package-tabs test checks its entry line.
+  for (const path of ['/docs/pre-commit/']) {
+    const html = await (await request.get(WEB + path)).text();
+    expect(html, path).toContain('npx specdiff-cli pre-commit --fail-on breaking');
+    expect(html, path).not.toMatch(/pass_filenames:\s*false/);
+    expect(html, path).not.toContain('specdiff-cli --ci --fail-on breaking HEAD:');
+  }
+  expect(await (await request.get(WEB + '/docs/pre-commit/')).text()).toContain('.pre-commit-hooks.yaml');
 });

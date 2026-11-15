@@ -26,6 +26,7 @@ export interface ChangeIndex {
   schemas: Map<string, BadgeKind>;
   /** Endpoints present before but gone now. */
   removedOps: Change[];
+  /** `breaking` is the Report's breaking-change count (B-2); the others count endpoints by badge. */
   counts: { breaking: number; changed: number; new: number; deprecated: number };
 }
 
@@ -104,6 +105,9 @@ export function indexChanges(report: Report | undefined, current: Model, previou
   const removedKeys = new Set(idx.removedOps.flatMap(opKeysOf).filter((k) => !currentKeys.has(k)));
   if (previous) for (const k of prevOps.keys()) if (!currentKeys.has(k)) removedKeys.add(k);
   idx.counts.breaking += removedKeys.size;
+  // B-2: "Breaking" is the number of breaking changes, as in the Report summary the app and CLI show.
+  // Counting breaking-badged endpoints instead counted a shared-schema change once per endpoint.
+  if (report) idx.counts.breaking = report.summary.breaking;
   return idx;
 }
 
@@ -137,6 +141,18 @@ export function checklist(changes: Change[]): Checklist {
   const line = (c: Change) => `- [ ] ${changeTitle(c)}`;
   const text = [...required, ...check, ...optional].map(line).join('\n');
   return { required, check, optional, text };
+}
+
+const SEV_ORDER: Record<Severity, number> = { breaking: 0, possibly: 1, safe: 2, docs: 3 };
+/** Breaking → Possibly → Safe → Docs only; stable within a severity (V-04). */
+export function bySeverity(changes: Change[]): Change[] {
+  return changes.map((c, i) => [c, i] as const).sort(([a, i], [b, j]) => (SEV_ORDER[a.severity ?? 'docs'] - SEV_ORDER[b.severity ?? 'docs']) || i - j).map(([c]) => c);
+}
+
+/** The endpoint a change is shown under: the first one the reader picked, else its own. */
+export function displayKeyOf(c: Change, picked?: ReadonlySet<string>): string | undefined {
+  const keys = opKeysOf(c);
+  return (picked && keys.find((k) => picked.has(k))) ?? keys[0];
 }
 
 /** Keep the changes that touch one of the chosen endpoints (or are not tied to any endpoint). */

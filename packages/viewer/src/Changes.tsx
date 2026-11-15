@@ -4,7 +4,7 @@ import type { Change } from '@specdiff/core';
 import { Button, SeverityBadge } from '@specdiff/ui';
 import { Copy } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { changeAdvice, changeTitle, checklist, filterByEndpoints, opKeysOf } from './change-index';
+import { bySeverity, changeAdvice, changeTitle, checklist, displayKeyOf, filterByEndpoints } from './change-index';
 import { useViewer } from './context';
 import { useReports } from './hooks';
 import { CodePanel, InlineText, Method, cx } from './parts';
@@ -12,7 +12,7 @@ import css from './Viewer.module.css';
 
 export function useFilteredChanges(): { all: Change[]; shown: Change[] } {
   const v = useViewer();
-  return useMemo(() => ({ all: v.changes, shown: filterByEndpoints(v.changes, v.myEndpoints) }), [v.changes, v.myEndpoints]);
+  return useMemo(() => ({ all: v.changes, shown: bySeverity(filterByEndpoints(v.changes, v.myEndpoints)) }), [v.changes, v.myEndpoints]);
 }
 
 function Timeline() {
@@ -82,7 +82,7 @@ export function Changes() {
         <>
           {v.myEndpoints ? (
             <section className={css.filterCard} aria-labelledby="sd-filter">
-              <h2 id="sd-filter" className={css.h4}>Showing changes for the {v.myEndpoints.size} endpoints you use</h2>
+              <h2 id="sd-filter" className={css.h4}>Showing changes for the {v.myEndpoints.size === 1 ? 'endpoint' : `${v.myEndpoints.size} endpoints`} you use</h2>
               <p className={css.small}>{all.length - shown.length} of {all.length} changes hidden. Saved in this browser.</p>
               <div className={css.row}>
                 <Button onClick={v.openMyEndpoints}>Edit my endpoints</Button>
@@ -101,7 +101,7 @@ export function Changes() {
             {shown.length ? (
               <ul className={css.changeRows}>
                 {shown.map((c) => {
-                  const key = opKeysOf(c)[0];
+                  const key = displayKeyOf(c, v.myEndpoints);
                   const op = key ? ops.get(key) : undefined;
                   const [method, path] = key ? [key.split(' ')[0]!, key.slice(key.indexOf(' ') + 1)] : ['', ''];
                   return (
@@ -145,7 +145,7 @@ export function ChangesAside() {
         <p className={css.effortText}>{list.check.length} to check, {list.optional.length} optional. Copy the list into your ticket.</p>
         <Button variant="brand" icon={<Copy />} onClick={() => v.copyMarkdown(list.text || '- [ ] Nothing to do', 'Checklist copied')}>Copy as checklist</Button>
       </section>
-      {list.text ? <CodePanel title="Checklist" code={list.text} /> : null}
+      {list.text ? <CodePanel title="Checklist" code={list.text} wrap /> : null}
     </div>
   );
 }

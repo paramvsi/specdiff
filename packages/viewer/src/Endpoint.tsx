@@ -91,7 +91,8 @@ export function Endpoint({ op, tab }: { op: Op; tab: 'docs' | 'history' }) {
           <Clock aria-hidden="true" size={16} />
           <div>
             <strong>Deprecated.{op.sunset ? ` Stops working on ${sunsetText(op.sunset)}.` : ''}</strong>
-            {op.description ? <p className={css.noMargin}>{op.description}</p> : null}
+            {/* The title already says "Deprecated.": don't repeat it when the description opens with it. */}
+            {op.description?.replace(/^\s*Deprecated\.?\s*/i, '') ? <p className={css.noMargin}>{op.description.replace(/^\s*Deprecated\.?\s*/i, '')}</p> : null}
             {replacement ? <p className={css.noMargin}>Use <code className={css.code}>{replacement}</code> instead.{op.sunset ? <> The sunset date comes from <code className={css.code}>x-sunset</code>.</> : null}</p> : null}
           </div>
         </div>

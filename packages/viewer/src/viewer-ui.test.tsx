@@ -80,7 +80,8 @@ describe('badges (VW-08)', () => {
   const idx = indexChanges(report, buildModel(next), buildModel(base));
   it('derives endpoint badges with New over Breaking over Changed', () => {
     expect(Object.fromEntries(idx.ops)).toEqual({ 'POST /payments': 'breaking', 'GET /payments': 'breaking', 'POST /payouts': 'new' });
-    expect(idx.counts).toEqual({ breaking: 2, changed: 0, new: 1, deprecated: 0 });
+    // B-2: Breaking counts breaking changes (summary.breaking = 3), not the 2 breaking-badged endpoints.
+    expect(idx.counts).toEqual({ breaking: 3, changed: 0, new: 1, deprecated: 0 });
   });
   it('derives field badges and removed fields; docs-only changes get no badge', () => {
     expect(idx.fields.get('body:POST /payments:currency')).toBe('changed');

@@ -14,18 +14,21 @@ repos:
     hooks:
       - id: specdiff
         name: specdiff
-        entry: npx specdiff-cli --ci --fail-on breaking HEAD:openapi.yaml openapi.yaml
+        entry: npx specdiff-cli pre-commit --fail-on breaking
         language: system
-        pass_filenames: false
         files: openapi\.yaml$
 ```
 
-`HEAD:openapi.yaml` is the last committed version; `openapi.yaml` is the file in your working copy (not only the staged part).
+pre-commit passes every matching file in one call. For each one, `specdiff-cli pre-commit` compares the last committed version (`HEAD:<file>`) with the file in your working copy (not only the staged part). A file that is not in `HEAD` yet is new, so it passes. Leave `pass_filenames` at its default: the hook needs the file names.
 
-You can also leave out the paths and `pass_filenames: false`, so pre-commit passes the matching file. This works when `files` matches a single file. Given one file, the CLI compares `HEAD:<file>` with the working copy, and a file that is not in `HEAD` yet passes. With two arguments, a file missing from `HEAD` is an input error (exit code 2).
+Once `specdiff-cli` is published, you can use this repository as a hook repository instead of a local hook. It ships a `.pre-commit-hooks.yaml` with the hook id `specdiff`:
 
-```yaml
-        entry: npx specdiff-cli --ci --fail-on breaking
+```yaml title=".pre-commit-config.yaml"
+repos:
+  - repo: https://github.com/paramvsi/specdiff
+    rev: v1.0.0
+    hooks:
+      - id: specdiff
         files: openapi\.yaml$
 ```
 

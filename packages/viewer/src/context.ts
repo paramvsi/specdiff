@@ -45,6 +45,8 @@ export interface ViewerCtx {
   setMyEndpoints: (keys: ReadonlySet<string> | undefined) => void;
   openMyEndpoints: () => void;
   setPair: (current: string, compareWith: string | undefined) => void;
+  /** The version picked to compare with, even when it failed to load (V-01 error keeps it selected). */
+  compareWith: string | undefined;
 }
 
 export const Ctx = createContext<ViewerCtx | null>(null);

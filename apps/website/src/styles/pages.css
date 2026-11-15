@@ -80,7 +80,7 @@
 
 /* ---------- Rules list ---------- */
 .rules-main {
-  max-width: 1240px;
+  max-width: 1288px; /* 1240 px content + 24 px gutters */
   margin: 0 auto;
   padding: 48px 24px 80px;
   display: flex;
@@ -127,10 +127,15 @@
 .rules-table td code {
   font: 500 0.92em var(--sd-font-mono);
 }
+.rules-table th:first-child {
+  width: 410px;
+}
 .rule-id {
   font: 500 13.5px var(--sd-font-mono);
   color: var(--sd-ink);
-  overflow-wrap: anywhere;
+  /* Rule ids wrap at their hyphens only (W-03), never mid-word. */
+  overflow-wrap: normal;
+  word-break: normal;
 }
 .rule-area {
   color: var(--sd-muted);
@@ -146,7 +151,7 @@
 
 /* ---------- Rule detail ---------- */
 .rule-main {
-  max-width: 1240px;
+  max-width: 1288px; /* 1240 px content + 24 px gutters */
   margin: 0 auto;
   padding: 36px 24px 80px;
   display: flex;
@@ -322,10 +327,19 @@
 @media (max-width: 760px) {
   .rules-main,
   .rule-main {
-    padding: 28px 16px 56px;
+    padding: 28px 24px 56px;
   }
   .rule-aside {
     max-width: none;
+  }
+  /* W03-Rules-390: the Rule column keeps ~235 px; "What changed" and the rest scroll sideways. */
+  .rules-table th:first-child {
+    width: 235px;
+  }
+  /* Table cells ignore min-width; a block link inside holds the column at ~235 px. */
+  .rule-id {
+    display: block;
+    min-width: 203px;
   }
   .related a,
   .chip,
@@ -336,7 +350,7 @@
 
 /* ---------- Docs ---------- */
 .docs-main {
-  max-width: 1240px;
+  max-width: 1288px; /* 1240 px content + 24 px gutters */
   margin: 0 auto;
   padding: 36px 24px 72px;
   display: flex;
@@ -534,7 +548,11 @@
   border: 1px solid var(--sd-line);
   background: var(--sd-surface);
 }
-.sev-cell span:last-child {
+.sev-cell > .sev {
+  align-self: stretch;
+}
+/* Only the meaning line: `.sev-cell span:last-child` also matched the badge's symbol span and greyed it out. */
+.sev-cell > span:last-child {
   font: 400 13.5px/1.5 var(--sd-font-sans);
   color: var(--sd-muted);
 }
@@ -613,7 +631,7 @@
 }
 @media (max-width: 760px) {
   .docs-main {
-    padding: 24px 16px 56px;
+    padding: 24px 24px 56px;
   }
   .docs-group a,
   .docs-toc a.toc-link,
@@ -654,7 +672,7 @@
 }
 .release-meta {
   flex: 1 1 200px;
-  max-width: 240px;
+  max-width: 200px;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -670,6 +688,7 @@
   color: var(--sd-muted);
 }
 .latest {
+  align-self: stretch;
   font: 600 12px var(--sd-font-sans);
   background: var(--sd-brand);
   color: var(--sd-on-brand);
@@ -741,8 +760,14 @@
   background: var(--sd-added-bg);
   color: var(--sd-added-strong);
 }
+.nf-diff {
+  max-width: 640px;
+}
+.nf-main .lede {
+  max-width: 580px;
+}
 .nf-h1 {
-  max-width: 18ch;
+  max-width: 440px;
   font-size: clamp(32px, 4.4vw, 52px);
 }
 .nf-actions {
@@ -768,10 +793,10 @@
 }
 @media (max-width: 760px) {
   .log-main {
-    padding: 32px 16px 56px;
+    padding: 32px 24px 56px;
   }
   .nf-main {
-    padding: 48px 16px;
+    padding: 48px 24px;
   }
   .nf-diff > div:first-child {
     border-right: 0;

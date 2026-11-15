@@ -176,7 +176,7 @@ Phases: **P0** setup · **P1** foundations + OpenAPI + review · **P2** JSON/YAM
 | PK-01 | `@specdiff/core`: parsing, normalising, diff engines, rules, changelog builder (no DOM) | P1 | Core |
 | PK-02 | `@specdiff/embed`: script build, `Specdiff.mount(el, { url, compareWith, mode, theme, brand })` | P4 | Core |
 | PK-03 | `@specdiff/react`: components wrapping the Viewer and diff | P4 | Core |
-| PK-04 △ | `specdiff` CLI: `npx specdiff old new` opens the local UI; `--ci` prints the report and exits non-zero per `--fail-on` (breaking, possibly, missing-version-bump); `--format md\|json\|html`; git `rev:path`; `history <file>` walks git history for the Viewer timeline; reads `.specdiff.yaml` and decisions | P4 | Core |
+| PK-04 △ | `specdiff` CLI: `npx specdiff-cli old new` opens the local UI; `--ci` prints the report and exits non-zero per `--fail-on` (breaking, possibly, missing-version-bump); `--format md\|json\|html`; git `rev:path`; `history <file>` walks git history for the Viewer timeline; reads `.specdiff.yaml` and decisions | P4 | Core |
 | PK-06 | Express and Fastify middleware serving the Viewer at `/docs` | P4 | Core |
 | PK-07 | Spring Boot starter (Maven Central): serves the Viewer at `/specdiff`, reads the app's OpenAPI document automatically | P4 | Core |
 | PK-08 | Offline/installable web app (PWA) | P5 | Core |
@@ -204,7 +204,7 @@ Phases: **P0** setup · **P1** foundations + OpenAPI + review · **P2** JSON/YAM
 
 ## Not doing (v1)
 
-GitHub Action package (was PK-05) and CI snippet export (was OUT-04), removed 15 Nov 2026: no GitHub Actions; use `npx specdiff --ci` in any CI · Hosted approvals, accounts or a server-side review store · server-side or browser-initiated AI calls · merging or editing text · PDF, Word, Excel, image or folder comparison · AsyncAPI diff (Later) · localised messages (Later).
+GitHub Action package (was PK-05) and CI snippet export (was OUT-04), removed 15 Nov 2026: no GitHub Actions; use `npx specdiff-cli --ci` in any CI · Hosted approvals, accounts or a server-side review store · server-side or browser-initiated AI calls · merging or editing text · PDF, Word, Excel, image or folder comparison · AsyncAPI diff (Later) · localised messages (Later).
 
 ## Totals
 

@@ -88,7 +88,7 @@ export function SearchDialog({ open, initial, onClose }: { open: boolean; initia
           );
         })}
       </ul>
-      <p className={css.searchFoot}><Kbd>↑</Kbd> <Kbd>↓</Kbd> move <Kbd>↵</Kbd> open <span>Searches {v.cur.label}</span></p>
+      <p className={css.searchFoot}><Kbd>↑</Kbd> <Kbd>↓</Kbd> move <Kbd>↵</Kbd> open <span className={css.searchScope}>Searches {/^\d/.test(v.cur.label) ? `v${v.cur.label}` : v.cur.label}</span></p>
     </Dialog>
   );
 }
@@ -157,7 +157,7 @@ export function MyEndpointsDialog({ open, onOpenChange }: { open: boolean; onOpe
           {har ? (
             <>
               <strong className={css.mono}>{har.name}</strong>
-              <span className={css.small}>{fmt(matchedRequests)} requests matched {har.result.matches.length} endpoints. {fmt(har.result.ignoredOrigin)} to other hosts ignored.</span>
+              <span className={css.small}>{fmt(matchedRequests)} {matchedRequests === 1 ? 'request' : 'requests'} matched {har.result.matches.length} {har.result.matches.length === 1 ? 'endpoint' : 'endpoints'}. {fmt(har.result.ignoredOrigin)} to other hosts ignored.</span>
             </>
           ) : (
             <>
@@ -192,7 +192,7 @@ export function MyEndpointsDialog({ open, onOpenChange }: { open: boolean; onOpe
                   <Method method={o.method} />
                   <span className={css.mono}>{o.path}</span>
                 </label>
-                <span className={css.calls}>{har ? (n ? `${fmt(n)} calls` : 'No calls') : ''}</span>
+                <span className={css.calls}>{har ? (n ? `${fmt(n)} ${n === 1 ? 'call' : 'calls'}` : 'No calls') : ''}</span>
               </li>
             );
           })}

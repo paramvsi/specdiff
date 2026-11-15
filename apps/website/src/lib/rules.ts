@@ -188,16 +188,54 @@ export function loadFixture(id: string): Fixture {
 }
 
 // ---------------------------------------------------------------- text helpers
-/** Fill core's {op}/{target}/{before}/{after} placeholders for prose. */
+const genericWords: Record<string, string> = {
+  op: 'this endpoint',
+  target: 'the field',
+  before: 'the old value',
+  after: 'the new value',
+  where: 'this item',
+};
+/** Fill core's {op}/{target}/{before}/{after}/{where} placeholders with readable generic words. */
 export function prose(template: string): string {
-  const words: Record<string, string> = { op: 'the operation', target: 'the changed item', before: 'the old value', after: 'the new value' };
+  const word = (k: string) => genericWords[k] ?? 'it';
   // A placeholder written as code (`{target}`) becomes plain words, not code.
-  return template.replace(/`\{(\w+)\}`/g, (m, k: string) => words[k] ?? m).replace(/\{(\w+)\}/g, (m, k: string) => words[k] ?? m);
+  return template.replace(/`\{(\w+)\}`/g, (_m, k: string) => word(k)).replace(/\{(\w+)\}/g, (_m, k: string) => word(k));
 }
-/** Fill placeholders visibly, for the example changelog line. */
-export function exampleLine(template: string): string {
-  const words: Record<string, string> = { op: '‹operation›', target: '‹target›', before: '‹before›', after: '‹after›' };
-  return template.replace(/\{(\w+)\}/g, (m, k: string) => words[k] ?? m);
+
+export interface Example {
+  explanation?: { who: string; see: string; avoid: string };
+  changelogLine?: string;
+}
+/**
+ * A real example for a rule: its fixture pair run through compareOpenApi at build time.
+ * Rules reported only inside another change ("contained") use that change; rules that are never
+ * reported on their own read the .2 pair. Returns {} when the fixture produces nothing.
+ */
+export function loadExample(id: string): Example {
+  const abs = join(ROOT, 'fixtures/rules', id);
+  for (const suffix of ['', '.2']) {
+    const f = (n: string) => join(abs, `${n}${suffix}.${n === 'expected' ? 'json' : 'yaml'}`);
+    if (!existsSync(f('before')) || !existsSync(f('after'))) continue;
+    let expected: { config?: core.ConfigInput; today?: string } = {};
+    try {
+      if (existsSync(f('expected'))) expected = JSON.parse(readFileSync(f('expected'), 'utf8')) as typeof expected;
+    } catch {
+      /* malformed expected.json: compare with defaults */
+    }
+    try {
+      const report = core.compareOpenApi(
+        { name: `before${suffix}.yaml`, content: readFileSync(f('before'), 'utf8') },
+        { name: `after${suffix}.yaml`, content: readFileSync(f('after'), 'utf8') },
+        expected.config,
+        expected.today ? { today: expected.today } : {},
+      );
+      const c = report.changes.find((x) => x.ruleId === id) ?? report.changes[0];
+      if (c) return { ...(c.explanation ? { explanation: c.explanation } : {}), ...(c.changelogLine ? { changelogLine: c.changelogLine } : {}) };
+    } catch {
+      /* fixture fails to compare: fall back to generic wording */
+    }
+  }
+  return {};
 }
 /** Split `inline code` out of a sentence. */
 export function codeSegments(text: string): Array<{ code: boolean; text: string }> {

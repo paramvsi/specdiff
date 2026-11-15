@@ -50,7 +50,7 @@ export function CopyButton({ text, label }: { text: string; label: string }) {
 }
 
 /** Inverse code panel with a title bar and a copy button. */
-export function CodePanel({ title, code, label }: { title: string; code: string; label?: string }) {
+export function CodePanel({ title, code, label, wrap = false }: { title: string; code: string; label?: string; wrap?: boolean }) {
   return (
     <section className={css.codePanel} aria-label={label ?? title}>
       <div className={css.codePanelHead}>
@@ -59,7 +59,10 @@ export function CodePanel({ title, code, label }: { title: string; code: string;
       </div>
       {/* Scrollable region: focusable so keyboard users can scroll it. */}
       {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex */}
-      <pre className={css.pre} tabIndex={0}><code>{code}</code></pre>
+      <pre className={cx(css.pre, wrap && css.preWrap)} tabIndex={0}>
+        {/* Wrapped lines (checklists) hang under their text, after the "- [ ] " marker. */}
+        <code>{wrap ? code.split('\n').map((line, i) => <span key={i} className={css.preLine}>{line}</span>) : code}</code>
+      </pre>
     </section>
   );
 }

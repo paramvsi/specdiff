@@ -6,7 +6,7 @@ import SiteHeader from '../../components/SiteHeader.astro';
 import Footer from '../../components/Footer.astro';
 import Severity from '../../components/Severity.astro';
 import CodeCard from '../../components/CodeCard.astro';
-import { changedLines, codeSegments, directionLabel, exampleLine, loadFixture, loadRules, prose, sevLabel, type Rule } from '../../lib/rules';
+import { changedLines, codeSegments, directionLabel, loadExample, loadFixture, loadRules, prose, sevLabel, type Rule } from '../../lib/rules';
 import { REPO } from '../../lib/site';
 import '../../styles/pages.css';
 
@@ -28,10 +28,14 @@ const related = all
 // "How to change its severity": suggest the next step down (or up for safe/docs rules).
 const alt = rule.severity === 'breaking' ? 'possibly' : rule.severity === 'possibly' ? 'breaking' : rule.severity ? 'possibly' : null;
 const yaml = alt
-  ? `rules:\n  ${rule.id}:\n    severity: ${alt}   # or: enabled: false`
+  ? `rules:\n  ${rule.id}:\n    severity: ${alt}`
   : `rules:\n  ${rule.id}:\n    enabled: false`;
-const line = fx.changelogLine ?? (rule.changelog ? exampleLine(rule.changelog) : undefined);
+// Real example values from the fixture (compareOpenApi at build time); generic words otherwise.
+const ex = loadExample(rule.id);
+const expl = ex.explanation ?? (rule.explanation ? { who: prose(rule.explanation.who), see: prose(rule.explanation.see), avoid: prose(rule.explanation.avoid) } : undefined);
 const sevText = rule.severity ? sevLabel[rule.severity] : 'Not a change of its own';
+const rawLine = ex.changelogLine ?? fx.changelogLine ?? (rule.changelog ? prose(rule.changelog) : undefined);
+const line = rawLine && rule.severity ? `**${sevLabel[rule.severity]}:** ${rawLine}` : rawLine;
 const description = `${sevText}: ${rule.change.replace(/`/g, '')}. Who it breaks, how to avoid it, and how to change its severity in .specdiff.yaml.`;
 ---
 <Base title={`${rule.id} · Rules · Specdiff`} description={description} ogType="article">
@@ -53,17 +57,17 @@ const description = `${sevText}: ${rule.change.replace(/`/g, '')}. Who it breaks
       )}
 
       <h2 id="who" class="h2-doc">Who it breaks</h2>
-      {rule.explanation ? (
+      {expl ? (
         <>
-          <p class="p-doc">{codeSegments(prose(rule.explanation.who)).map((s) => (s.code ? <code class="icode">{s.text}</code> : s.text))}</p>
-          <p class="p-doc"><strong>What they see:</strong> {codeSegments(prose(rule.explanation.see)).map((s) => (s.code ? <code class="icode">{s.text}</code> : s.text))}</p>
+          <p class="p-doc">{codeSegments(expl.who).map((s) => (s.code ? <code class="icode">{s.text}</code> : s.text))}</p>
+          <p class="p-doc"><strong>What they see:</strong> {codeSegments(expl.see).map((s) => (s.code ? <code class="icode">{s.text}</code> : s.text))}</p>
         </>
       ) : (
         <p class="p-doc">{rule.severity === 'breaking' ? 'Existing clients will fail.' : rule.severity === 'possibly' ? 'Some clients may fail, depending on how strictly they read the API.' : rule.severity === 'safe' ? 'No existing client breaks.' : 'Nobody: this only changes documentation.'}</p>
       )}
 
       <h2 id="fix" class="h2-doc">How to avoid it</h2>
-      <p class="p-doc">{rule.explanation ? codeSegments(prose(rule.explanation.avoid)).map((s) => (s.code ? <code class="icode">{s.text}</code> : s.text)) : 'Ship the change in a new major version and say so in the changelog, or keep the old behaviour alongside the new one for a deprecation period.'}</p>
+      <p class="p-doc">{expl ? codeSegments(expl.avoid).map((s) => (s.code ? <code class="icode">{s.text}</code> : s.text)) : 'Ship the change in a new major version and say so in the changelog, or keep the old behaviour alongside the new one for a deprecation period.'}</p>
 
       <h2 id="msg" class="h2-doc">Example message</h2>
       {line ? <CodeCard name="Changelog line" code={line} /> : <p class="p-doc">This rule is reported in the summary, not as a changelog line.</p>}
