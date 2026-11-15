@@ -34,6 +34,8 @@ export interface TextDiff {
   stats: { added: number; removed: number; changed: number };
   filters: FilterResult[];
   identical: boolean;
+  /** Set when the inputs differed too much for an exact line alignment; rows are paired by position. */
+  approximate?: true;
   /** TX-11: present when diffText was asked to detect moves. */
   moves?: Move[];
   /** TX-12: present for a comparison rebuilt from a patch. */
@@ -67,6 +69,21 @@ export function applyFilters(text: string, filters: TextFilter[], hits: FilterRe
     }
   });
   return t;
+}
+
+type LinePart = { value: string[]; count: number; added: boolean; removed: boolean };
+function positional(a: string[], b: string[], same: (x: string, y: string) => boolean): LinePart[] {
+  let pre = 0;
+  while (pre < a.length && pre < b.length && same(a[pre]!, b[pre]!)) pre++;
+  let suf = 0;
+  while (suf < a.length - pre && suf < b.length - pre && same(a[a.length - 1 - suf]!, b[b.length - 1 - suf]!)) suf++;
+  const out: LinePart[] = [];
+  const push = (value: string[], added: boolean, removed: boolean) => { if (value.length) out.push({ value, count: value.length, added, removed }); };
+  push(b.slice(0, pre), false, false);
+  push(a.slice(pre, a.length - suf), false, true);
+  push(b.slice(pre, b.length - suf), true, false);
+  push(b.slice(b.length - suf), false, false);
+  return out;
 }
 
 function splitLines(value: string): string[] {
@@ -112,7 +129,13 @@ export function diffText(before: string, after: string, opts: TextOptions, extra
     if (opts.ignoreCase) t = t.toLowerCase();
     return t;
   };
-  const parts = diffArrays(splitLines(a), splitLines(b), { comparator: (l: string, r: string) => norm(l) === norm(r) });
+  const la = splitLines(a), lb = splitLines(b);
+  const same = (l: string, r: string) => norm(l) === norm(r);
+  // Myers' diff is O(N·D): when almost everything differs it can take minutes. Past an edit budget,
+  // fall back to a positional alignment (common prefix/suffix, the middle paired line by line).
+  const exact = diffArrays(la, lb, { comparator: same, maxEditLength: Math.max(2000, (la.length + lb.length) >> 3) });
+  const approximate = exact === undefined;
+  const parts = exact ?? positional(la, lb, same);
   const found = extras.moves ? findMoves(parts, opts.ignoreCase) : null;
 
   const rows: Row[] = [];
@@ -158,7 +181,7 @@ export function diffText(before: string, after: string, opts: TextOptions, extra
     for (let k = pairs; k < dels.length; k++) { rows.push({ type: 'del', left: { n: ln++, segs: [{ text: dels[k]!, kind: 'del' }] } }); stats.removed++; }
     for (let k = pairs; k < adds.length; k++) { rows.push({ type: 'add', right: { n: rn++, segs: [{ text: adds[k]!, kind: 'add' }] } }); stats.added++; }
   }
-  const out: TextDiff = { rows, blocks, stats, filters, identical: blocks.length === 0 };
+  const out: TextDiff = { rows, blocks, stats, filters, identical: blocks.length === 0, ...(approximate ? { approximate: true as const } : {}) };
   if (found) {
     out.moves = found.moves.map((m, idx) => {
       const fromRow = rows.findIndex((r) => r.move === idx && r.left);

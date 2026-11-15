@@ -106,3 +106,19 @@ describe('diffText moves (TX-11)', () => {
     expect(JSON.stringify(diffText(before, after, opts(), { moves: true }))).toBe(JSON.stringify(diffText(before, after, opts(), { moves: true })));
   });
 });
+
+describe('large, mostly different inputs (X-02)', () => {
+  it('a 20,000-line diff where every line changed finishes quickly with an approximate alignment', () => {
+    const a = Array.from({ length: 20000 }, (_, i) => `line ${i} alpha ${i * 7}`).join('\n') + '\n';
+    const b = Array.from({ length: 20000 }, (_, i) => `row ${i} beta ${i * 3}`).join('\n') + '\n';
+    const t0 = performance.now();
+    const d = diffText(a, b, opts());
+    const ms = performance.now() - t0;
+    expect(ms).toBeLessThan(4000);
+    expect(d.approximate).toBe(true);
+    expect(d.stats.changed).toBe(20000);
+  });
+  it('small inputs stay exact', () => {
+    expect(diffText('a\nb\n', 'a\nc\n', opts()).approximate).toBeUndefined();
+  });
+});

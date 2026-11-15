@@ -75,6 +75,8 @@ describe('exports', () => {
   const arb = fc.jsonValue({ maxDepth: 4 });
   it('JSON Patch round-trips (verified with fast-json-patch)', () => {
     fc.assert(fc.property(arb, arb, (a, b) => {
+      // fast-json-patch refuses `__proto__` keys by design (prototype-pollution guard), so it can't verify those.
+      fc.pre(!JSON.stringify([a, b]).includes('"__proto__"'));
       const ops = jsonPatch(a, b);
       const doc = jsonpatch.deepClone({ root: a });
       const res = jsonpatch.applyPatch(doc, ops.map((op) => ({ ...op, path: '/root' + op.path })) as Operation[], true).newDocument;
