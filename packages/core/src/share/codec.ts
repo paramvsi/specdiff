@@ -1,9 +1,11 @@
 // Share links (OUT-05, OUT-09; docs/07 §5). The hash never reaches a server; passphrases never leave the browser.
 // fflate's deflateSync/inflateSync are raw DEFLATE (RFC 1951), i.e. deflateRaw.
-import { deflateSync, inflateSync, strFromU8, strToU8 } from 'fflate';
+import { deflateSync, Inflate, strFromU8, strToU8 } from 'fflate';
 import { SharePayload } from '../schemas';
 
 export const SHARE_WARN_BYTES = 8 * 1024; // D-10: warn, don't block
+/** Most a link may inflate to. DEFLATE reaches ~1000:1, so without a cap a short link could expand to gigabytes. */
+export const SHARE_MAX_BYTES = 64 * 1024 * 1024;
 export const PBKDF2_ITERATIONS = 310_000;
 
 const b64u = (u: Uint8Array): string => {
@@ -15,6 +17,23 @@ const unb64u = (s: string): Uint8Array => {
   const bin = atob(s.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - (s.length % 4)) % 4));
   return Uint8Array.from(bin, (c) => c.charCodeAt(0));
 };
+
+/** Inflate in 1 KB input slices, so output arrives in bounded chunks and a bomb stops at `limit`. */
+function inflateLimited(data: Uint8Array, limit: number): Uint8Array {
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  const inf = new Inflate((chunk) => {
+    total += chunk.length;
+    if (total > limit) throw new ShareError('malformed');
+    chunks.push(chunk);
+  });
+  for (let i = 0; i < data.length; i += 1024) inf.push(data.subarray(i, i + 1024), i + 1024 >= data.length);
+  if (data.length === 0) inf.push(data, true);
+  const out = new Uint8Array(total);
+  let at = 0;
+  for (const c of chunks) { out.set(c, at); at += c.length; }
+  return out;
+}
 
 async function key(passphrase: string, salt: Uint8Array<ArrayBuffer>): Promise<CryptoKey> {
   const base = await crypto.subtle.importKey('raw', strToU8(passphrase), 'PBKDF2', false, ['deriveKey']);
@@ -56,7 +75,7 @@ export async function decodeShare(hash: string, passphrase?: string): Promise<Sh
     } catch { throw new ShareError('wrong-passphrase'); }
   }
   let json: unknown;
-  try { json = JSON.parse(strFromU8(inflateSync(packed))); } catch { throw new ShareError('malformed'); }
+  try { json = JSON.parse(strFromU8(inflateLimited(packed, SHARE_MAX_BYTES))); } catch { throw new ShareError('malformed'); }
   const r = SharePayload.safeParse(json);
   if (!r.success) throw new ShareError('invalid');
   return r.data;

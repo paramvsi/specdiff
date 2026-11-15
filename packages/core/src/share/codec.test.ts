@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { decodeShare, encodeShare, isLocked, passphraseStrength, SHARE_WARN_BYTES, ShareError } from './codec';
+import { decodeShare, encodeShare, isLocked, passphraseStrength, SHARE_MAX_BYTES, SHARE_WARN_BYTES, ShareError } from './codec';
 import type { SharePayload } from '../schemas';
 
 const payload: SharePayload = { left: { name: 'a.yaml', content: 'openapi: 3.1.0\n' }, right: { name: 'b.yaml', content: 'openapi: 3.1.1\n' }, mode: 'openapi', view: { tab: 'summary' } };
@@ -39,5 +39,18 @@ describe('share codec', () => {
     expect(passphraseStrength('abcdefgh')).toBe(1);
     expect(passphraseStrength('Abcdefgh1234')).toBe(2);
     expect(passphraseStrength('correct horse battery staple')).toBe(3);
+  });
+});
+
+describe('decompression limit', () => {
+  const big = (bytes: number): SharePayload => ({ left: { name: 'a', content: 'x'.repeat(bytes) }, right: { name: 'b', content: '' }, mode: 'text' });
+  it('refuses a link that inflates past SHARE_MAX_BYTES (a decompression bomb) and stops early', async () => {
+    const hash = await encodeShare(big(SHARE_MAX_BYTES + 1024));
+    expect(hash.length).toBeLessThan(200_000); // ~1000:1, so a short link
+    await expect(decodeShare(hash)).rejects.toMatchObject({ code: 'malformed' });
+  });
+  it('still opens a large link under the limit', async () => {
+    const r = await decodeShare(await encodeShare(big(1024 * 1024)));
+    expect(r.left.content.length).toBe(1024 * 1024);
   });
 });
