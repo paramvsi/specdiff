@@ -10,7 +10,8 @@ Owner asleep. Claude runs self-paced loops: audit → fix → commit, then enhan
 - Every fix: a failing check first where it is a bug, then the fix, then the passing check, logged below with the commit hash.
 
 ## Morning decisions
-_(none yet)_
+- **M-1 (row 12):** with `--allow-external-refs`, should the CLI also follow *relative* `$ref`s found inside a fetched remote file (resolved against that file's URL)? Today they stay unresolved. Default kept: no (smaller network reach).
+- **M-2 (row 3):** integers beyond 2^53 lose precision in JSON/YAML mode. Options: (a) leave, (b) flag "number too large to compare exactly" as a warning, (c) compare such numbers by their source text. Suggest (b).
 
 ## Log
 | # | Time | Area | Finding | Evidence | Fix / commit |
@@ -24,3 +25,6 @@ _(none yet)_
 | 7 | 00:28 | core · report generator (OUT-11) | `generator.version` hard-coded to `0.0.0` in every report, including the published 0.1.0 | new test failing before, 17/17 after; app start-up JS 175.0 kB unchanged | `ad3fbdb` |
 | 8 | 00:20 | research · OpenAPI 3.2 (VW-01, A05) | 3.2 adds `query` and `additionalOperations` ([OAI 3.2 release](https://newreleases.io/project/github/OAI/OpenAPI-Specification/release/3.2.0), [learn.openapis.org](https://learn.openapis.org/specification/http-methods)). Core handled both; the Viewer and the HAR consumer filter dropped `additionalOperations` | 2 new tests failing before, passing after | `ace1ea4` |
 | 9 | 00:20 | process note | DOM tests (viewer, ui, app) must run from the repo root (`vitest.config.ts` projects give them jsdom); run from a package dir they fail on `localStorage` | 14 viewer-ui failures from packages/viewer, 0 from root | n/a |
+| 10 | 00:24 | cli · inputs (IN-12) | Sibling scan ran for every spec with or without an external `$ref`; a dangling symlink or unreadable folder beside the input crashed the CLI; from ~ or /tmp it read and served unrelated files; git diff driver scanned git's temp folder | 2 new tests failing (ENOENT) before, 15/15 after; built CLI smoke test | `a7df01e` |
+| 11 | 00:24 | cli · serve | Local UI: 127.0.0.1 only, random 128-bit session token, no-store. OK | read | no change |
+| 12 | 00:24 | cli · remote refs | `--allow-external-refs` follows only absolute http(s) refs inside fetched files; a relative ref inside a remote file is left unresolved (reported as unresolved, not fetched) | read | noted, not changed: fetching relative-to-remote URLs widens network reach; owner call → Morning decisions |
