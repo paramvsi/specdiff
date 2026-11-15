@@ -16,7 +16,8 @@ export function EmptyHistoryState({ onNewComparison, onTrySample, className, foo
   return (
     <EmptyState
       className={className}
-      icon={<Clock size={24} />}
+      size="lg"
+      icon={<Clock size={30} />}
       footer={footer}
       title="No comparisons yet"
       actions={

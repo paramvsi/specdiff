@@ -34,3 +34,15 @@
 .footer {
   margin-top: var(--sd-space-4);
 }
+.lg {
+  gap: 14px;
+}
+.lg .title {
+  font-size: 22px;
+  letter-spacing: -0.4px;
+}
+.lg .body {
+  max-width: 46ch;
+  font-size: 15px;
+  line-height: 1.6;
+}

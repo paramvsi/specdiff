@@ -13,6 +13,8 @@ export interface EmptyStateProps {
   /** Optional content under the actions (a setting, a note). */
   footer?: ReactNode | undefined;
   className?: string | undefined;
+  /** `lg`: a page-level empty state (A-11 History: 22 px title, 15 px body). */
+  size?: 'md' | 'lg' | undefined;
 }
 
 /** Centred empty/identical state: icon, title, one line, actions. */
@@ -24,10 +26,11 @@ export function EmptyState({
   actions,
   footer,
   className,
+  size = 'md',
 }: EmptyStateProps) {
   const H = `h${level}` as const;
   return (
-    <div className={cx(css.root, className)}>
+    <div className={cx(css.root, size === 'lg' && css.lg, className)}>
       {icon ? (
         <span className={css.icon} aria-hidden="true">
           {icon}
