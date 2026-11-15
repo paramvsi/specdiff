@@ -1,0 +1,44 @@
+.files {
+  display: flex;
+  align-items: center;
+  gap: var(--sd-space-3);
+  min-width: 0;
+}
+.arrow {
+  color: var(--sd-muted);
+  flex: none;
+}
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sd-space-2);
+}
+.search {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sd-space-2);
+  height: 40px;
+  padding: 0 var(--sd-space-2) 0 var(--sd-space-3);
+  border: 1px solid var(--sd-line);
+  border-radius: var(--sd-radius-md);
+  background: var(--sd-surface);
+  color: var(--sd-muted);
+  font-size: 13.5px;
+  cursor: pointer;
+}
+.search:hover {
+  background: var(--sd-raised);
+}
+@media (max-width: 1023px) {
+  .searchLabel {
+    display: none;
+  }
+  .files :global(*) {
+    max-width: 22ch;
+  }
+}
+@media (max-width: 639px) {
+  .files {
+    display: none;
+  }
+}

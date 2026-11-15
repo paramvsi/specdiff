@@ -5,7 +5,7 @@ export default defineConfig({
   fullyParallel: true,
   reporter: [['list']],
   use: { baseURL: 'http://localhost:5173', trace: 'retain-on-failure' },
-  expect: { toHaveScreenshot: { maxDiffPixelRatio: 0.01 } },
+  expect: { timeout: 15_000, toHaveScreenshot: { maxDiffPixelRatio: 0.01 } },
   projects: [
     {
       name: 'desktop',

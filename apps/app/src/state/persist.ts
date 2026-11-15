@@ -18,14 +18,24 @@ export function summarise(r: CompareResult): Summary {
   return { breaking: 0, possibly: 0, safe: 0, docs: 0, total: 0, byArea: {} };
 }
 
-export async function saveHistory(before: Source, after: Source, r: CompareResult): Promise<HistoryEntry> {
+export async function saveHistory(
+  before: Source,
+  after: Source,
+  r: CompareResult,
+): Promise<HistoryEntry> {
   if ('kind' in r) throw new Error('not a result');
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
   const entry: HistoryEntry = {
-    id, createdAt: now, openedAt: now, pinned: false, mode: r.mode,
-    before: { name: before.name, size: before.size }, after: { name: after.name, size: after.size },
-    summary: summarise(r), payloadRef: id,
+    id,
+    createdAt: now,
+    openedAt: now,
+    pinned: false,
+    mode: r.mode,
+    before: { name: before.name, size: before.size },
+    after: { name: after.name, size: after.size },
+    summary: summarise(r),
+    payloadRef: id,
   };
   await set(id, { before, after, mode: r.mode }, payloads);
   await set(id, entry, history);
@@ -34,14 +44,20 @@ export async function saveHistory(before: Source, after: Source, r: CompareResul
 
 export async function listHistory(): Promise<HistoryEntry[]> {
   const all = (await entries<string, HistoryEntry>(history)).map(([, v]) => v);
-  return all.sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.openedAt.localeCompare(a.openedAt));
+  return all.sort(
+    (a, b) => Number(b.pinned) - Number(a.pinned) || b.openedAt.localeCompare(a.openedAt),
+  );
 }
-export const loadPayload = (ref: string) => get<{ before: Source; after: Source; mode: string }>(ref, payloads);
+export const loadPayload = (ref: string) =>
+  get<{ before: Source; after: Source; mode: string }>(ref, payloads);
 export async function updateEntry(id: string, patch: Partial<HistoryEntry>) {
   const e = await get<HistoryEntry>(id, history);
   if (e) await set(id, { ...e, ...patch }, history);
 }
-export async function deleteEntry(id: string) { await del(id, history); await del(id, payloads); }
+export async function deleteEntry(id: string) {
+  await del(id, history);
+  await del(id, payloads);
+}
 export async function clearHistory() {
   for (const [k] of await entries(history)) await del(k, history);
   for (const [k] of await entries(payloads)) await del(k, payloads);

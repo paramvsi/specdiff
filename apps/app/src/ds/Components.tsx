@@ -337,10 +337,26 @@ function Showcase() {
         <Tabs
           label="Template"
           items={[
-            { value: 'release', label: 'Release notes', content: <p className={css.p}>Release notes for 2.0.0.</p> },
-            { value: 'kac', label: 'Keep a Changelog', content: <p className={css.p}>## [2.0.0] · Changed</p> },
-            { value: 'slack', label: 'Slack message', content: <p className={css.p}>Payments API 2.0.0 is out.</p> },
-            { value: 'pr', label: 'PR comment', content: <p className={css.p}>3 breaking changes.</p> },
+            {
+              value: 'release',
+              label: 'Release notes',
+              content: <p className={css.p}>Release notes for 2.0.0.</p>,
+            },
+            {
+              value: 'kac',
+              label: 'Keep a Changelog',
+              content: <p className={css.p}>## [2.0.0] · Changed</p>,
+            },
+            {
+              value: 'slack',
+              label: 'Slack message',
+              content: <p className={css.p}>Payments API 2.0.0 is out.</p>,
+            },
+            {
+              value: 'pr',
+              label: 'PR comment',
+              content: <p className={css.p}>3 breaking changes.</p>,
+            },
           ]}
         />
       </Block>
@@ -444,7 +460,12 @@ function Showcase() {
           </Drawer>
           <Menu
             trigger={
-              <Button variant="secondary" iconOnly icon={<MoreHorizontal />} aria-label="More actions" />
+              <Button
+                variant="secondary"
+                iconOnly
+                icon={<MoreHorizontal />}
+                aria-label="More actions"
+              />
             }
             items={[
               { label: 'Copy link', icon: <Copy />, hint: '⌘L' },

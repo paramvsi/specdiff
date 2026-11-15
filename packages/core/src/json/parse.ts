@@ -16,6 +16,7 @@ export function jsonPathKey(parent: string, key: string | number): string {
 }
 
 function hintFor(code: string, message: string): string {
+  if (code === 'MISSING_CHAR' || /end with a|flow (map|sequence|collection)|missing/i.test(message)) return 'A bracket, brace or quote is not closed. Look for a missing ] } or " near here.';
   if (code === 'BAD_INDENT' || /indent/i.test(message)) return 'Check the indentation on this line: it must line up with its siblings, using spaces, not tabs.';
   if (code === 'MISSING_CHAR' || /flow/i.test(message)) return 'A bracket, brace or quote is not closed. Look for a missing ] } or " near here.';
   if (code === 'TAB_AS_INDENT') return 'YAML does not allow tabs for indentation. Replace them with spaces.';

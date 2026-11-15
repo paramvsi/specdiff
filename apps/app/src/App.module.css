@@ -1,0 +1,32 @@
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--sd-ground);
+  color: var(--sd-ink);
+}
+.main {
+  flex: 1;
+  width: 100%;
+  max-width: calc(var(--sd-layout-max) + 2 * var(--sd-space-10));
+  margin: 0 auto;
+  padding: var(--sd-space-8) var(--sd-space-10) var(--sd-space-12);
+  outline: none;
+}
+.skip {
+  position: absolute;
+  left: -9999px;
+  top: var(--sd-space-2);
+  z-index: 10;
+  background: var(--sd-surface);
+  padding: var(--sd-space-2) var(--sd-space-3);
+  border-radius: var(--sd-radius-sm);
+}
+.skip:focus {
+  left: var(--sd-space-2);
+}
+@media (max-width: 639px) {
+  .main {
+    padding: var(--sd-space-4);
+  }
+}

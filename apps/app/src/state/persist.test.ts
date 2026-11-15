@@ -1,8 +1,25 @@
 import { expect, it } from 'vitest';
-import { clearHistory, deleteEntry, listHistory, loadPayload, saveHistory, updateEntry } from './persist';
+import {
+  clearHistory,
+  deleteEntry,
+  listHistory,
+  loadPayload,
+  saveHistory,
+  updateEntry,
+} from './persist';
 import type { CompareResult } from '../worker/protocol';
 
-const r: CompareResult = { mode: 'text', detected: 'text', text: { rows: [], blocks: [0], stats: { added: 1, removed: 0, changed: 2 }, filters: [], identical: false } };
+const r: CompareResult = {
+  mode: 'text',
+  detected: 'text',
+  text: {
+    rows: [],
+    blocks: [0],
+    stats: { added: 1, removed: 0, changed: 2 },
+    filters: [],
+    identical: false,
+  },
+};
 const src = (name: string) => ({ name, content: 'x', size: 1 });
 
 it('saves, pins, lists, deletes and clears history', async () => {

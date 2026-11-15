@@ -11,7 +11,12 @@ export type DiffTheme = 'default' | 'high-contrast';
 export type Screen = 'compare' | 'parsing' | 'result' | 'history' | 'settings' | 'saved' | 'unlock';
 export type Side = 'before' | 'after';
 
-export interface Settings { theme: Theme; diffTheme: DiffTheme; config: ConfigInput; userName: string }
+export interface Settings {
+  theme: Theme;
+  diffTheme: DiffTheme;
+  config: ConfigInput;
+  userName: string;
+}
 
 export const STEPS: Step[] = ['detect', 'parse', 'resolve', 'normalise', 'compare'];
 
@@ -36,12 +41,20 @@ interface State {
   setSettings: (s: Partial<Settings>) => void;
   compare: () => Promise<void>;
   cancel: () => void;
-  decide: (fingerprint: string, d: { decision: 'accepted' | 'rejected'; path: string; ruleId?: string; note?: string } | null) => void;
+  decide: (
+    fingerprint: string,
+    d: { decision: 'accepted' | 'rejected'; path: string; ruleId?: string; note?: string } | null,
+  ) => void;
   setDecisions: (d: DecisionsFile) => void;
   toggleViewed: (id: string) => void;
 }
 
-export const defaultSettings: Settings = { theme: 'system', diffTheme: 'default', config: {}, userName: '' };
+export const defaultSettings: Settings = {
+  theme: 'system',
+  diffTheme: 'default',
+  config: {},
+  userName: '',
+};
 
 export const useApp = create<State>((set, get) => ({
   screen: 'compare',
@@ -59,11 +72,18 @@ export const useApp = create<State>((set, get) => ({
   setSource: (side, s) => set({ [side]: s } as Pick<State, Side>),
   setText: (side, content) => {
     const prev = get()[side];
-    set({ [side]: { name: prev?.name ?? (side === 'before' ? 'Before' : 'After'), content, size: new Blob([content]).size } } as Pick<State, Side>);
+    set({
+      [side]: {
+        name: prev?.name ?? (side === 'before' ? 'Before' : 'After'),
+        content,
+        size: new Blob([content]).size,
+      },
+    } as Pick<State, Side>);
   },
   swap: () => set((s) => ({ before: s.after, after: s.before })),
   setMode: (mode) => set({ mode }),
-  updateConfig: (fn) => set((s) => ({ settings: { ...s.settings, config: fn(s.settings.config) } })),
+  updateConfig: (fn) =>
+    set((s) => ({ settings: { ...s.settings, config: fn(s.settings.config) } })),
   setSettings: (p) => set((s) => ({ settings: { ...s.settings, ...p } })),
   compare: async () => {
     const { before, after, mode, settings } = get();
@@ -75,26 +95,41 @@ export const useApp = create<State>((set, get) => ({
     set({ job, progress: {}, error: null, screen: 'parsing', viewed: {} });
     try {
       const result = await job.promise;
-      set({ result, job: null, screen: 'result' });
+      set({ result, job: null, screen: 'kind' in result ? 'compare' : 'result' });
       if (!('kind' in result)) void saveHistory(before, after, result).catch(() => {});
     } catch (e) {
-      if (e instanceof DOMException && e.name === 'AbortError') { set({ job: null, screen: 'compare' }); return; }
+      if (e instanceof DOMException && e.name === 'AbortError') {
+        set({ job: null, screen: 'compare' });
+        return;
+      }
       set({ job: null, error: e instanceof Error ? e.message : String(e), screen: 'compare' });
     }
   },
-  cancel: () => { get().job?.cancel(); set({ job: null, screen: 'compare' }); },
+  cancel: () => {
+    get().job?.cancel();
+    set({ job: null, screen: 'compare' });
+  },
   decide: (fp, d) =>
     set((s) => {
       const decisions = { ...s.decisions.decisions };
       if (d) {
         decisions[fp] = {
-          decision: d.decision, path: d.path, at: new Date().toISOString(),
-          ...(d.ruleId ? { ruleId: d.ruleId } : {}), ...(d.note ? { note: d.note } : {}),
+          decision: d.decision,
+          path: d.path,
+          at: new Date().toISOString(),
+          ...(d.ruleId ? { ruleId: d.ruleId } : {}),
+          ...(d.note ? { note: d.note } : {}),
           ...(s.settings.userName ? { by: s.settings.userName } : {}),
         };
       } else delete decisions[fp];
       return { decisions: { version: 1, decisions } };
     }),
   setDecisions: (decisions) => set({ decisions }),
-  toggleViewed: (id) => set((s) => { const v = { ...s.viewed }; if (v[id]) delete v[id]; else v[id] = true; return { viewed: v }; }),
+  toggleViewed: (id) =>
+    set((s) => {
+      const v = { ...s.viewed };
+      if (v[id]) delete v[id];
+      else v[id] = true;
+      return { viewed: v };
+    }),
 }));
