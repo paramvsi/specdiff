@@ -38,3 +38,12 @@ Claude Code adds rows here when it takes a default without the owner.
 
 | # | Decision | Phase | Why |
 |---|---|---|---|
+| B-1 | npm: `@specdiff/*` scope; CLI package `specdiff-cli` with bin `specdiff` (D-4) | P0 | `specdiff` on npm is taken (another OpenAPI diff tool, v0.1.1). Owner ruling 2026-11-15 |
+| B-2 | The designs' `request-param-max-decreased` (P) is not a rule; `limit` max lowered is `request-param-constraint-tightened` (B). Example data is now 4 breaking, 1 possibly, 14 safe, 9 docs; rule counts on screens use the real catalogue count | P0 | Severity law rule 1. Owner ruling 2026-11-15 |
+| B-3 | Visual tests: each screen is compared by eye against `design/screens/`; after approval Playwright stores its own baseline | P0 | JPG renders cannot be pixel-matched. Owner ruling 2026-11-15 |
+| B-4 | Owner asked for all phases end to end without stopping. Spikes D-2/D-3 take the suggested default and are recorded here; publishing, pushing, Netlify and domain still wait for the owner | P0 | Owner instruction 2026-11-15 |
+| B-5 | TypeScript 6.0.3 and ESLint 9.39.5 instead of the newest majors | P0 | Peer ranges (see LIBRARIES-LOCK) |
+| B-6 | Share links use `deflateRaw` (docs/07 §5), not `deflate` (docs/04) | P0 | docs/07 is the more specific spec |
+| B-7 | `decisions.json` `by` comes from an optional "Your name" setting, empty by default | P0 | No accounts |
+| B-8 | Version bump for possibly-breaking only: minor | P0 | Not specified; conservative |
+| B-9 | Breakpoints from the PDF: tree 240–300 px; tablet 640–1023 px collapses the tree to a drawer | P0 | PDF wins over docs/03 |

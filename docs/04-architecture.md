@@ -55,7 +55,7 @@ UI: summary · explorer · detail · raw diff (location links both ways) · revi
 - Lists over a few hundred rows use TanStack Virtual.
 - The diff renderer, Markdown pipeline, tree-sitter grammars and the Viewer are separate lazy chunks.
 
-## Budgets (enforced in CI by size-limit)
+## Budgets (enforced by size-limit in `pnpm verify` and the Netlify build)
 
 | Target | Budget |
 |---|---|

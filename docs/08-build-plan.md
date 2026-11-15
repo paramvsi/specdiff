@@ -84,5 +84,5 @@ After **every phase**: `pnpm verify` green (lint, typecheck, unit, build, size, 
 - Size budgets pass; a 10 MB spec stays responsive.
 - Netlify site connected and a deploy preview checked on phone and desktop; domain and package names confirmed (`docs/10`).
 - npm packages and the Maven artifact published at 1.0.0 (**only after the owner says so**).
-- README with a demo GIF, CI badge, licence; CONTRIBUTING and a "good first issue" set.
+- README with a demo GIF, licence; CONTRIBUTING and a "good first issue" set.
 - Launch posts drafted for the owner: GitHub release, LinkedIn, Hacker News "Show HN", r/webdev, dev.to.

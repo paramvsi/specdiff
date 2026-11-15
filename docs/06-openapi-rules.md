@@ -1,6 +1,6 @@
 # 06 · OpenAPI rule catalogue
 
-Severity: **B** breaking · **P** possibly breaking · **S** safe · **D** docs only. Presets: **W** = same severity in both presets; **K → B** = raised to breaking under the SDK preset (Wire keeps the listed severity). This matches the Rules and settings design (A-12).
+Severity: **B** breaking · **P** possibly breaking · **S** safe · **D** docs only. Presets: **W** = same severity in both presets; **K → B** = raised to breaking under the SDK preset (Wire keeps the listed severity). The A-12 design shows 58 rules; this catalogue is the source of truth (docs/10 B-2).
 
 Every rule needs: ID, default severity, direction (request/response/both), preset, explanation template (who it breaks, what they will see), fix template, and fixtures in `fixtures/rules/<id>/` (`before.yaml`, `after.yaml`, `expected.json`). The website's rules reference (WEB-04) is generated from these.
 
@@ -17,7 +17,7 @@ Apply this, and write each rule's severity from it, not from intuition:
 
 ## Decision D-1: OpenAPI Changes Model
 
-oasdiff publishes the **OpenAPI Changes Model** (Apache-2.0): 681 named changes with direction, effect, guards and derived severity, plus all 15,255 possible edits (github.com/oasdiff/openapi-changes-model). Default plan: use it as the coverage checklist and test oracle. Map each Specdiff rule to the model's change names in `fixtures/rules/<id>/expected.json` (`"modelRefs": [...]`), and add a CI report of model changes with no Specdiff rule. Confirm with the owner before copying the model file into the repo (licence notice needed).
+oasdiff publishes the **OpenAPI Changes Model** (Apache-2.0): 681 named changes with direction, effect, guards and derived severity, plus all 15,255 possible edits (github.com/oasdiff/openapi-changes-model). Default plan: use it as the coverage checklist and test oracle. Map each Specdiff rule to the model's change names in `fixtures/rules/<id>/expected.json` (`"modelRefs": [...]`), and add a local coverage report (`pnpm model:coverage`) of model changes with no Specdiff rule. Confirm with the owner before copying the model file into the repo (licence notice needed).
 
 ## Endpoints and operations
 

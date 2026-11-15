@@ -47,7 +47,7 @@ Home page with a live, animated demo, before/after slider, feature grid, Viewer 
 - **OpenAPI**: semantic diff of Swagger 2.0 and OpenAPI 3.0/3.1/3.2; severity per change; explanation and fix; version-bump check; shared-schema dedup; Wire/SDK strictness presets; SDK-impact view (Beta); "changes that affect me" filter from operationIds or a HAR file.
 - **Review**: accept or reject each change with a note; decisions saved to `.specdiff/decisions.json`, which the CLI and pre-commit hook respect; "mark as viewed" progress.
 - **Output**: changelog templates, exports (Markdown, JSON, HTML, JSON Patch, Merge Patch, RSS), share links (optionally passphrase-locked), local history, saved sources that re-check a URL on each visit.
-- **Rules and settings**: presets, per-rule severity, ignore paths, regex text filters, diff options, themes; all stored in one `.specdiff.yaml` shared with the CLI and Action.
+- **Rules and settings**: presets, per-rule severity, ignore paths, regex text filters, diff options, themes; all stored in one `.specdiff.yaml` shared with the CLI.
 
 ### 4.3 Viewer (Swagger UI replacement)
 A modern API reference from any OpenAPI/Swagger file: overview, endpoint and schema pages, search across fields, code samples, Try it with auth, CORS guidance. Plus what no free renderer does: **version timeline, New/Changed/Breaking/Deprecated badges, per-endpoint history, "What changed for me?", and a warning when a Try it request would fail on the newer version.**
