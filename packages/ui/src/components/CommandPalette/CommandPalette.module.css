@@ -138,3 +138,12 @@
     transform: translate(-50%, 8px);
   }
 }
+/* Touch screens: the input itself is the 44 px target; the row keeps its height. */
+@media (pointer: coarse) {
+  .inputRow {
+    padding-block: 4px;
+  }
+  .input {
+    min-height: 44px;
+  }
+}

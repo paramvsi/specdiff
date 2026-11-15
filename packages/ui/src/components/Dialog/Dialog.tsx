@@ -1,6 +1,6 @@
 import * as RadixDialog from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
-import type { ReactElement, ReactNode } from 'react';
+import { useCallback, useRef, useState, type ReactElement, type ReactNode } from 'react';
 import { cx } from '../../internal/cx';
 import { usePortalContainer } from '../../internal/portal';
 import { Button } from '../Button/Button';
@@ -37,6 +37,20 @@ export function Dialog({
   icon,
 }: DialogProps) {
   const container = usePortalContainer();
+  // A body that overflows (e.g. a long list on a phone) becomes a named, focusable region so it can
+  // be scrolled from the keyboard (WCAG 2.1.1; axe scrollable-region-focusable). Bodies that fit add
+  // no tab stop.
+  const [scrolls, setScrolls] = useState(false);
+  const observer = useRef<ResizeObserver | null>(null);
+  const bodyRef = useCallback((el: HTMLDivElement | null) => {
+    observer.current?.disconnect();
+    observer.current = null;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const check = () => setScrolls(el.scrollHeight > el.clientHeight + 1);
+    check();
+    observer.current = new ResizeObserver(check);
+    observer.current.observe(el);
+  }, []);
   return (
     <RadixDialog.Root
       {...(open !== undefined ? { open } : {})}
@@ -65,7 +79,11 @@ export function Dialog({
               </RadixDialog.Close>
             )}
           </div>
-          {children ? <div className={css.body}>{children}</div> : null}
+          {children ? (
+            <div ref={bodyRef} className={css.body} {...(scrolls ? { tabIndex: 0, role: 'region', 'aria-label': title } : {})}>
+              {children}
+            </div>
+          ) : null}
           {actions ? <div className={css.actions}>{actions}</div> : null}
         </RadixDialog.Content>
       </RadixDialog.Portal>
