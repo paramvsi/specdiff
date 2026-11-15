@@ -200,9 +200,14 @@ function DiffTab({
     if (linked.current) return;
     linked.current = true;
     const id = readChangeHash();
-    const i = id ? visible.findIndex((c) => c.id === id) : -1;
-    if (i >= 0) go(i);
-  }, [visible, go]);
+    if (!id || !visible.some((c) => c.id === id)) return;
+    useNav.getState().set({ changeId: id });
+    requestAnimationFrame(() => {
+      const el = rowRefs.current.get(id);
+      el?.scrollIntoView({ block: 'nearest' });
+      el?.focus({ preventScroll: true });
+    });
+  }, [visible]);
   useCommand(
     'copy-link',
     useCallback(() => {

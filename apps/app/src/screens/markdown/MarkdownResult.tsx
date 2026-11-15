@@ -5,7 +5,7 @@ import type { BlockStatus, MdBlock, MdDiff } from '@specdiff/core/markdown';
 import { diffText } from '@specdiff/core/text';
 import { IdenticalState, SegmentedControl, Tooltip, useToast } from '@specdiff/ui';
 import * as icons from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useCommand } from '../../shell/commands';
 import { changeLink, focusChange, readChangeHash } from '../../shell/nav';
 import { useApp } from '../../state/store';
@@ -43,7 +43,13 @@ export default function MarkdownResult() {
   const { toast } = useToast();
   const md = result && 'markdown' in result ? result.markdown : null;
   const [view, setView] = useState<View>(memo.view);
-  const [current, setCurrent] = useState(-1);
+  // X-12: start on the block named in the URL hash (#change=m-<n>), if it changed.
+  const [current, setCurrent] = useState(() => {
+    const id = readChangeHash();
+    const i = id?.startsWith('m-') ? Number(id.slice(2)) : -1;
+    const changedNow = md ? md.blocks.map((b, k) => (b.status === 'same' ? -1 : k)).filter((k) => k >= 0) : [];
+    return changedNow.indexOf(i);
+  });
   const changed = useMemo(
     () => (md ? md.blocks.map((b, i) => (b.status === 'same' ? -1 : i)).filter((i) => i >= 0) : []),
     [md],
@@ -85,15 +91,14 @@ export default function MarkdownResult() {
   const at = current >= 0 ? changed[current] : changed[0];
   useCommand('mark-viewed', useCallback(() => { if (at !== undefined) toggleViewed(changeIdOf(at)); }, [at, toggleViewed]));
   useCommand('copy-link', useCallback(() => { if (at !== undefined) void navigator.clipboard?.writeText(changeLink(changeIdOf(at))).then(() => toast({ title: 'Link to this change copied' })); }, [at, toast]));
-  const linked = useRef(false);
   useEffect(() => {
-    if (linked.current) return;
-    linked.current = true;
     const id = readChangeHash();
     const i = id?.startsWith('m-') ? Number(id.slice(2)) : -1;
-    const k = changed.indexOf(i);
-    if (k >= 0) { setCurrent(k); jump(i); }
-  }, [changed, jump]);
+    if (i < 0) return;
+    const el = document.getElementById(blockId(i));
+    el?.scrollIntoView({ block: 'center' });
+    el?.focus({ preventScroll: true });
+  }, []);
 
   if (!md || !result) return null;
   if (!changed.length) return <IdenticalState ignoredLines={0} />;

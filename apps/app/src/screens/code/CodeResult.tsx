@@ -3,7 +3,7 @@ import type { CodeDiff, CodeItem, CodeStatus } from '@specdiff/core/code';
 import type { Row } from '@specdiff/core/text';
 import { BetaLabel, Button, Checkbox, IdenticalState, SegmentedControl, useToast } from '@specdiff/ui';
 import * as icons from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useCommand } from '../../shell/commands';
 import { changeLink, focusChange, readChangeHash } from '../../shell/nav';
 import { useApp } from '../../state/store';
@@ -62,7 +62,12 @@ const itemId = (i: CodeItem) => `k-${i.name}`;
 function Structural({ diff, rows }: { diff: CodeDiff; rows: Row[] }) {
   const { before, after, viewed, toggleViewed } = useApp();
   const { toast } = useToast();
-  const [cur, setCur] = useState(0);
+  // X-12: start on the change named in the URL hash, if any.
+  const [cur, setCur] = useState(() => {
+    const id = readChangeHash();
+    const k = id ? diff.items.filter((i) => i.status !== 'same' && i.status !== 'formatting').findIndex((i) => itemId(i) === id) : -1;
+    return Math.max(0, k);
+  });
   const [view, setView] = useState<'structural' | 'text'>('structural');
   const [hideRenames, setHideRenames] = useState(true);
   const [hideComments, setHideComments] = useState(false);
@@ -107,14 +112,10 @@ function Structural({ diff, rows }: { diff: CodeDiff; rows: Row[] }) {
   useCommand('prev-change', useCallback(() => goTo(cur - 1), [goTo, cur]));
   useCommand('mark-viewed', useCallback(() => { const i = listed[cur]; if (i) toggleViewed(itemId(i)); }, [listed, cur, toggleViewed]));
   useCommand('copy-link', useCallback(() => { const i = listed[cur]; if (i) void navigator.clipboard?.writeText(changeLink(itemId(i))).then(() => toast({ title: 'Link to this change copied' })); }, [listed, cur, toast]));
-  const linked = useRef(false);
   useEffect(() => {
-    if (linked.current) return;
-    linked.current = true;
     const id = readChangeHash();
-    const k = id ? listed.findIndex((i) => itemId(i) === id) : -1;
-    if (k >= 0) goTo(k);
-  }, [listed, goTo]);
+    if (id) document.getElementById(id)?.focus();
+  }, []);
   const seen = listed.filter((i) => viewed[itemId(i)]).length;
 
   return (
