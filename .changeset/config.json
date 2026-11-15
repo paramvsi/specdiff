@@ -1,0 +1,9 @@
+{
+  "$schema": "https://unpkg.com/@changesets/config@3.0.0/schema.json",
+  "changelog": "@changesets/cli/changelog",
+  "commit": false,
+  "fixed": [["@specdiff/core", "@specdiff/ui", "@specdiff/viewer", "@specdiff/embed", "@specdiff/react", "@specdiff/express", "specdiff-cli"]],
+  "access": "public",
+  "baseBranch": "main",
+  "ignore": ["@specdiff/app", "@specdiff/website"]
+}
