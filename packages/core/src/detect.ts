@@ -11,7 +11,8 @@ const CODE: Record<string, string> = {
 export interface Detected { mode: Mode; language?: string; specVersion?: string }
 
 export function detectMode(name: string, content: string): Detected {
-  const ext = name.toLowerCase().split('.').pop() ?? '';
+  // "client.ts (new)" or "README.md (PR)": ignore a trailing note in brackets.
+  const ext = name.toLowerCase().replace(/\s*\([^)]*\)$/, '').split('.').pop() ?? '';
   const head = content.slice(0, 4096);
   const oa = /^[\s{]*["']?(openapi|swagger)["']?\s*:\s*["']?(\d+\.\d+(?:\.\d+)?)/m.exec(head);
   if (oa) return { mode: 'openapi', specVersion: oa[2]! };

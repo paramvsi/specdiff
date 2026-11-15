@@ -1,4 +1,5 @@
 import type { Change, ConfigInput, Mode, Report } from '@specdiff/core';
+import type { CodeOutcome } from '@specdiff/core/code';
 import type { JsonDiff } from '@specdiff/core/json';
 import type { MdDiff } from '@specdiff/core/markdown';
 import type { TextDiff } from '@specdiff/core/text';
@@ -51,5 +52,6 @@ export type CompareResult =
     }
   | { mode: 'json' | 'yaml'; detected: Mode; json: JsonResultData; text: TextDiff }
   | { mode: 'markdown'; detected: Mode; markdown: MdDiff; text: TextDiff }
+  | { mode: 'code'; detected: Mode; code: CodeOutcome; language?: string; text: TextDiff }
   | { mode: 'openapi'; detected: Mode; report: Report; text: TextDiff }
   | ParseFailure;

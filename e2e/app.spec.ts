@@ -48,3 +48,20 @@ test('parse errors are pinned to a line', async ({ page }) => {
   await page.getByRole('button', { name: 'Compare', exact: true }).click();
   await expect(page.getByText(/Couldn't parse After: line 1/)).toBeVisible();
 });
+
+test('A-09 code sample shows a structural diff (Beta)', async ({ page }) => {
+  await page.goto('/app/?sample=code');
+  await expect(page.getByRole('heading', { name: /1 logic change/ })).toBeVisible();
+  await expect(page.getByText('Beta').first()).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'What changed' })).toBeVisible();
+  await expectAxeClean(page);
+});
+
+test('A-09 fallback: unsupported language shows a text diff with a notice', async ({ page }) => {
+  await page.goto('/app/');
+  await page.getByRole('textbox', { name: 'Before' }).fill('package main\nfunc a() {}\n');
+  await page.getByRole('textbox', { name: 'After' }).fill('package main\nfunc a(b int) {}\n');
+  await page.getByRole('combobox', { name: 'Compare as' }).selectOption('code');
+  await page.getByRole('button', { name: 'Compare', exact: true }).click();
+  await expect(page.getByText(/Structural diff supports TypeScript, JavaScript, Java and Python/)).toBeVisible();
+});

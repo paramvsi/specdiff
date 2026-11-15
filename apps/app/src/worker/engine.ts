@@ -4,6 +4,7 @@ import { detectMode, detectPair } from '@specdiff/core/detect';
 import { diffMarkdown } from '@specdiff/core/markdown';
 import { diffText } from '@specdiff/core/text';
 import type { CompareRequest, CompareResult, Progress } from './protocol';
+import { compareCode } from './code';
 import { compareStructured } from './structured';
 
 export async function runCompare(
@@ -33,7 +34,14 @@ export async function runCompare(
     onProgress({ step: 'compare', state: 'done' });
     return { mode: 'markdown', detected: pair.mode, markdown, text };
   }
-  // Text, and Code until its engine lands (P3).
+  if (mode === 'code') {
+    onProgress({ step: 'parse', state: 'running', detail: 'loading the grammar' });
+    const { language, outcome } = await compareCode(req.before.name, req.after.name, req.before.content, req.after.content);
+    onProgress({ step: 'parse', state: 'done', ...(language ? { detail: language } : {}) });
+    const text = diffText(req.before.content, req.after.content, config.text);
+    onProgress({ step: 'compare', state: 'done' });
+    return { mode: 'code', detected: pair.mode, code: outcome, text, ...(language ? { language } : {}) };
+  }
   onProgress({ step: 'parse', state: 'done' });
   onProgress({ step: 'compare', state: 'running' });
   const text = diffText(req.before.content, req.after.content, config.text);

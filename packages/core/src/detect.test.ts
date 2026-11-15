@@ -9,6 +9,7 @@ it('detects modes', () => {
   expect(detectMode('a.yml', 'a: 1').mode).toBe('yaml');
   expect(detectMode('README.md', 'hi').mode).toBe('markdown');
   expect(detectMode('a.ts', 'const a = 1;')).toEqual({ mode: 'code', language: 'typescript' });
+  expect(detectMode('client.ts (new)', 'const a = 1;')).toEqual({ mode: 'code', language: 'typescript' });
   expect(detectMode('log.txt', 'line one\nline two').mode).toBe('text');
   expect(detectMode('', 'name: x\nage: 2\n').mode).toBe('yaml');
 });

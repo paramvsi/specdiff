@@ -199,6 +199,6 @@ function lcs(xs: string[], ys: string[]): Set<string> {
 }
 
 export function languageFor(name: string): CodeLang | undefined {
-  const ext = name.toLowerCase().split('.').pop() ?? '';
+  const ext = name.toLowerCase().replace(/\s*\([^)]*\)$/, '').split('.').pop() ?? '';
   return ({ ts: 'typescript', mts: 'typescript', cts: 'typescript', tsx: 'tsx', js: 'javascript', jsx: 'javascript', mjs: 'javascript', cjs: 'javascript', java: 'java', py: 'python' } as Record<string, CodeLang>)[ext];
 }
