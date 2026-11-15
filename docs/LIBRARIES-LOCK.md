@@ -54,3 +54,7 @@ Pinning rule (docs/05): latest stable release public for at least 14 days, pinne
 | unified, remark-parse, remark-gfm, remark-rehype, rehype-sanitize, rehype-stringify | 11.0.5, 11.0.0, 4.0.1, 11.1.2, 6.0.0, 10.0.1 | 2026-11-15 | Markdown mode |
 | github-slugger | 2.0.0 | 2026-11-15 | Heading anchors (MD-06) |
 | @types/mdast, @types/hast | 4.0.4, 3.0.5 | 2026-11-15 | AST types (type-only, like the other @types) |
+| commander | 15.0.0 | 2026-11-15 | CLI arguments |
+| picocolors | 1.1.1 | 2026-11-15 | Terminal colours |
+| open | 11.0.4 | 2026-11-15 | Open the local UI |
+| sirv | 3.0.2 | 2026-11-15 | Static server for the local UI |
