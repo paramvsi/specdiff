@@ -1,0 +1,40 @@
+---
+layout: ../../layouts/Docs.astro
+title: "FAQ"
+description: "Answers about CORS errors, privacy, size limits, formats and running Specdiff in CI."
+lede: "Short answers to the questions people ask most."
+---
+
+## Is it really free?
+
+Yes. Specdiff is open source under the MIT licence. There are no accounts, plans or paid tiers.
+
+## Are my files uploaded anywhere?
+
+No. Files are read and compared in your browser. Share links carry the files after the `#`, which browsers never send to a server, and you can lock them with a passphrase. More in [Privacy](/docs/privacy/).
+
+## Why did loading a URL fail?
+
+Your browser fetches the URL itself, so the server has to allow cross-origin requests (CORS). If it doesn’t, the browser blocks the response and Specdiff shows a CORS error. You can:
+
+- download the file and drop it in instead,
+- use the raw file URL (GitHub file links are converted to raw links for you),
+- or run the [CLI](/docs/cli/), which reads files from disk or git and has no CORS rules.
+
+The Viewer’s Try it accepts an optional CORS proxy URL that you supply. Specdiff hosts none.
+
+## How large can a spec be?
+
+A 10 MB spec stays responsive: parsing and diffing run off the main thread. Above 10 MB the app warns you; above 25 MB it offers a text-only comparison. The CLI handles larger files.
+
+## Can I run it in CI?
+
+Yes. `npx specdiff-cli --ci` works in any CI: it prints the changelog and exits non-zero on breaking changes. A [pre-commit hook](/docs/pre-commit/) catches them before you push. Examples for GitLab CI, Jenkins and plain shell are in [CLI](/docs/cli/#use-in-any-ci).
+
+## Which formats does it support?
+
+Swagger 2.0 and OpenAPI 3.0, 3.1 and 3.2, JSON, YAML, Markdown and plain text. Code mode covers TypeScript, JavaScript, Java and Python, in Beta.
+
+## Does it work offline?
+
+Yes. The app is installable and keeps working without a connection once loaded.

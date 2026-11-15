@@ -23,5 +23,12 @@ export default defineConfig({
       url: 'http://localhost:5173/app/',
       reuseExistingServer: true,
     },
+    {
+      // Website (apps/website): static build served by astro preview. Website tests use absolute URLs.
+      command: 'pnpm --filter @specdiff/website build && pnpm --filter @specdiff/website exec astro preview --port 4321',
+      url: 'http://localhost:4321/',
+      reuseExistingServer: true,
+      timeout: 180_000,
+    },
   ],
 });

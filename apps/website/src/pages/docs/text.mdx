@@ -1,0 +1,31 @@
+---
+layout: ../../layouts/Docs.astro
+title: "Text"
+description: "Compare any two text files: split or unified, smart, word or character precision, and filters that mask noise."
+lede: "For any file, including ones Specdiff has no special mode for."
+---
+
+## Views and precision
+
+Split or unified view. Precision is Smart, Word or Char. Ignore whitespace, case or line endings. Unchanged regions collapse, with controls to expand them. Move between changes with the overview ruler or the keyboard.
+
+## Filters
+
+Regex filters mask noise on both sides before comparing: timestamps, request IDs, UUIDs. Masked text shows as `‹name›`, with a hit count per filter.
+
+```yaml title=".specdiff.yaml"
+text:
+  ignoreWhitespace: true
+  precision: word
+  filters:
+    - { name: Timestamps, pattern: '\d{4}-\d{2}-\d{2}T[\d:.]+Z', replace: '‹time›' }
+    - { name: Request IDs, pattern: 'req_[a-z0-9]{8,}', replace: '‹req-id›' }
+```
+
+## Transforms
+
+Sort lines, lowercase, trim and normalise line breaks before comparing.
+
+## Patches
+
+Paste a unified patch or `git diff` output to open it as a text comparison. Moved blocks are detected, with edits inside them highlighted.

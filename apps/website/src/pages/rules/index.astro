@@ -1,0 +1,51 @@
+---
+// W-03 Rules reference (WEB-04). Generated at build time from @specdiff/core (or docs/06 as fallback).
+import Base from '../../layouts/Base.astro';
+import SiteHeader from '../../components/SiteHeader.astro';
+import Footer from '../../components/Footer.astro';
+import Severity from '../../components/Severity.astro';
+import { Search } from 'lucide-react';
+import { areasOf, codeSegments, loadRules, sevOrder } from '../../lib/rules';
+import '../../styles/pages.css';
+
+const rules = loadRules();
+const areas = areasOf(rules);
+const count = (s: string) => rules.filter((r) => r.severity === s).length;
+const sevButtons: Array<[string, string, number]> = [
+  ['all', 'All', rules.length],
+  ...sevOrder.map((s): [string, string, number] => [s, s === 'breaking' ? 'Breaking' : s === 'possibly' ? 'Possibly' : s === 'safe' ? 'Safe' : 'Docs', count(s)]),
+];
+---
+<Base title="Breaking-change rules · Specdiff" description={`Every one of the ${rules.length} OpenAPI changes Specdiff can report, what it means for clients, and how to avoid it. Generated from the rules and fixtures the app uses.`}>
+  <SiteHeader current="rules" />
+  <main id="main" class="rules-main">
+    <h1 class="page-h1">Breaking-change rules</h1>
+    <p class="lede">Every change Specdiff can report, what it means for clients, and how to avoid it. Generated from the same rules and test fixtures the app uses.</p>
+    <div class="rules-tools">
+      <label class="search-box rules-search"><Search size={16} aria-hidden="true" /><input type="search" placeholder={`Search ${rules.length} rules`} aria-label="Search rules" data-rules-search /></label>
+      <div role="group" aria-label="Severity" class="chips">{sevButtons.map(([id, label, n]) => <button type="button" class="chip" data-sev={id} aria-pressed={id === 'all' ? 'true' : 'false'}>{label} <span class="chip-n">{n}</span></button>)}</div>
+    </div>
+    <div role="group" aria-label="Area" class="chips chips-area">{areas.map((a) => <button type="button" class="chip-sq" data-area={a} aria-pressed="false">{a}</button>)}</div>
+    <div class="table-wrap">
+      <table class="rules-table">
+        <caption class="sr-only">OpenAPI rules with their area and default severity</caption>
+        <thead><tr><th scope="col">Rule</th><th scope="col">What changed</th><th scope="col">Area</th><th scope="col">Default severity</th></tr></thead>
+        <tbody>
+          {rules.map((r) => (
+            <tr data-rule data-sev={r.severity ?? 'none'} data-area={r.area} data-text={`${r.id} ${r.title} ${r.change} ${r.area}`.toLowerCase()}>
+              <td><a class="rule-id" href={`/rules/${r.id}/`}>{r.id}</a></td>
+              <td class="rule-what">{codeSegments(r.change).map((s) => (s.code ? <code>{s.text}</code> : s.text))}</td>
+              <td class="rule-area">{r.area}</td>
+              <td><Severity sev={r.severity} /></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+    <p class="rules-count" role="status" data-rules-status>Showing {rules.length} of {rules.length}. Severities can be changed per project in <code>.specdiff.yaml</code>.</p>
+  </main>
+  <Footer />
+  <script>
+    import '../../scripts/rules-filter';
+  </script>
+</Base>

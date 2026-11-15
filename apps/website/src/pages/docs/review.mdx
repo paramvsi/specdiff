@@ -1,0 +1,41 @@
+---
+layout: ../../layouts/Docs.astro
+title: "Review decisions"
+description: "Accept or reject each change with a note. Decisions are saved to .specdiff/decisions.json and respected by the CLI and pre-commit hook."
+lede: "Decide on each change once, commit the decision, and let the CLI respect it."
+---
+import Callout from '../../components/Callout.astro';
+
+## Decide
+
+In the workspace, accept or reject each change and add a note. Press <kbd>A</kbd> to accept and <kbd>R</kbd> to reject. A progress count shows how many are left.
+
+## Save
+
+Decisions are keyed by a stable fingerprint of the change, so they survive re-runs and reformatting. Download them as `.specdiff/decisions.json` and commit the file:
+
+```json title=".specdiff/decisions.json"
+{
+  "version": 1,
+  "decisions": {
+    "7c1e…a94f": {
+      "decision": "accepted",
+      "ruleId": "response-property-removed",
+      "path": "components.schemas.Card › last4",
+      "note": "Removed in 2.0.0; announced in the 1.5 changelog",
+      "by": "paramvsi",
+      "at": "2026-11-14T09:12:00Z"
+    }
+  }
+}
+```
+
+`by` is filled from the optional “Your name” setting, and is empty by default.
+
+## How the CLI uses them
+
+- An **accepted** breaking change does not fail the run.
+- A **rejected** change always fails it.
+- A decision whose fingerprint no longer appears is reported as **stale** and ignored.
+
+<Callout>The pre-commit hook and any CI that runs `specdiff-cli --ci` read the same file. Point to another path with `decisions:` in [`.specdiff.yaml`](/docs/config/).</Callout>

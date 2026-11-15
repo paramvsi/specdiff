@@ -1,0 +1,35 @@
+---
+layout: ../../layouts/Docs.astro
+title: "Pre-commit hook"
+description: "Catch breaking API changes before they are committed with a pre-commit hook that runs specdiff-cli."
+lede: "Run the CLI on every commit that touches your spec."
+---
+import Callout from '../../components/Callout.astro';
+
+## With the pre-commit framework
+
+```yaml title=".pre-commit-config.yaml"
+repos:
+  - repo: local
+    hooks:
+      - id: specdiff
+        name: specdiff
+        entry: npx specdiff-cli --ci --fail-on breaking HEAD:openapi.yaml openapi.yaml
+        language: system
+        pass_filenames: false
+        files: openapi\.yaml$
+```
+
+`HEAD:openapi.yaml` is the last committed version; `openapi.yaml` is what you are about to commit.
+
+## Without a framework
+
+```sh title=".git/hooks/pre-commit"
+#!/bin/sh
+git diff --cached --quiet -- openapi.yaml && exit 0
+exec npx specdiff-cli HEAD:openapi.yaml openapi.yaml --ci --fail-on breaking
+```
+
+Make it executable with `chmod +x .git/hooks/pre-commit`.
+
+<Callout>The hook reads `.specdiff.yaml` and `.specdiff/decisions.json`. Accept a breaking change in the app, commit the decision, and the hook lets it through.</Callout>

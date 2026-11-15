@@ -8,11 +8,21 @@
     "typecheck": "ASTRO_TELEMETRY_DISABLED=1 astro check"
   },
   "dependencies": {
+    "@astrojs/mdx": "8.1.2",
+    "@astrojs/react": "7.1.2",
+    "@astrojs/sitemap": "3.7.4",
+    "@specdiff/core": "workspace:*",
     "@specdiff/ui": "workspace:*",
-    "astro": "7.4.4"
+    "astro": "7.4.4",
+    "lucide-react": "1.66.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "shiki": "4.5.0"
   },
   "devDependencies": {
     "@astrojs/check": "0.9.12",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
     "typescript": "6.0.3"
   }
 }

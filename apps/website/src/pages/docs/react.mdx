@@ -1,0 +1,27 @@
+---
+layout: ../../layouts/Docs.astro
+title: "React"
+description: "Render the version-aware Specdiff Viewer or a diff in a React app with @specdiff/react."
+lede: "Components that wrap the Viewer and the diff."
+---
+
+## Install
+
+```bash
+npm install @specdiff/react
+```
+
+## Viewer
+
+```tsx
+import { SpecdiffViewer } from '@specdiff/react'
+
+<SpecdiffViewer
+  url="/openapi.json"
+  compareWith="/openapi-1.5.json"
+/>
+```
+
+`compareWith` adds the change badges (New, Changed, Breaking, Deprecated) and the “What changed for me?” view. Load a whole timeline with the `versions.json` that [`specdiff-cli history`](/docs/cli/#viewer-timeline-history) writes.
+
+The Viewer follows light and dark mode, takes a brand colour and logo, and is themed with CSS variables.

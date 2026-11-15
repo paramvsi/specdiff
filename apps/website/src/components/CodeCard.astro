@@ -1,0 +1,8 @@
+---
+// A titled code block with a copy button (W-02, W-04). Highlighted with Shiki at build time when `lang` is set.
+import { Code } from 'astro:components';
+import { Copy } from 'lucide-react';
+interface Props { name: string; code: string; lang?: 'yaml' | 'json' | 'bash' | 'shell' | 'ts' | 'tsx' | 'html' | 'xml' | 'markdown' | 'groovy' | 'ini' }
+const { name, code, lang } = Astro.props;
+---
+<div class="codecard"><div class="codecard-head"><span>{name}</span><button type="button" class="copy-btn" aria-label={`Copy ${name}`} data-copy={code}><Copy size={14} aria-hidden="true" /></button></div>{lang ? <Code code={code} lang={lang} themes={{ light: 'github-light-default', dark: 'github-dark-default' }} defaultColor={false} /> : <pre tabindex="0">{code}</pre>}</div>

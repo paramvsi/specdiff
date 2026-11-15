@@ -1,0 +1,19 @@
+---
+layout: ../../layouts/Docs.astro
+title: "Code (Beta)"
+description: "Structure-aware comparison for TypeScript, JavaScript, Java and Python, with formatting-only changes collapsed."
+lede: "Code mode compares syntax trees, so formatting and moves stop hiding the real change. It is in Beta."
+---
+import Callout from '../../components/Callout.astro';
+
+## Languages
+
+TypeScript, JavaScript, Java and Python, parsed with tree-sitter in the browser. Each parser loads only when you need it.
+
+## What it does
+
+- Formatting-only changes collapse to “no logic change”.
+- Renamed and moved functions and methods are detected and labelled.
+- Meaning-preserving edits are hidden: argument order where arguments are named, number base, optional trailing commas. Toggles show renames and comment-only changes.
+
+<Callout type="warn">Other languages, or a file that fails to parse, fall back to text mode with a notice.</Callout>

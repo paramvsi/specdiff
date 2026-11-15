@@ -1,0 +1,28 @@
+---
+layout: ../../layouts/Docs.astro
+title: "Express and Fastify"
+description: "Serve the Specdiff Viewer at /docs from an Express or Fastify app."
+lede: "Middleware that serves the Viewer for your spec at /docs."
+---
+
+## Express
+
+```ts
+import express from 'express'
+import { specdiff } from '@specdiff/express'
+
+const app = express()
+app.use('/docs', specdiff({ spec: './openapi.yaml' }))
+```
+
+## Fastify
+
+```ts
+import Fastify from 'fastify'
+import { specdiffFastify } from '@specdiff/express'
+
+const app = Fastify()
+await app.register(specdiffFastify, { prefix: '/docs', spec: './openapi.yaml' })
+```
+
+Open `/docs` to see the Viewer. Settings come from `.specdiff.yaml`.

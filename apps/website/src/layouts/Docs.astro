@@ -1,0 +1,68 @@
+---
+// W-02 Docs page layout (WEB-03, WEB-05). Used as the `layout` of every MDX page in src/pages/docs.
+import type { MarkdownHeading } from 'astro';
+import { Search } from 'lucide-react';
+import Base from './Base.astro';
+import SiteHeader from '../components/SiteHeader.astro';
+import Footer from '../components/Footer.astro';
+import { docsNav, flatDocs, normalise } from '../lib/docs-nav';
+import { REPO } from '../lib/site';
+import '../styles/pages.css';
+
+interface Props {
+  frontmatter: { title: string; description: string; lede?: string };
+  headings?: MarkdownHeading[];
+  file?: string;
+}
+const { frontmatter, headings = [], file } = Astro.props;
+const here = normalise(Astro.url.pathname);
+const index = flatDocs.findIndex((d) => d.href === here);
+const current = flatDocs[index];
+// Prev/next skip pages outside /docs (rules, changelog).
+const inDocs = (i: number) => flatDocs[i] && flatDocs[i]!.href.startsWith('/docs/');
+let p = index - 1;
+while (p >= 0 && !inDocs(p)) p--;
+let n = index + 1;
+while (n < flatDocs.length && !inDocs(n)) n++;
+const prev = index >= 0 ? flatDocs[p] : undefined;
+const next = index >= 0 ? flatDocs[n] : undefined;
+const toc = headings.filter((h) => h.depth === 2 || h.depth === 3);
+const source = file ? file.slice(file.indexOf('apps/website/')) : undefined;
+---
+<Base title={`${frontmatter.title} · Specdiff docs`} description={frontmatter.description} ogType="article">
+  <SiteHeader current="docs" />
+  <main id="main" class="docs-main">
+    <div class="docs-side">
+      <label class="search-box"><Search size={15} aria-hidden="true" /><input type="search" placeholder="Search docs" aria-label="Search docs" aria-keyshortcuts="/" data-docs-search /><kbd aria-hidden="true">/</kbd></label>
+      <span class="sr-only" role="status" data-docs-search-status></span>
+      <nav aria-label="Documentation" class="docs-nav">
+        {docsNav.map((g) => (
+          <div class="docs-group" data-docs-group>
+            <h2>{g.title}</h2>
+            <ul>{g.links.map((l) => <li><a href={l.href} data-keywords={l.keywords ?? ''} aria-current={l.href === here ? 'page' : undefined}>{l.label}</a></li>)}</ul>
+          </div>
+        ))}
+      </nav>
+    </div>
+    <div class="docs-col">
+      <article class="docs-article">
+        <nav aria-label="Breadcrumb" class="crumbs"><a href="/docs/">Docs</a> / {current?.group ?? 'Docs'}</nav>
+        <h1 class="docs-h1">{frontmatter.title}</h1>
+        {frontmatter.lede && <p class="docs-lede">{frontmatter.lede}</p>}
+        <div class="prose"><slot /></div>
+        <nav class="pager" aria-label="Previous and next page">
+          {prev && inDocs(p) ? <a href={prev.href}><span>Previous</span><span>{prev.label}</span></a> : <span></span>}
+          {next && inDocs(n) ? <a class="next" href={next.href}><span>Next</span><span>{next.label}</span></a> : null}
+        </nav>
+      </article>
+    </div>
+    <div class="docs-toc-col">
+      <aside aria-label="On this page" class="docs-toc">
+        <h2>On this page</h2>
+        {toc.map((h) => <a class={`toc-link depth-${h.depth}`} href={`#${h.slug}`}>{h.text}</a>)}
+        {source && <a class="edit" href={`${REPO}/edit/main/${source}`}>Edit this page on GitHub</a>}
+      </aside>
+    </div>
+  </main>
+  <Footer />
+</Base>

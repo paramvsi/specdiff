@@ -1,0 +1,33 @@
+---
+layout: ../../layouts/Docs.astro
+title: "Script tag"
+description: "Embed the Specdiff Viewer in any page with one script tag and Specdiff.mount()."
+lede: "One script tag, no build step."
+---
+
+## Mount
+
+```html
+<div id="api"></div>
+<script src="…/@specdiff/embed"></script>
+<script type="module" src="./docs.js"></script>
+```
+
+```js title="docs.js"
+Specdiff.mount(document.getElementById('api'), {
+  url: '/openapi.json',
+  compareWith: '/openapi-1.5.json',
+  theme: 'auto',
+  brand: { color: '#c8f24a', logo: '/logo.svg' },
+})
+```
+
+| Option | What it does |
+|---|---|
+| `url` | The spec to render |
+| `compareWith` | An older version, for change badges |
+| `mode` | `viewer` (default) or `diff` |
+| `theme` | `light`, `dark` or `auto` |
+| `brand` | Brand colour and logo |
+
+Keeping the `mount` call in a file rather than an inline script works with a strict Content Security Policy.

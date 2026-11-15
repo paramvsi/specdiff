@@ -1,0 +1,7 @@
+---
+// Docs callout (W-02): tip (safe tint + check), info (added tint + triangle, as in the design), warn.
+import { Check, Info, TriangleAlert } from 'lucide-react';
+interface Props { type?: 'tip' | 'info' | 'warn' }
+const { type = 'tip' } = Astro.props;
+---
+<div class={`callout${type === 'tip' ? '' : ` callout-${type}`}`}>{type === 'tip' ? <Check size={16} aria-hidden="true" /> : type === 'info' ? <TriangleAlert size={16} aria-hidden="true" /> : <Info size={16} aria-hidden="true" />}<p><slot /></p></div>

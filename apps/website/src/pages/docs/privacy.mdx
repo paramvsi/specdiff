@@ -1,0 +1,27 @@
+---
+layout: ../../layouts/Docs.astro
+title: "Privacy"
+description: "Specdiff never uploads your files. What stays in your browser, what the share link carries, and what the site stores."
+lede: "Your files never leave your browser. There is no account and no server that receives content."
+---
+import Callout from '../../components/Callout.astro';
+
+## What happens to your files
+
+Files are read and compared in your browser, in background workers. Open the network panel while you compare: the spec is not sent anywhere.
+
+When you load a URL, your browser fetches it directly. If the server does not allow cross-origin requests, the load fails and Specdiff explains why; Specdiff runs no proxy. See [FAQ: CORS](/docs/faq/#why-did-loading-a-url-fail).
+
+## What is stored
+
+History, saved sources and settings are kept in your browser’s IndexedDB. You can delete single entries or clear everything from History and Settings. Nothing is synced.
+
+## Share links
+
+A share link carries the files after the `#`. Browsers never send that part of a URL to a server. Lock it with a passphrase and the content is encrypted in your browser (AES-GCM, key from PBKDF2); the passphrase never leaves it. See [Share links](/docs/share-links/).
+
+## AI
+
+Specdiff makes no AI calls. “Copy for LLM” copies text to your clipboard; what you do with it is up to you.
+
+<Callout>The website uses no cookies and does not track file content.</Callout>

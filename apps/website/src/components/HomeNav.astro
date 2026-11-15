@@ -1,0 +1,9 @@
+---
+// Floating rounded nav (Home v2). Compact on phones: logo + Open app + menu button (PhoneMenu island).
+import Logo from './Logo.astro';
+import ThemeToggle from './ThemeToggle.astro';
+import GithubMark from './GithubMark.astro';
+import PhoneMenu from '../islands/PhoneMenu';
+import { APP, GITHUB_PROFILE } from '../lib/site';
+---
+<header class="fnav"><div class="fnav-bar"><div class="fnav-left"><Logo /><nav aria-label="Main" class="fnav-links"><a href="#product">Product</a><a href="#viewer">Viewer</a><a href="#packages">Packages</a><a href="/docs/">Docs</a><a href="/rules/">Rules</a></nav></div><div class="fnav-right"><ThemeToggle /><a class="fnav-gh" href={GITHUB_PROFILE}><GithubMark />GitHub</a><a class="fnav-app" href={APP}>Open the app</a></div><div class="fnav-compact"><a class="fnav-app" href={APP}>Open app</a><div class="island-contents" data-island="phone-menu"><PhoneMenu /></div></div></div></header>

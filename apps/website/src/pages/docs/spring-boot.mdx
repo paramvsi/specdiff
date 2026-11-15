@@ -1,0 +1,23 @@
+---
+layout: ../../layouts/Docs.astro
+title: "Spring Boot"
+description: "Serve the Specdiff Viewer from a Spring Boot app at /specdiff with one dependency."
+lede: "Add one dependency and your app serves the Viewer at /specdiff."
+---
+
+## Install
+
+```xml title="pom.xml"
+<dependency>
+  <groupId>io.github.paramvsi</groupId>
+  <artifactId>specdiff-spring-boot-starter</artifactId>
+</dependency>
+```
+
+Then open `http://localhost:8080/specdiff`.
+
+## What it reads
+
+The starter finds your app’s OpenAPI document automatically and renders it in the Viewer: search, code samples, Try it, and change badges when more than one version is available.
+
+Settings come from `.specdiff.yaml` like everywhere else.

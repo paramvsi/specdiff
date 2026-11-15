@@ -1,9 +1,156 @@
 ---
+// W-01 Home v2 (WEB-01, WEB-02, WEB-09). Copy from design/prototypes/website/W01v2-Home.dc.html with
+// docs/10 B-11 (`npx specdiff-cli`) and B-2 (4 breaking · 1 possibly · 14 safe) applied.
 import Base from '../layouts/Base.astro';
+import HomeNav from '../components/HomeNav.astro';
+import Footer from '../components/Footer.astro';
+import DemoTabs from '../islands/DemoTabs';
+import BeforeAfter from '../islands/BeforeAfter';
+import PackageTabs from '../islands/PackageTabs';
+import { APP, SAMPLE } from '../lib/site';
+import { ArrowRight, Check, Clock, Copy, Layers, Plus, Sparkles, X, Zap } from 'lucide-react';
+import '../styles/home.css';
+
+const words = ['Know', 'what', 'your', 'API', 'change', 'breaks', 'before', 'you', 'ship', 'it.'];
+const formats = ['Swagger 2.0', 'OpenAPI 3.0', 'OpenAPI 3.1', 'OpenAPI 3.2', 'JSON', 'YAML', 'Markdown', 'TypeScript', 'JavaScript', 'Java', 'Python', 'Plain text'];
+const command = 'npx specdiff-cli old.yaml new.yaml';
+const faqs: Array<[string, string, boolean?]> = [
+  ['Is it really free?', 'Yes. Specdiff is open source under the MIT licence. There are no accounts, plans or paid tiers.'],
+  ['Are my files uploaded anywhere?', 'No. Files are read and compared in your browser. Share links carry the files after the #, which browsers never send to a server, and you can lock them with a passphrase.', true],
+  ['How large can a spec be?', 'A 10 MB spec stays responsive. Above 25 MB, Specdiff offers a text-only comparison. The CLI handles larger files.'],
+  ['Can I run it in CI?', 'Yes. npx specdiff-cli --ci works in any CI: it prints the changelog and exits non-zero on breaking changes. A pre-commit hook catches them before you push.'],
+  ['Which formats does it support?', 'Swagger 2.0 and OpenAPI 3.0, 3.1 and 3.2, JSON, YAML, Markdown and plain text. Code mode covers TypeScript, JavaScript, Java and Python, in Beta.'],
+];
+const viewerPoints: Array<[typeof Clock, string, string]> = [
+  [Clock, 'A timeline of releases', 'Every endpoint shows when it was added, changed or deprecated.'],
+  [Sparkles, 'What changed for me?', 'Pick the endpoints you call, or drop a HAR file. Everything else fades away.'],
+  [Zap, 'Try it, with a warning', 'Send real requests, and see if they would fail on the newer version.'],
+  [Layers, 'Drop-in, like Swagger UI', 'Spring Boot at /specdiff, Express and Fastify at /docs, React, or one script tag.'],
+];
+const stops: Array<[string, number]> = [['1.0', 4], ['1.3', 28], ['1.4', 52], ['1.5', 76], ['2.0', 96]];
+const endpoints: Array<[string, string, string, string]> = [
+  ['POST', '/v1/payments', 'Breaking', 'breaking'],
+  ['GET', '/v1/payments/{id}', 'Changed', 'changed'],
+  ['POST', '/v1/payouts', 'New', 'new'],
+  ['GET', '/v1/charges', 'Deprecated', 'deprecated'],
+];
+const keys: Array<[string, string]> = [['J', 'next'], ['K', 'prev'], ['A', 'accept'], ['R', 'reject'], ['⌘K', 'search']];
 ---
-<Base title="Specdiff · See what changed in your API" description="Specdiff shows what changed between two versions of an API spec and explains which changes break clients. Everything runs in your browser.">
-  <main>
-    <h1>specdiff</h1>
-    <p><a href="/app/">Open app</a></p>
+<Base title="Specdiff · Know what your API change breaks before you ship it" description="Compare two versions of an OpenAPI spec, JSON, Markdown or code. See which changes break clients, why, and how to avoid it. Then copy the changelog. Everything runs in your browser.">
+  <HomeNav />
+  <main id="main">
+    <section class="hero" aria-labelledby="hero-h">
+      <div class="wrap hero-in">
+        <div class="hero-top">
+          <div class="hero-left">
+            <a class="pill-new rise" href="/changelog/"><span class="new">New</span>Review decisions that your CI respects<ArrowRight size={14} aria-hidden="true" /></a>
+            <h1 id="hero-h" class="hero-h1">{words.map((w, i) => <><span class="w" style={`--d:${(0.05 + i * 0.045).toFixed(3)}s`}>{w}</span>{i < words.length - 1 ? ' ' : ''}</>)}</h1>
+          </div>
+          <div class="hero-side rise" style="--d:.45s">
+            <p>Compare two versions of an OpenAPI spec, JSON, Markdown or code. See which changes break clients, why, and how to avoid it. Then copy the changelog.</p>
+            <div class="cta-row"><a class="cta cta-brand" href={SAMPLE}>Try it with a sample<ArrowRight size={16} aria-hidden="true" /></a><a class="cta cta-plain" href={APP}>Compare my files</a></div>
+            <div class="cmd"><code><span class="t-prompt" aria-hidden="true">$</span> {command}</code><button type="button" aria-label="Copy command" data-copy={command}><Copy size={14} aria-hidden="true" /></button></div>
+          </div>
+        </div>
+        <figure class="demo" aria-label="Live demo" data-loop><div class="island-contents" data-island="demo"><DemoTabs /></div></figure>
+      </div>
+    </section>
+
+    <section class="formats" aria-label="Supported formats" data-loop>
+      <div class="formats-track">
+        <ul>{formats.map((f) => <li><Plus size={12} aria-hidden="true" />{f}</li>)}</ul>
+        <ul aria-hidden="true">{formats.map((f) => <li><Plus size={12} />{f}</li>)}</ul>
+      </div>
+    </section>
+
+    <section id="product" class="sec product" aria-labelledby="product-h">
+      <div class="product-head"><h2 id="product-h" class="h2-big">31 hunks of YAML. Or 3 things that matter.</h2><p class="sec-p">Drag the handle. Same two files: on the left the line diff your PR shows, on the right what Specdiff tells you.</p></div>
+      <div class="island-contents" data-island="slider"><BeforeAfter /></div>
+    </section>
+
+    <section class="sec features" aria-labelledby="features-h" data-loop>
+      <h2 id="features-h" class="h2-big">Built for the review, not just the diff.</h2>
+      <div class="tiles">
+        <article class="tile tile-wide">
+          <div class="tile-head"><h3>Every breaking change explains itself</h3><p>Who it breaks, what they’ll see, and how to avoid it. Written for the person reviewing the PR, not for a parser.</p></div>
+          <div class="slides">
+            <div class="slide" style="--d:0s"><span class="slide-k">Who it breaks · 1/3</span><span class="slide-v">Web and mobile apps that create payments without currency.</span></div>
+            <div class="slide" style="--d:3s"><span class="slide-k">What they’ll see · 2/3</span><span class="slide-v">400 Bad Request on the first call after you deploy.</span></div>
+            <div class="slide" style="--d:6s"><span class="slide-k">How to avoid it · 3/3</span><span class="slide-v">Default currency to the account’s currency, or release 2.0.0.</span></div>
+          </div>
+        </article>
+        <article class="tile">
+          <div class="tile-head"><h3>One schema change, one finding</h3><p>Edit a shared schema used by twenty endpoints and you get one finding at the schema, not twenty copies.</p></div>
+          <div class="fanout" aria-hidden="true">
+            <span class="fanout-src">Card</span>
+            <div class="dashes"><span style="--d:0s"></span><span style="--d:.15s"></span><span style="--d:.3s"></span></div>
+            <div class="fanout-eps">{['/payments/{id}', '/payments', '/customers/{id}'].map((p) => <span class="ep"><span class="method m-get">GET</span>{p}</span>)}</div>
+          </div>
+        </article>
+        <article class="tile tile-inverse">
+          <div class="tile-head"><h3>Your spec stays in the tab</h3><p>Parsing and diffing run in background workers in your browser. Open the network panel and check.</p></div>
+          <div class="net" aria-hidden="true">
+            <div class="net-head"><span>Network</span><span><span class="net-rec"></span>recording</span></div>
+            <div class="net-row"><span>specdiff.app/app</span><span>200 · page</span></div>
+            <div class="net-row"><span>worker.js</span><span>200 · cached</span></div>
+            <div class="net-row hot"><span>payments-v2.yaml</span><span>not sent</span></div>
+          </div>
+        </article>
+        <article class="tile">
+          <div class="tile-head"><h3>The version number, decided</h3><p>Breaking means major, additions mean minor. If info.version disagrees, you’ll hear about it.</p></div>
+          <div class="vbump"><span class="vbump-old">1.6.0</span><ArrowRight size={28} aria-hidden="true" /><span class="sr-only"> to </span><span class="vbump-new">2.0.0<span class="vbump-tag">major</span></span></div>
+        </article>
+        <article class="tile">
+          <div class="tile-head"><h3>Accept or reject, then commit</h3><p>Decisions save to .specdiff/decisions.json, and the CLI and pre-commit hook respect them.</p></div>
+          <div>
+            <ul class="decisions">
+              <li class="decision decision-ok"><span class="decision-ic"><Check size={12} aria-hidden="true" /></span><span class="decision-what">DELETE /refunds/{'{id}'}</span><span class="decision-state">Accepted</span></li>
+              <li class="decision decision-no"><span class="decision-ic"><X size={12} aria-hidden="true" /></span><span class="decision-what">currency required</span><span class="decision-state">Rejected</span></li>
+            </ul>
+            <div class="fillbar" aria-hidden="true" style="margin-top:10px"><span style="--w:66%"></span></div>
+          </div>
+        </article>
+        <article class="tile tile-wide tile-short">
+          <div class="tile-head"><h3>Hands stay on the keyboard</h3><p>Step through changes, decide, search and share without reaching for the mouse.</p></div>
+          <ul class="keys">{keys.map(([k, label], i) => <li><kbd style={`--d:${i * 0.5}s`}>{k}</kbd><span>{label}</span></li>)}</ul>
+        </article>
+      </div>
+    </section>
+
+    <section id="viewer" class="viewer" aria-labelledby="viewer-h" data-loop>
+      <div class="viewer-in">
+        <div class="viewer-copy">
+          <span class="viewer-kicker">Specdiff Viewer</span>
+          <h2 id="viewer-h" class="h2-big">API docs that remember every version.</h2>
+          <p>An interactive API reference with search, code samples and Try it. Unlike other free renderers, it knows your API’s history.</p>
+          <ul class="vlist">{viewerPoints.map(([Icon, t, d]) => <li><span class="vlist-ic"><Icon size={15} aria-hidden="true" /></span><span class="vlist-t"><strong>{t}</strong><span>{d}</span></span></li>)}</ul>
+        </div>
+        <div class="viewer-mock-wrap">
+          <div class="viewer-mock" role="img" aria-label="The Viewer for Payments API, versions 1.0 to 2.0: POST /v1/payments is breaking, GET /v1/payments/{id} changed, POST /v1/payouts is new and GET /v1/charges is deprecated.">
+            <div class="vm-head"><span class="vm-title">Payments API</span><span class="vm-ver">v1.5 → v2.0</span></div>
+            <div class="vm-line"><span class="vm-track"></span>{stops.map(([v, left]) => <span class="vm-stop" style={`left:${left}%`}><span class="vm-dot"></span><span class="vm-label">{v}</span></span>)}<span class="vm-marker"></span></div>
+            <ul class="vm-eps">{endpoints.map(([m, p, b, k], i) => <li><span class={`method ${m === 'GET' ? 'm-get' : 'm-post'}`}>{m}</span><span class="vm-path">{p}</span><span class={`vbadge vb-${k}`} style={`--d:${(0.2 + i * 0.3).toFixed(1)}s`}>{b}</span></li>)}</ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="packages" class="sec packages" aria-labelledby="packages-h">
+      <div class="packages-copy"><h2 id="packages-h" class="h2-big">Runs where you already work.</h2><p class="sec-p">One engine in the web app, your terminal, any CI and your own service. One <code>.specdiff.yaml</code> configures them all.</p></div>
+      <div class="pk-wrap"><div class="island-contents" data-island="packages"><PackageTabs /></div></div>
+    </section>
+
+    <section class="sec faq" aria-labelledby="faq-h">
+      <h2 id="faq-h">Questions</h2>
+      <div class="faq-list">{faqs.map(([q, a, open]) => <details open={open}><summary>{q}<Plus size={18} aria-hidden="true" /></summary><p>{a}</p></details>)}</div>
+    </section>
+
+    <section class="cta-band" aria-labelledby="cta-h" data-loop>
+      <div class="cta-box">
+        <div class="cta-copy"><h2 id="cta-h">Compare your next release before your users do.</h2><div class="cta-row"><a class="cta-dark" href={APP}>Open the app</a><a class="cta-line" href="/docs/">Read the docs</a></div></div>
+        <svg class="cta-mark" width="120" height="120" viewBox="0 0 26 26" aria-hidden="true"><g class="l"><rect class="frame" x="2" y="5" width="13" height="16" rx="3.5" fill="none" stroke-width="1.6"></rect></g><g class="r"><rect class="fill" x="11" y="5" width="13" height="16" rx="3.5"></rect><path d="M14.5 13h6" stroke-width="1.6" stroke-linecap="round"></path><path d="M17.5 10v6" stroke-width="1.6" stroke-linecap="round"></path></g></svg>
+      </div>
+    </section>
   </main>
+  <Footer />
 </Base>

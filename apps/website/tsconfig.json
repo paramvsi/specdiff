@@ -1,5 +1,5 @@
 {
   "extends": "astro/tsconfigs/strict",
-  "compilerOptions": { "noUncheckedIndexedAccess": true, "exactOptionalPropertyTypes": true },
+  "compilerOptions": { "noUncheckedIndexedAccess": true, "exactOptionalPropertyTypes": true, "jsx": "react-jsx", "jsxImportSource": "react" },
   "include": [".astro/types.d.ts", "src"]
 }

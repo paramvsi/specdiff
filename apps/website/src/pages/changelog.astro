@@ -1,0 +1,28 @@
+---
+// W-06 Changelog (WEB-06), with an RSS feed at /changelog.xml.
+import Base from '../layouts/Base.astro';
+import SiteHeader from '../components/SiteHeader.astro';
+import Footer from '../components/Footer.astro';
+import { Rss } from 'lucide-react';
+import GithubMark from '../components/GithubMark.astro';
+import { releases } from '../lib/changelog';
+import { REPO } from '../lib/site';
+import '../styles/pages.css';
+---
+<Base title="Changelog · Specdiff" description="What’s new in Specdiff. Written by Specdiff, from its own spec. Subscribe with RSS.">
+  <SiteHeader current="changelog" />
+  <main id="main" class="log-main">
+    <h1 class="page-h1">Changelog</h1>
+    <div class="log-top">
+      <p class="lede">What’s new in Specdiff. Written by Specdiff, from its own spec.</p>
+      <span class="btns"><a class="btn" href="/changelog.xml"><Rss size={15} aria-hidden="true" />RSS feed</a><a class="btn" href={`${REPO}/releases`}><GithubMark />GitHub releases</a></span>
+    </div>
+    {releases.map((r) => (
+      <article class="release" aria-labelledby={`v-${r.version}`}>
+        <div class="release-meta"><h2 id={`v-${r.version}`}>{r.version}</h2><span class="date">{r.date}</span>{r.latest && <span class="latest">Latest</span>}</div>
+        <div class="release-notes">{r.sections.map((s) => <section><h3>{s.title}</h3><ul>{s.items.map((i) => <li>{i}</li>)}</ul></section>)}</div>
+      </article>
+    ))}
+  </main>
+  <Footer />
+</Base>

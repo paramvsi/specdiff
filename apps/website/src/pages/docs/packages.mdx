@@ -1,0 +1,18 @@
+---
+layout: ../../layouts/Docs.astro
+title: "Packages"
+description: "Specdiff as a CLI, a pre-commit hook, a Spring Boot starter, React components, Express and Fastify middleware, and a script tag."
+lede: "One engine in the web app, your terminal, any CI and your own service. One .specdiff.yaml configures them all."
+---
+
+| Package | Where | What it does |
+|---|---|---|
+| [`specdiff-cli`](/docs/cli/) | npm | Compare from a terminal or any CI; `history` and a git diff driver |
+| [Pre-commit hook](/docs/pre-commit/) | your repo | Run the CLI before each commit |
+| [`specdiff-spring-boot-starter`](/docs/spring-boot/) | Maven Central | Serve the Viewer at `/specdiff` |
+| [`@specdiff/react`](/docs/react/) | npm | Viewer and diff components |
+| [`@specdiff/express`](/docs/express-fastify/) | npm | Express and Fastify middleware serving the Viewer at `/docs` |
+| [`@specdiff/embed`](/docs/embed/) | npm | One script tag, `Specdiff.mount()` |
+| `@specdiff/core` | npm | Parsing, diffing, rules and changelog builder, no DOM |
+
+All of them read the same [`.specdiff.yaml`](/docs/config/).

@@ -1,0 +1,38 @@
+---
+layout: ../../layouts/Docs.astro
+title: "JSON and YAML"
+description: "Compare JSON and YAML by structure: key order ignored, array items matched by id, moves shown as moves, export as JSON Patch."
+lede: "Compare config and data files by structure, not by line."
+---
+import Callout from '../../components/Callout.astro';
+
+## What counts as a change
+
+- **Key order** is ignored (you can turn this off).
+- **Array items** are matched by key, detected automatically from `id`, `uuid` or `key`. Pick another key, or ignore array order entirely.
+- A **moved** item is shown as a move (`↕`), not a removal and an addition.
+- A **type change**, such as `"25MB"` → `26214400`, is its own category in the stats and filters.
+- `null` and a missing key stay different unless you turn on “treat null as missing”. Duplicate keys are reported with their line.
+- **Numbers** can compare with a tolerance, so `100.00` equals `100`.
+
+Every change has a JSONPath.
+
+<Callout>Ignore noisy keys such as `updatedAt` or `requestId` with the ignore list, in the app or in `.specdiff.yaml`.</Callout>
+
+## Views
+
+Tree, side by side, and raw.
+
+## Export
+
+Export the result as a JSON Patch (RFC 6902), a JSON Merge Patch (RFC 7386), a list of JSONPaths, or Markdown. Patches are checked to round-trip before you download them.
+
+```yaml title=".specdiff.yaml"
+json:
+  ignoreKeyOrder: true
+  ignoreArrayOrder: false
+  arrayMatchKey: auto
+  nullEqualsMissing: false
+  ignoreKeys: [updatedAt, requestId]
+  numberTolerance: 0.01
+```

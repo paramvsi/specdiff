@@ -1,6 +1,7 @@
 /* Specdiff website motion · v1 · use with tokens.css
    Rules: one load sequence (sdUp on hero words, staggered 45 ms); looping demo 9 s; everything off under reduced motion.
-   Easing for all: cubic-bezier(.2,.8,.2,1). Colours here are the light-theme token values; swap for var(--sd-*) when porting. */
+   Easing for all: cubic-bezier(.2,.8,.2,1). Colours are tokens (var(--sd-*)), so the keyframes follow the theme.
+   sdOdo4 is added for the 0 → 4 Breaking counter (docs/10 B-2: the example has 4 breaking changes, not 3). */
 @keyframes sdUp {
   from {
     opacity: 0;
@@ -33,17 +34,17 @@
   0%,
   14% {
     background-color: transparent;
-    color: #15171a;
+    color: var(--sd-ink);
   }
   19%,
   86% {
-    background-color: #fbe7da;
-    color: #963a0b;
+    background-color: var(--sd-removed-bg);
+    color: var(--sd-removed-strong);
   }
   94%,
   100% {
     background-color: transparent;
-    color: #15171a;
+    color: var(--sd-ink);
   }
 }
 @keyframes sdAdd {
@@ -95,6 +96,29 @@
   40%,
   86% {
     transform: translateY(-3em);
+  }
+  94%,
+  100% {
+    transform: translateY(0);
+  }
+}
+@keyframes sdOdo4 {
+  0%,
+  28% {
+    transform: translateY(0);
+  }
+  31% {
+    transform: translateY(-1em);
+  }
+  34% {
+    transform: translateY(-2em);
+  }
+  37% {
+    transform: translateY(-3em);
+  }
+  40%,
+  86% {
+    transform: translateY(-4em);
   }
   94%,
   100% {
@@ -203,12 +227,12 @@
   62%,
   100% {
     transform: translateY(0);
-    box-shadow: 0 3px 0 #daddd5;
+    box-shadow: 0 3px 0 var(--sd-line);
   }
   68%,
   78% {
     transform: translateY(3px);
-    box-shadow: 0 0 0 #daddd5;
+    box-shadow: 0 0 0 var(--sd-line);
   }
 }
 @keyframes sdFill {
@@ -223,13 +247,13 @@
 }
 @keyframes sdPing {
   0% {
-    box-shadow: 0 0 0 0 rgba(27, 107, 87, 0.45);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--sd-safe) 45%, transparent);
   }
   70% {
-    box-shadow: 0 0 0 9px rgba(27, 107, 87, 0);
+    box-shadow: 0 0 0 9px color-mix(in srgb, var(--sd-safe) 0%, transparent);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(27, 107, 87, 0);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--sd-safe) 0%, transparent);
   }
 }
 @keyframes sdTravel {

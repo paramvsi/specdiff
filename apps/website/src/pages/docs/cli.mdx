@@ -1,0 +1,112 @@
+---
+layout: ../../layouts/Docs.astro
+title: "CLI"
+description: "Compare specs from a terminal, gate any CI with --ci and --fail-on, read git revisions, build a Viewer timeline, and install a git diff driver."
+lede: "The same engine as the app, in your terminal and in any CI."
+---
+import Callout from '../../components/Callout.astro';
+
+<Callout type="info">The npm package is `specdiff-cli`; once installed, the command is `specdiff`. With npx, use `npx specdiff-cli`.</Callout>
+
+## Compare locally
+
+```bash
+npx specdiff-cli old.yaml new.yaml
+```
+
+Opens the app on `127.0.0.1` with both files loaded. Nothing is uploaded.
+
+## Read from git
+
+Any argument can be a git revision and path, `rev:path`:
+
+```bash
+npx specdiff-cli main:openapi.yaml openapi.yaml
+npx specdiff-cli v1.5.0:api/openapi.yaml HEAD:api/openapi.yaml
+```
+
+Split specs resolve their relative `$ref`s from the same revision. Revisions that start with `-` are refused.
+
+## Gate a build: `--ci`
+
+```bash
+npx specdiff-cli main:openapi.yaml openapi.yaml --ci
+```
+
+```text
+Comparing main → working tree…
+✖ 4 breaking  ? 1 possibly  + 14 safe  ¶ 9 docs only
+Suggested version: 2.0.0 (major)
+Exit code 1 · breaking changes found
+```
+
+| Flag | Values | Default |
+|---|---|---|
+| `--ci` | | Print the report and exit; don’t open the app |
+| `--fail-on` | `breaking`, `possibly`, `missing-version-bump`, `none` | `breaking` |
+| `--format` | `md`, `json`, `html` | `md` |
+| `--config` | path to a `.specdiff.yaml` | `./.specdiff.yaml`, then the repo root |
+| `--allow-external-refs` | | Off: remote `$ref` URLs are not fetched in `--ci` mode |
+
+Exit code 0 means nothing failed the gate, 1 means it did. Accepted [review decisions](/docs/review/) don’t fail it; rejected ones always do.
+
+## Use in any CI
+
+The CLI needs Node and git, nothing else. Fetch the base branch so `rev:path` can read it.
+
+### GitLab CI
+
+```yaml title=".gitlab-ci.yml"
+api-changes:
+  image: node:26
+  script:
+    - git fetch origin main --depth=50
+    - npx specdiff-cli origin/main:openapi.yaml openapi.yaml --ci --format md > specdiff.md
+  artifacts:
+    when: always
+    paths: [specdiff.md]
+```
+
+### Jenkins
+
+```groovy title="Jenkinsfile"
+pipeline {
+  agent { docker { image 'node:26' } }
+  stages {
+    stage('API changes') {
+      steps {
+        sh 'git fetch origin main'
+        sh 'npx specdiff-cli origin/main:openapi.yaml openapi.yaml --ci --fail-on breaking'
+      }
+    }
+  }
+}
+```
+
+### Plain shell
+
+```bash
+#!/bin/sh
+set -e
+git fetch origin main
+npx specdiff-cli origin/main:openapi.yaml openapi.yaml --ci --format json > report.json
+```
+
+The JSON report follows a published JSON Schema, so other tools can read it.
+
+## Viewer timeline: `history`
+
+```bash
+npx specdiff-cli history openapi.yaml --out versions.json
+```
+
+Walks git tags (or recent commits when there are none) and writes a version set for the [Viewer](/docs/react/) timeline.
+
+## Git diff driver
+
+Make `git log -p` and `git diff` show the semantic changelog for spec files:
+
+```bash
+git config diff.specdiff.command "npx specdiff-cli git-diff-driver"
+echo "openapi.yaml diff=specdiff" >> .gitattributes
+```

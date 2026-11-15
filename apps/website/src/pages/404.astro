@@ -1,6 +1,22 @@
 ---
+// W-08 Page not found (WEB-08). Built as /404.html, which Netlify serves for unknown paths.
 import Base from '../layouts/Base.astro';
+import SiteHeader from '../components/SiteHeader.astro';
+import Footer from '../components/Footer.astro';
+import { APP } from '../lib/site';
+import '../styles/pages.css';
 ---
-<Base title="Page not found · Specdiff" description="This page does not exist.">
-  <main><h1>Page not found</h1><p><a href="/">Go home</a></p></main>
+<Base title="Page not found · Specdiff" description="This page was removed, or never existed." noindex>
+  <SiteHeader />
+  <main id="main" class="nf-main">
+    <div class="nf-diff" role="img" aria-label="Expected GET /the-page-you-wanted, actual 404 Not Found">
+      <div><p aria-hidden="true">expected</p><div class="nf-line nf-rem" aria-hidden="true">- GET /the-page-you-wanted</div></div>
+      <div><p aria-hidden="true">actual</p><div class="nf-line nf-add" aria-hidden="true">+ 404 Not Found</div></div>
+    </div>
+    <h1 class="page-h1 nf-h1">This page was removed, or never existed.</h1>
+    <p class="lede">The link may be old, or the address may have a typo. These should get you where you were going.</p>
+    <div class="nf-actions"><a class="btn btn-brand" href={APP}>Open the app</a><a class="btn" href="/docs/">Read the docs</a><a class="btn" href="/">Go home</a></div>
+    <p class="nf-note">Followed a share link? Share links open in the app, at <code>specdiff.app/app#…</code>.</p>
+  </main>
+  <Footer />
 </Base>

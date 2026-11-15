@@ -1,0 +1,31 @@
+---
+layout: ../../layouts/Docs.astro
+title: "How it works"
+description: "What Specdiff does with your files, from parsing to the report."
+lede: "Specdiff is a static site. The work happens in your browser, or in Node when you use the CLI."
+---
+import Callout from '../../components/Callout.astro';
+
+## Parse
+
+Each side is read into memory and parsed in a Web Worker, with progress per file and per step. You can cancel at any point. Parse errors point to the line and column with a plain-English hint.
+
+## Normalise
+
+OpenAPI specs are resolved (`$ref`s, split files from a folder or ZIP) and normalised to OpenAPI 3.1: Swagger 2.0 and 3.0 are upgraded, the three ways of writing nullability become one, and path-level parameters are merged into each operation.
+
+## Compare
+
+Each mode has its own engine:
+
+- **OpenAPI** matches endpoints, parameters, bodies, responses, schemas, security, servers and webhooks, then runs the [rules](/rules/) over every difference. Each rule knows its direction: requests may accept more but not less; responses may promise more but not less.
+- **JSON and YAML** compare the tree, matching array items by `id`, `uuid` or `key`.
+- **Markdown** compares the rendered document and checks anchors.
+- **Code (Beta)** compares syntax trees with tree-sitter.
+- **Text** compares lines, words or characters.
+
+## Report
+
+The result is a report with stable IDs and fingerprints. The same two inputs always give a byte-identical report, so CI output and review decisions don’t drift.
+
+<Callout type="info">Specdiff reads specs; your editor writes them. Nothing in Specdiff changes your files.</Callout>

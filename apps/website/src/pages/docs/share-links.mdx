@@ -1,0 +1,25 @@
+---
+layout: ../../layouts/Docs.astro
+title: "Share links"
+description: "Share a comparison as a link. Files travel after the # and can be locked with a passphrase."
+lede: "A share link carries the comparison itself, so there is nothing to upload."
+---
+import Callout from '../../components/Callout.astro';
+
+## What is in the link
+
+The files are compressed into the URL after the `#`. Browsers never send that part to a server. You can include the rules, your review decisions and the change that is open.
+
+```text
+https://…/app/#v=1&c=<compressed comparison>
+```
+
+## Lock it
+
+Add a passphrase and the content is encrypted in your browser with AES-GCM; the key comes from the passphrase through PBKDF2 with at least 310,000 iterations. The passphrase is never stored or sent. Whoever opens the link sees an unlock screen.
+
+## Large comparisons
+
+Above about 8 KB of URL, Specdiff warns you and offers a `comparison.specdiff.json` file to download instead. Drop that file into the app to open it.
+
+<Callout type="info">Share links open in the app. A link that lands on the website’s 404 page has lost its `/app/` part.</Callout>

@@ -1,0 +1,59 @@
+---
+layout: ../../layouts/Docs.astro
+title: "Compare two OpenAPI specs"
+description: "Find every change between two versions of an API, see which ones break clients, and get a changelog."
+lede: "Find every change between two versions of an API, see which ones break clients, and get a changelog. Takes about two minutes."
+---
+import Callout from '../../components/Callout.astro';
+import SevGrid from '../../components/SevGrid.astro';
+
+## Open both versions
+
+Open the app and add the older spec on the left and the newer one on the right. You can paste, drop a file, drop a folder or ZIP for split specs, or load a URL. GitHub file links are converted to raw links for you.
+
+<Callout>Comparing branches? From a terminal, `npx specdiff-cli main:openapi.yaml openapi.yaml` reads both versions straight from git.</Callout>
+
+Specdiff reads Swagger 2.0 and OpenAPI 3.0, 3.1 and 3.2, in YAML or JSON. Everything is normalised to 3.1 before comparing, so a 3.0 → 3.1 upgrade on its own reports nothing. Internal and external `$ref`s are resolved; recursive schemas are compared by reference and reported once per entry into a cycle.
+
+## Read the summary
+
+The summary counts changes by severity and suggests the next version number. If `info.version` doesn’t match what changed, Specdiff says so.
+
+<SevGrid />
+
+A breaking change means a major version, an addition means a minor one, and anything else a patch. Below 1.0.0 a breaking change needs a minor bump. See [Severities](/docs/severities/) for how each change is judged.
+
+## Review each breaking change
+
+Open the workspace to step through changes. Each one shows the before and after, who it breaks, and how to avoid it. Accept or reject it, and your decision is saved for the CLI and pre-commit hook.
+
+```json title=".specdiff/decisions.json"
+{
+  "version": 1,
+  "decisions": {
+    "7c1e…a94f": { "decision": "accepted",
+                   "note": "Card.last4 removed in 2.0.0" }
+  }
+}
+```
+
+A change to a shared schema is reported once, at the schema, with the endpoints that use it. Changes are grouped under the component or operation you edited. `nullable: true`, `type: [x, "null"]` and `oneOf` with a `null` branch are treated as the same thing, so moving between them is not a change.
+
+## Export the changelog
+
+Pick a template, edit the text, and copy or download it. Release notes, Keep a Changelog, a PR comment and a Slack message are built in.
+
+<Callout type="info">Specdiff reads specs; your editor writes them. Nothing in Specdiff changes your files.</Callout>
+
+## Options that change the result
+
+| Option | Default | What it does |
+|---|---|---|
+| Strictness preset | Wire | **Wire** judges HTTP payloads. **SDK** also treats renamed `operationId`s, schema names and enum names as breaking. |
+| Match inline and `$ref` | On | An inline schema moved into `components` with the same shape is not a change. |
+| Case-insensitive headers | On | Header names compare as RFC 9110 says. |
+| Flatten `allOf` | Off | Merge `allOf` branches before comparing. |
+| Merge path-level parameters | On | Parameters on the path item count for every operation under it. |
+| Sunset grace period | 90 days | A deprecation whose `x-sunset` is closer than this is breaking. |
+
+Hide docs-only changes, ignore examples or ignore `x-` extensions from the filters. All of these can live in [`.specdiff.yaml`](/docs/config/).

@@ -1,0 +1,39 @@
+---
+layout: ../../layouts/Docs.astro
+title: "Severities"
+description: "How Specdiff decides whether an API change is breaking, possibly breaking, safe or docs only, and the version it suggests."
+lede: "Every OpenAPI change gets one of four severities. They are decided by one law, not by intuition."
+---
+
+import SevGrid from '../../components/SevGrid.astro';
+
+<SevGrid />
+
+## The severity law
+
+1. A change is **breaking** when a request that was valid before can now be rejected, or a response can now carry something clients were never written to handle.
+2. It is **safe** when neither can happen.
+3. It is **possibly breaking** when the spec alone cannot decide, for example a new enum value in a response, which strict clients reject and lenient ones ignore.
+4. **Direction matters.** Requests may accept more but not less; responses may promise more but not less. Adding `null` to a request field is safe; adding it to a response field is possibly breaking.
+5. `readOnly` properties never appear in requests and `writeOnly` never in responses, so changes to them on that side are docs only.
+6. Removing something marked `deprecated` follows its `x-sunset` date: before the date it is breaking, after it is not reported, with no date it is possibly breaking.
+
+## Strictness presets
+
+**Wire** judges what goes over HTTP. **SDK** also counts what generated clients depend on: a renamed `operationId`, schema or enum name becomes breaking.
+
+## Suggested version
+
+Breaking means major, additions mean minor, anything else a patch. Below 1.0.0, breaking means minor. Possibly breaking alone suggests a minor bump. If `info.version` disagrees, the summary says so, and the CLI can fail on it with `--fail-on missing-version-bump`.
+
+## Change a rule’s severity
+
+Every rule can be switched off or given another severity per project:
+
+```yaml title=".specdiff.yaml"
+rules:
+  request-property-became-required: { severity: possibly }
+  extension-changed: { enabled: false }
+```
+
+The [Rules reference](/rules/) lists every rule with its default.

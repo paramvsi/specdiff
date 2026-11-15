@@ -1,0 +1,55 @@
+---
+layout: ../../layouts/Docs.astro
+title: ".specdiff.yaml"
+description: "One configuration file for the app, the CLI and the pre-commit hook: rules, ignores, preset, options and decisions."
+lede: "One file configures the app, the CLI and the pre-commit hook."
+---
+import Callout from '../../components/Callout.astro';
+
+## Where it is read from
+
+1. The `--config` flag.
+2. `./.specdiff.yaml`.
+3. The repository root.
+
+The app imports and exports the same file from Rules and settings.
+
+## Full example
+
+```yaml title=".specdiff.yaml"
+version: 1
+preset: wire                 # wire | sdk
+failOn: breaking             # breaking | possibly | missing-version-bump | none   (CLI --ci)
+rules:
+  request-property-became-required: { severity: possibly }
+  extension-changed: { enabled: false }
+ignore:
+  paths: ["x-internal-*", "/v1/admin/**"]
+  extensions: true
+openapi:
+  matchInlineRefs: true
+  caseInsensitiveHeaders: true
+  flattenAllOf: false
+  mergePathParams: true
+  autoUpgrade: true
+  includePathParamNames: false
+  sunsetGracePeriodDays: 90
+json:
+  ignoreKeyOrder: true
+  ignoreArrayOrder: false
+  arrayMatchKey: auto        # auto | <key name>
+  nullEqualsMissing: false
+  ignoreKeys: [updatedAt, requestId]
+  numberTolerance: 0.01
+text:
+  ignoreWhitespace: true
+  ignoreCase: false
+  ignoreLineEndings: true
+  precision: word            # smart | word | char
+  filters:
+    - { name: Timestamps, pattern: '\d{4}-\d{2}-\d{2}T[\d:.]+Z', replace: '‹time›' }
+    - { name: Request IDs, pattern: 'req_[a-z0-9]{8,}', replace: '‹req-id›' }
+decisions: .specdiff/decisions.json
+```
+
+<Callout>Rule IDs are listed in the [Rules reference](/rules/). Each rule page has the snippet to change its severity.</Callout>

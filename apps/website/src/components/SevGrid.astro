@@ -1,0 +1,12 @@
+---
+// The four severities with one-line meanings (W-02 "Read the summary").
+import Severity from './Severity.astro';
+import type { Sev } from '../lib/rules';
+const cells: Array<[Sev, string]> = [
+  ['breaking', 'Existing clients will fail.'],
+  ['possibly', 'Some clients may fail.'],
+  ['safe', 'Additions and relaxed rules.'],
+  ['docs', 'Descriptions and examples.'],
+];
+---
+<div class="sev-grid">{cells.map(([s, t]) => <div class="sev-cell"><Severity sev={s} /><span>{t}</span></div>)}</div>

@@ -1,0 +1,6 @@
+---
+import { Shield } from 'lucide-react';
+import Logo from './Logo.astro';
+import { footerColumns } from '../lib/site';
+---
+<footer class="sfoot"><div class="sfoot-in"><div class="sfoot-top"><div class="sfoot-brand"><Logo /><p>Understand how an API, config or document changed. Free, open source, and private by design.</p></div><div class="sfoot-cols">{footerColumns.map((c) => (<div class="sfoot-col"><h2>{c.title}</h2>{c.links.map(([label, href]) => <a href={href}>{label}</a>)}</div>))}</div></div><div class="sfoot-bottom"><span>MIT licence. Built by Paramveer Singh.</span><span><Shield size={14} aria-hidden="true" />No accounts, no cookies, no tracking of file content.</span></div></div></footer>

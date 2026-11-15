@@ -1,8 +1,4 @@
 [
-  {
-    "name": "App initial JS",
-    "path": "apps/app/dist/assets/index-*.js",
-    "limit": "200 KB",
-    "gzip": true
-  }
+  { "name": "App initial JS", "path": "apps/app/dist/assets/index-*.js", "limit": "200 KB", "gzip": true },
+  { "name": "Website JS loaded by Home at start (B-13)", "path": "apps/website/dist/_astro/*_astro_type_script_*.js", "limit": "60 KB", "gzip": true }
 ]

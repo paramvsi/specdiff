@@ -1,0 +1,10 @@
+---
+// Severity badge: coloured pill + symbol (never colour alone). `null` = not reported as its own change.
+import type { Sev } from '../lib/rules';
+import { sevLabel, sevSymbol } from '../lib/rules';
+interface Props { sev: Sev | null; short?: boolean }
+const { sev, short = false } = Astro.props;
+---
+{sev
+  ? <span class={`sev sev-${sev}`}><span class="sev-sym" aria-hidden="true">{sevSymbol[sev]}</span>{short && sev === 'possibly' ? 'Possibly' : sevLabel[sev]}</span>
+  : <span class="sev sev-none">Not a change of its own</span>}
