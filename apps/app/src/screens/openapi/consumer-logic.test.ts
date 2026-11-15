@@ -28,8 +28,17 @@ it('finds calls and failing requests in a HAR', () => {
   const removed = ch({ ruleId: 'endpoint-removed', path: 'DELETE /v1/refunds/{id}', operation: { method: 'DELETE', path: '/v1/refunds/{id}' } });
   const r = fromHar('session.har', har, spec, [limit, removed]);
   expect(r.calls).toEqual({ 'GET /v1/payments': 2, 'DELETE /v1/refunds/{id}': 1 });
-  expect(r.failing.map((f) => f.reason)).toEqual(['1 calls with limit above 50', '1 calls to DELETE /v1/refunds/{id}, which is removed']);
+  expect(r.failing.map((f) => f.reason)).toEqual(['1 call with limit above 50', '1 call to DELETE /v1/refunds/{id}, which is removed']);
   expect(affects(limit, r.keys)).toBe(true);
+});
+
+it('counts every failing call, not a sample, and says "1 call" (A05-ConsumerFilter shows 23)', () => {
+  const spec = { servers: [{ url: 'https://api.example.com' }], paths: { '/v1/payments': { get: {} }, '/v1/refunds/{id}': { delete: {} } } };
+  const get = (q: number) => ({ request: { method: 'GET', url: `https://api.example.com/v1/payments?limit=${q}` } });
+  const har = { log: { entries: [...Array(20).fill(get(10)), ...Array(23).fill(get(150)), { request: { method: 'DELETE', url: 'https://api.example.com/v1/refunds/re_1' } }] } };
+  const limit = ch({ ruleId: 'request-param-constraint-tightened', path: 'GET /v1/payments › query limit › maximum', after: { maximum: 100 }, operation: { method: 'GET', path: '/v1/payments' } });
+  const removed = ch({ ruleId: 'endpoint-removed', path: 'DELETE /v1/refunds/{id}', operation: { method: 'DELETE', path: '/v1/refunds/{id}' } });
+  expect(fromHar('s.har', har, spec, [limit, removed]).failing.map((f) => f.reason)).toEqual(['23 calls with limit above 100', '1 call to DELETE /v1/refunds/{id}, which is removed']);
 });
 
 // OA-22 on a REAL report (compareOpenApi on fixtures/samples/payments-v*.yaml), not hand-made changes.

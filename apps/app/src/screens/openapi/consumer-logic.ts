@@ -69,6 +69,8 @@ export function operationsOf(spec: unknown): { ops: Operation[]; servers: string
 
 export interface AffectsMe { source: string; keys: string[]; calls: Record<string, number>; failing: Array<{ change: Change; count: number; reason: string }> }
 
+const nCalls = (n: number) => `${n} ${n === 1 ? 'call' : 'calls'}`;
+
 /** HAR → used operations, call counts, and requests that would fail on the new version. */
 export function fromHar(name: string, har: unknown, beforeSpec: unknown, changes: Change[]): AffectsMe {
   const { ops, servers } = operationsOf(beforeSpec);
@@ -79,9 +81,9 @@ export function fromHar(name: string, har: unknown, beforeSpec: unknown, changes
     if (!c.operation) continue;
     const m = r.matches.find((x) => x.operationKey === opKey(c.operation!));
     if (!m) continue;
-    if (c.ruleId === 'endpoint-removed') failing.push({ change: c, count: m.calls, reason: `${m.calls} calls to ${m.operationKey}, which is removed` });
+    if (c.ruleId === 'endpoint-removed') failing.push({ change: c, count: m.calls, reason: `${nCalls(m.calls)} to ${m.operationKey}, which is removed` });
     const over = overBound(c, m.requests);
-    if (over) failing.push({ change: c, count: over.count, reason: `${over.count} calls with ${over.param} ${over.dir} ${over.limit}` });
+    if (over) failing.push({ change: c, count: over.count, reason: `${nCalls(over.count)} with ${over.param} ${over.dir} ${over.limit}` });
   }
   return { source: name, keys: Object.keys(calls).sort(), calls, failing };
 }

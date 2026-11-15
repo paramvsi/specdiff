@@ -55,7 +55,7 @@ export function matchHar(har: unknown, ops: Operation[], servers: string[]): Har
     const k = key(hit.op);
     const m = by.get(k) ?? { operationKey: k, calls: 0, requests: [] };
     m.calls++;
-    if (m.requests.length < 20) m.requests.push({ method, url: raw });
+    m.requests.push({ method, url: raw }); // all of them: the URL strings are already in memory
     by.set(k, m);
   }
   return { matches: [...by.values()].sort((a, b) => b.calls - a.calls || byCodePoint(a.operationKey, b.operationKey)), unmatched, ignoredOrigin };

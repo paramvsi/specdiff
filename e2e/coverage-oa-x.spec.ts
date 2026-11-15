@@ -761,8 +761,9 @@ test('OA-22 changes that affect me from a HAR file: filtered list, call counts, 
   const limitRow = trs.filter({ hasText: /limit/i }).first();
   await expect(limitRow.locator('td').last()).toHaveText('2');
   // Requests that will fail.
-  await expect(table.getByText('1 calls to DELETE /v1/refunds/{id}, which is removed')).toBeVisible();
-  await expect(table.getByText('1 calls with limit above 50')).toBeVisible();
+  await expect(table.getByText('1 call to DELETE /v1/refunds/{id}, which is removed')).toBeVisible();
+  await expect(table.getByText(/which is removed\. It will be rejected/)).toBeVisible();
+  await expect(table.getByText('1 call with limit above 50')).toBeVisible();
   await expectAxeClean(page);
 });
 
