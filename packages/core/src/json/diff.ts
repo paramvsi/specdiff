@@ -1,6 +1,7 @@
 // Structural JSON/YAML diff (JS-01..JS-06, JS-10, JS-11). Deterministic.
 import type { Change, Config, Kind } from '../schemas';
 import { jsonPathKey, type Parsed } from './parse';
+import { byCodePoint } from '../order';
 
 export type JsonOptions = Config['json'];
 type Json = null | boolean | number | string | Json[] | { [k: string]: Json };
@@ -207,7 +208,7 @@ export function toChanges(d: JsonDiff, before: Parsed, after: Parsed, files: { b
       ...(c.after !== undefined ? { after: c.after } : {}),
     };
   });
-  out.sort((x, y) => line(x) - line(y) || x.jsonPath!.localeCompare(y.jsonPath!) || x.kind.localeCompare(y.kind));
+  out.sort((x, y) => line(x) - line(y) || byCodePoint(x.jsonPath!, y.jsonPath!) || byCodePoint(x.kind, y.kind));
   out.forEach((c, i) => { c.id = `c-${String(i + 1).padStart(4, '0')}`; });
   return out;
 }

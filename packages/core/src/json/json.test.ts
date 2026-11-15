@@ -98,6 +98,16 @@ describe('parse', () => {
   });
 });
 
+describe('X-13 determinism across machines', () => {
+  it('orders changes on one line by code point, not by the machine locale', () => {
+    const a = parse('{"a": 1, "A": 1, "_a": 1}'), b = parse('{"a": 2, "A": 2, "_a": 2}');
+    const d = diffJson(a.value, b.value, Config.parse({}).json);
+    const paths = toChanges(d, a, b, { before: 'a.json', after: 'b.json' }, 'json').map((c) => c.jsonPath);
+    // Locale collation gives _a, a, A (en) and differs again in lt/et; code points do not.
+    expect(paths).toEqual(['$.A', '$._a', '$.a']);
+  });
+});
+
 describe('exports', () => {
   it('keeps a "__proto__" key in a merge patch as an ordinary key (JS-08)', () => {
     const a = JSON.parse('{"__proto__": {"x": 1}, "y": 1}') as unknown;

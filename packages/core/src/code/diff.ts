@@ -1,6 +1,7 @@
 // Code mode (Beta; CD-01..CD-06): structure-aware diff with tree-sitter (WASM).
 // Declarations are matched by qualified name; bodies are compared as normalised token streams.
 import { Language, Parser, type Node } from 'web-tree-sitter';
+import { byCodePoint } from '../order';
 
 export type CodeLang = 'typescript' | 'tsx' | 'javascript' | 'java' | 'python';
 export type CodeStatus = 'same' | 'formatting' | 'comments' | 'changed' | 'added' | 'removed' | 'renamed' | 'moved' | 'renamedLocals';
@@ -218,7 +219,7 @@ export function diffCode(before: string, after: string, lang: CodeLang, language
     items.push({ name: '(top level)', kind: 'module', status, ...(status === 'formatting' ? { hiddenEdits: hiddenEdits(A.module.raw, B.module.raw, lang) } : {}), lines: {}, beforeText: A.module.text, afterText: B.module.text });
   }
   // Nested declarations change their parents' text too; a parent whose only change is in children stays "changed" — fine.
-  items.sort((x, y) => (x.lines.after?.[0] ?? x.lines.before?.[0] ?? 1e9) - (y.lines.after?.[0] ?? y.lines.before?.[0] ?? 1e9) || x.name.localeCompare(y.name));
+  items.sort((x, y) => (x.lines.after?.[0] ?? x.lines.before?.[0] ?? 1e9) - (y.lines.after?.[0] ?? y.lines.before?.[0] ?? 1e9) || byCodePoint(x.name, y.name));
   const stats = { same: 0, formatting: 0, comments: 0, changed: 0, added: 0, removed: 0, renamed: 0, moved: 0, renamedLocals: 0 } as Record<CodeStatus, number>;
   for (const i of items) stats[i.status]++;
   ta.delete(); tb.delete(); parser.delete();
@@ -308,7 +309,7 @@ function consistentRenames(a: string[], b: string[], declNames: ReadonlySet<stri
     if (a[i] !== b[i] || member(a, i)) continue;
     if (fwd.has(a[i]!) || back.has(b[i]!)) return undefined;
   }
-  return [...fwd].map(([from, to]) => ({ from, to, uses: uses.get(from)! })).sort((p, q) => p.from.localeCompare(q.from));
+  return [...fwd].map(([from, to]) => ({ from, to, uses: uses.get(from)! })).sort((p, q) => byCodePoint(p.from, q.from));
 }
 
 function findError(n: Node): Node | undefined {
