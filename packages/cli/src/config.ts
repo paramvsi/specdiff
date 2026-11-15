@@ -19,7 +19,9 @@ export function findConfig(explicit?: string): string | undefined {
 export function loadConfig(explicit?: string): { config: ConfigT; path?: string } {
   const path = findConfig(explicit);
   if (!path) return { config: Config.parse({}) };
-  const r = Config.safeParse(parse(readFileSync(path, 'utf8')) ?? {});
+  let raw: unknown;
+  try { raw = parse(readFileSync(path, 'utf8')); } catch (e) { throw new Error(`${path}: ${e instanceof Error ? e.message : String(e)}`); }
+  const r = Config.safeParse(raw ?? {});
   if (!r.success) throw new Error(`${path} is not valid:\n${r.error.issues.map((i) => `  ${i.path.join('.')}: ${i.message}`).join('\n')}`);
   return { config: r.data, path };
 }
