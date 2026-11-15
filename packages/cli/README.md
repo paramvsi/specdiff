@@ -77,7 +77,8 @@ Given one file, the CLI compares `HEAD:<file>` with your working copy. A new fil
 ```sh
 git config diff.specdiff.command "specdiff git-diff-driver"
 echo "openapi.yaml diff=specdiff" >> .gitattributes
-git log -p openapi.yaml    # shows the semantic changelog for each commit
+git diff openapi.yaml                 # uses the driver by default
+git log -p --ext-diff openapi.yaml    # git log needs --ext-diff to use it
 ```
 
 ## Version history for the Viewer

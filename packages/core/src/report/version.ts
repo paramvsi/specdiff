@@ -1,10 +1,10 @@
 // OA-08 version check and bump suggestion. docs/04: any breaking → major (minor below 1.0.0);
 // any safe change → minor; otherwise patch. B-8: possibly-breaking only → minor.
-import coerce from 'semver/functions/coerce';
-import inc from 'semver/functions/inc';
-import lt from 'semver/functions/lt';
-import major from 'semver/functions/major';
-import minor from 'semver/functions/minor';
+import coerce from 'semver/functions/coerce.js';
+import inc from 'semver/functions/inc.js';
+import lt from 'semver/functions/lt.js';
+import major from 'semver/functions/major.js';
+import minor from 'semver/functions/minor.js';
 import type { VersionCheck } from '../schemas';
 
 export interface SeverityCounts {

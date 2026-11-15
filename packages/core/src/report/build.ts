@@ -1,7 +1,8 @@
 // Report builder (docs/07 §2): runs the engine, dedups shared-schema findings (OA-14), applies
 // presets (OA-19), rule overrides, ignores and noise options (OA-12), and produces a sorted,
 // deterministic report with stable ids and fingerprints (X-13).
-import picomatch from 'picomatch/posix';
+// '.js': picomatch has no exports map, and plain Node ESM needs the file name.
+import picomatch from 'picomatch/posix.js';
 import { Config, type Change, type ConfigInput, type Report, type Severity } from '../schemas';
 import { Engine, type Finding } from '../openapi/engine';
 import { fnv1a64, stableStringify } from '../openapi/hash';

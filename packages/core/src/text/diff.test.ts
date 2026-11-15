@@ -62,3 +62,47 @@ describe('foldRows', () => {
     expect(v.length).toBeLessThan(d.rows.length);
   });
 });
+
+describe('diffText moves (TX-11)', () => {
+  const tax = ['export function tax(amount, rate) {', '  if (rate < 0) throw new Error("rate")', '  return amount * rate', '}'];
+  const total = ['export function total(items) {', '  return items.reduce((s, i) => s + i.price, 0)', '}'];
+  const pad = (p: string) => Array.from({ length: 6 }, (_, i) => `// ${p} filler line ${i}`);
+
+  it('finds a block moved unchanged and marks both ends', () => {
+    const before = [...tax, ...pad('a'), ...total].join('\n') + '\n';
+    const after = [...pad('a'), ...total, ...tax].join('\n') + '\n';
+    const d = diffText(before, after, opts(), { moves: true });
+    expect(d.moves).toEqual([{ from: [1, 4], to: [10, 13], rows: [0, d.rows.findIndex((r) => r.move === 0 && r.right)], edited: false, words: 0 }]);
+    expect(d.rows.filter((r) => r.move === 0 && r.left)).toHaveLength(4);
+    expect(d.rows.filter((r) => r.move === 0 && r.right)).toHaveLength(4);
+    // An unchanged moved line has no word highlights.
+    expect(d.rows.find((r) => r.move === 0 && r.right)!.right!.segs.every((s) => s.kind === 'same')).toBe(true);
+  });
+
+  it('highlights a word edited inside a moved block', () => {
+    const before = [...tax, ...pad('b'), ...total].join('\n') + '\n';
+    const edited = tax.map((l) => l.replace('return amount * rate', 'return Math.round(amount * rate)'));
+    const after = [...pad('b'), ...total, ...edited].join('\n') + '\n';
+    const d = diffText(before, after, opts(), { moves: true });
+    expect(d.moves).toHaveLength(1);
+    expect(d.moves![0]!.edited).toBe(true);
+    expect(d.moves![0]!.words).toBe(2); // "Math.round(" and ")"
+    const row = d.rows.find((r) => r.move === 0 && r.right?.n === 12)!;
+    expect(row.right!.segs.filter((s) => s.kind === 'add').map((s) => s.text).join('')).toContain('Math.round');
+  });
+
+  it('ignores runs shorter than three lines and edits in place', () => {
+    const d1 = diffText('aaaa\nbbbb\nx\ny\nz\n', 'x\ny\nz\naaaa\nbbbb\n', opts(), { moves: true });
+    expect(d1.moves).toEqual([]);
+    const d2 = diffText('one line\ntwo line\nthree line\n', 'one LINE\ntwo LINE\nthree LINE\n', opts(), { moves: true });
+    expect(d2.moves).toEqual([]);
+    expect(d2.rows.every((r) => r.type === 'change')).toBe(true);
+  });
+
+  it('is off unless asked for, and deterministic', () => {
+    const before = [...tax, ...pad('c'), ...total].join('\n') + '\n';
+    const after = [...pad('c'), ...total, ...tax].join('\n') + '\n';
+    expect(diffText(before, after, opts()).moves).toBeUndefined();
+    expect(JSON.stringify(diffText(before, after, opts(), { moves: true }))).toBe(JSON.stringify(diffText(before, after, opts(), { moves: true })));
+  });
+});

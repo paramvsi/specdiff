@@ -7,6 +7,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./text": "./src/text/diff.ts",
+    "./text/patch": "./src/text/patch.ts",
     "./share": "./src/share/codec.ts",
     "./detect": "./src/detect.ts",
     "./json": "./src/json/index.ts",
@@ -22,11 +23,43 @@
       ".": {
         "types": "./dist/index.d.ts",
         "import": "./dist/index.js"
+      },
+      "./text": {
+        "types": "./dist/text.d.ts",
+        "import": "./dist/text.js"
+      },
+      "./text/patch": {
+        "types": "./dist/text-patch.d.ts",
+        "import": "./dist/text-patch.js"
+      },
+      "./share": {
+        "types": "./dist/share.d.ts",
+        "import": "./dist/share.js"
+      },
+      "./detect": {
+        "types": "./dist/detect.d.ts",
+        "import": "./dist/detect.js"
+      },
+      "./json": {
+        "types": "./dist/json.d.ts",
+        "import": "./dist/json.js"
+      },
+      "./markdown": {
+        "types": "./dist/markdown.d.ts",
+        "import": "./dist/markdown.js"
+      },
+      "./har": {
+        "types": "./dist/har.d.ts",
+        "import": "./dist/har.js"
+      },
+      "./code": {
+        "types": "./dist/code.d.ts",
+        "import": "./dist/code.js"
       }
     }
   },
   "scripts": {
-    "build": "tsup src/index.ts --format esm --dts --clean",
+    "build": "tsup",
     "typecheck": "tsc -p ."
   },
   "dependencies": {

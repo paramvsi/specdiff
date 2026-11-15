@@ -20,7 +20,9 @@
     "exports": {
       ".": "./dist/specdiff-embed.js",
       "./specdiff-embed.css": "./dist/specdiff-embed.css",
-      "./specdiff-compare.js": "./dist/specdiff-compare.js"
+      "./specdiff-compare.js": "./dist/specdiff-compare.js",
+      "./package.json": "./package.json",
+      "./dist/*": "./dist/*"
     }
   },
   "scripts": {
