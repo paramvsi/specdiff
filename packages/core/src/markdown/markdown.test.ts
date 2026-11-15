@@ -88,3 +88,23 @@ describe('whitespace that renders the same', () => {
     expect(diffMarkdown('Some   text here.\n', 'Some text here.\n').stats).toEqual(expect.objectContaining({ added: 0, removed: 0, edited: 0 }));
   });
 });
+
+// Known XSS vectors (OWASP filter-evasion list, DOMPurify test cases) through every render path:
+// an added block, a removed block and a word-diffed changed paragraph. Text that merely reads
+// "javascript:" is fine; an attribute or element that would run code is not.
+describe('rendered HTML stays inert (MD-06)', () => {
+  const payloads = [
+    '[a](javascript:alert(1))', '[a](JaVaScRiPt:alert(1))', '[a](java&#x09;script:alert(1))', '[a](&#106;avascript:alert(1))',
+    '<img src=x onerror=alert(1)>', '<svg onload=alert(1)>', '<script>alert(1)</script>', '<iframe src="https://evil.example"></iframe>',
+    '![x](data:text/html;base64,PHNjcmlwdD4=)', '[a](data:text/html,<script>alert(1)</script>)', '<a href="javascript:alert(1)">x</a>',
+    '[ref][a]\n\n[a]: javascript:alert(1)', '<details open ontoggle=alert(1)>', '[a](vbscript:msgbox(1))',
+    '<math><mtext><table><mglyph><style><img src=x onerror=alert(1)>',
+  ];
+  const unsafe = /(href|src)="\s*(javascript|vbscript|data):|\son\w+=|<(script|iframe|svg|style|math|object|embed)\b|srcdoc/i;
+  it.each(payloads)('%s', (p) => {
+    for (const [a, b] of [['x\n', `${p}\n`], [`${p}\n`, 'x\n'], [`para ${p} end\n`, `para ${p} changed end\n`]]) {
+      const html = diffMarkdown(a!, b!).blocks.map((x) => x.html).join('\n');
+      expect(html).not.toMatch(unsafe);
+    }
+  });
+});
