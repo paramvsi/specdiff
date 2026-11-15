@@ -9,6 +9,18 @@ Owner asleep. Claude runs self-paced loops: audit → fix → commit, then enhan
 - Anything a permission check blocks goes to **Morning decisions** with what was tried.
 - Every fix: a failing check first where it is a bug, then the fix, then the passing check, logged below with the commit hash.
 
+## Summary so far (refreshed during the night; final version at the end)
+
+**Read first in the morning.** 29 code commits (26 fixes, 1 feature, 2 test-only), each with a test shown failing before and passing after. Nothing pushed. The pre-push \`pnpm verify\` has not been run tonight (CLAUDE.md: full suite only at push); two combined checkpoints (rows 34, 47) ran every affected test file, typecheck and lint together and were green.
+
+**Worth your attention first**
+- **Security:** share-link decompression bomb capped (\`031c5f2\`); Express handler could crash a plain node server on a malformed URL (\`135002d\`); CLI read and served unrelated files next to the input (\`a7df01e\`); bidi / Trojan Source characters now named in diffs (\`9bfe139\`); 15 XSS vectors locked in as a Markdown guard (\`1d3f212\`).
+- **Wrong results:** identical Java files with overloads reported a change (\`5ac73b0\`); output order depended on the machine locale (\`2233bba\`); unquoted \`info.version: 1.10\` read as 1.1, so 1.9 → 1.10 was called a decrease (\`ea6a2ef\`, \`74b7c51\`); reports said generator 0.0.0 (\`ad3fbdb\`); YAML front matter read as a heading (\`3fb3837\`).
+- **Review a visual change:** \`60f14c1\` updated 2 visual baselines (text result at 390 px: the stats line now wraps). Revert = one CSS line plus the two PNGs.
+- **Watch at push:** the 20,000-line text-diff timing test can exceed its 4 s budget on a loaded machine (row 41).
+
+**Morning decisions:** M-1 … M-8 below. Each has a suggested answer.
+
 ## Morning decisions
 - **M-1 (row 12):** with `--allow-external-refs`, should the CLI also follow *relative* `$ref`s found inside a fetched remote file (resolved against that file's URL)? Today they stay unresolved. Default kept: no (smaller network reach).
 - **M-2 (row 3):** integers beyond 2^53 lose precision in JSON/YAML mode. Options: (a) leave, (b) flag "number too large to compare exactly" as a warning, (c) compare such numbers by their source text. Suggest (b).
@@ -76,3 +88,4 @@ Owner asleep. Claude runs self-paced loops: audit → fix → commit, then enhan
 | 52 | 02:10 | research · YAML type traps (OA-09, JS-04) | Fine: YAML 1.2 keeps `NO` / `on` as strings; JSON/YAML mode treats 1.10 = 1.1 (numeric). **Bug:** unquoted `info.version: 1.10` became 1.1, so 1.9 → 1.10 was reported as a decrease. Now read as written. **Same class, not fixed:** the Viewer's version labels come from `spec.info.version` too (unquoted 1.10 shows "1.1") | 2 tests failing before, 84/84 after | `ea6a2ef`; Viewer label → next pass |
 | 53 | 02:15 | viewer · version labels (VW-03, follow-up to row 52) | Viewer, embed and React labelled an unquoted `info.version: 1.10` as "1.1". Now the written literal is kept at parse time in all three paths | embed test failing before, 42/42 after; visual 12/12; embed 167.7 kB gzip | `74b7c51` |
 | 54 | 02:20 | viewer · What changed (UI, V04-Timeline) | Desktop + phone, light + dark: axe clean, no sideways scroll, phone targets ≥ 44 px. Layout matches V04-Timeline (timeline, endpoint filter card, change list, upgrade-effort aside + checklist). Nit, not changed: the design draws the selected range between two chosen versions as a dark, thicker segment; ours stays thin grey with two versions (design shows a five-version, filtered state, so not confirmable here) | scripted sweep + screenshot vs design | no change (nit noted) |
+| 55 | 02:12 | refactor · two "written version" helpers (rows 52, 53) | core reads the literal at a parsed source position; the Viewer scans text (it has no positions). Core cannot import the Viewer; ~10 lines each. Not merged. Added a "Summary so far" block at the top of this log | read | no code change |
