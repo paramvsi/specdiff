@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { compareOpenApi, parseDocument } from '@specdiff/core';
 import { describe, expect, it } from 'vitest';
-import { bySeverity, changeLine, checklist, displayKeyOf, fieldNames, filterByEndpoints, indexChanges, shortTitle, summarySentence } from './change-index';
+import { bySeverity, changeLine, plain, checklist, displayKeyOf, fieldNames, filterByEndpoints, indexChanges, shortTitle, summarySentence } from './change-index';
 import { buildModel } from './model';
 
 const dir = join(__dirname, '../../../fixtures/samples');
@@ -94,5 +94,13 @@ describe('round 3 copy (V-01, V-02)', () => {
     const keys = cur.tags.flatMap((t) => t.ops.map((o) => o.key));
     expect(keys).toHaveLength(new Set(keys).size);
     expect(keys.sort()).toEqual(cur.ops.map((o) => o.key).sort());
+  });
+});
+
+describe('plain changelog headlines (VW-08, after OUT-01 fencing)', () => {
+  it('unwraps code spans of any fence length and decodes escaped text', () => {
+    expect(plain('`` GET /p/{id}|x`y `` now requires `q<a>`.')).toBe('GET /p/{id}|x`y now requires q<a>.');
+    expect(plain('`limit` maximum lowered from 100 to &lt;5 &amp; more')).toBe('limit maximum lowered from 100 to <5 & more');
+    expect(plain('Removed `GET /v1/refunds/{id}`.')).toBe('Removed GET /v1/refunds/{id}.');
   });
 });

@@ -114,7 +114,14 @@ export function indexChanges(report: Report | undefined, current: Model, previou
 }
 
 /** Inline-code-aware plain text: strips Markdown backticks. */
-export const plain = (s: string) => s.replace(/`/g, '');
+/**
+ * Inline Markdown of a changelog line as plain text: code spans of any fence length unwrapped (a
+ * backtick inside a value is kept), then the & < > escapes that core applies to bare values decoded.
+ */
+export const plain = (s: string) =>
+  s
+    .replace(/(`+)(?!`)([\s\S]*?[^`])\1(?!`)/g, (_m, _f: string, body: string) => (/^ .* $/.test(body) && body.trim() ? body.slice(1, -1) : body))
+    .replace(/&(lt|gt|amp);/g, (_m, e: string) => (e === 'lt' ? '<' : e === 'gt' ? '>' : '&'));
 
 /** Headline for a change: its changelog line, or a readable fallback. */
 export function changeTitle(c: Change): string {
