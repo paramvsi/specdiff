@@ -46,3 +46,17 @@ describe('gate', () => {
     expect(lines).toContain('⚠ After: could not resolve $ref x.yaml (from b).');
   });
 });
+
+it('an accepted change does not cover a different change at the same place (OA-21)', async () => {
+  const { compareOpenApi } = await import('@specdiff/core');
+  const spec = (max: number) => ({ name: 'o.yaml', content: `openapi: 3.1.0\ninfo: {title: T, version: '1'}\npaths:\n  /p:\n    get:\n      parameters:\n        - {name: limit, in: query, schema: {type: integer, maximum: ${max}}}\n      responses: {'200': {description: ok}}\n` });
+  const reviewed = compareOpenApi(spec(100), spec(50));
+  const fp = reviewed.changes.find((c) => c.severity === 'breaking')!.fingerprint;
+  const decisions = { version: 1 as const, decisions: { [fp]: { decision: 'accepted' as const, path: 'limit', at: '2026-11-16T00:00:00Z' } } };
+  expect(gate(reviewed, 'breaking', decisions).code).toBe(0);
+  // Same parameter, a tighter limit that nobody reviewed: the gate must fail and the old decision is stale.
+  const later = compareOpenApi(spec(100), spec(10));
+  const g = gate(later, 'breaking', decisions);
+  expect(g.code).toBe(1);
+  expect(g.stale).toEqual([fp]);
+});
