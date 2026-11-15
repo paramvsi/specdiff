@@ -41,3 +41,13 @@ test('History controls are at least 44 px tall on a phone @phone', async ({ page
   await expect(page.getByRole('heading', { name: 'History', level: 1 })).toBeVisible();
   expect(await smallTargets(page)).toEqual([]);
 });
+
+test('Viewer endpoint and schema controls are at least 44 px tall on a phone @phone', async ({ page }) => {
+  test.skip(test.info().project.name !== 'phone');
+  for (const route of ['#/op/post-v1-payments', '#/schema/card']) {
+    await page.goto(`http://localhost:5174/${route}`);
+    await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible();
+    // The hidden file input is driven by its visible "Add a version" button.
+    expect((await smallTargets(page)).filter((t) => t.what !== 'Add a version from a file'), route).toEqual([]);
+  }
+});

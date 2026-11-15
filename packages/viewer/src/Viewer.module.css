@@ -1495,3 +1495,19 @@ summary.responseHead::-webkit-details-marker {
   color: var(--sd-ink);
   font-weight: 600;
 }
+
+/* Touch screens: 44 px tap areas (CLAUDE.md rule 4). Padding plus an equal negative margin grows
+   the target without moving the layout. */
+@media (pointer: coarse) {
+  a.fieldType,
+  .mediaType .link,
+  .usedLink {
+    padding-block: 14px;
+    margin-block: -14px;
+  }
+  .iconBtnDark {
+    width: 44px;
+    height: 44px;
+    margin: -6px;
+  }
+}
