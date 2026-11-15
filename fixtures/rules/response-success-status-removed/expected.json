@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "response-success-status-removed",
+      "severity": "breaking",
+      "direction": "response",
+      "path": "GET /a › response 202",
+      "kind": "removed"
+    }
+  ],
+  "modelRefs": []
+}

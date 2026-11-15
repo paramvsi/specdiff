@@ -1,0 +1,356 @@
+openapi: 3.1.0
+info:
+  title: Payments API
+  version: 2.0.0
+  description: Accept payments, issue refunds and payouts, and manage saved cards.
+servers:
+  - url: https://api.example.com
+security:
+  - bearerAuth: []
+tags:
+  - name: payments
+  - name: refunds
+  - name: customers
+  - name: payouts
+paths:
+  /v1/payments:
+    post:
+      operationId: createPayment
+      summary: Create a payment in any supported currency
+      tags: [payments]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount, currency]
+              properties:
+                amount:
+                  type: integer
+                  minimum: 1
+                  description: Amount in the smallest currency unit.
+                currency:
+                  type: string
+                  description: Three-letter ISO 4217 currency code.
+                description:
+                  type: string
+                customer:
+                  type: string
+                metadata:
+                  type: object
+                  additionalProperties:
+                    type: string
+      responses:
+        '201':
+          description: Payment created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentSummary'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    get:
+      operationId: listPayments
+      summary: List payments, newest first
+      tags: [payments]
+      parameters:
+        - name: limit
+          in: query
+          description: How many payments to return (at most 50).
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+        - name: starting_after
+          in: query
+          schema:
+            type: string
+        - name: created_gte
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/PaymentStatus'
+      responses:
+        '200':
+          description: A page of payments
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentList'
+  /v1/payments/{id}:
+    get:
+      operationId: getPayment
+      summary: Retrieve a payment
+      tags: [payments]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The payment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /v1/payments/{id}/capture:
+    post:
+      operationId: capturePayment
+      summary: Capture a payment
+      tags: [payments]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The captured payment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentSummary'
+  /v1/refunds:
+    post:
+      operationId: createRefund
+      summary: Refund a payment
+      tags: [refunds]
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: false
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [payment]
+              properties:
+                payment:
+                  type: string
+                amount:
+                  type: integer
+                reason:
+                  type: string
+      responses:
+        '201':
+          description: Refund created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Refund'
+  /v1/refunds/{id}:
+    get:
+      operationId: getRefund
+      summary: Retrieve a refund
+      description: Deprecated. Use the refund object returned by POST /v1/refunds.
+      deprecated: true
+      tags: [refunds]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The refund
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Refund'
+  /v1/customers/{id}/cards:
+    get:
+      operationId: listCustomerCards
+      summary: List a customer's saved cards
+      tags: [customers, cards]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            maximum: 50
+      responses:
+        '200':
+          description: The customer's cards
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Card'
+  /v1/payouts:
+    post:
+      operationId: createPayout
+      summary: Send a payout
+      tags: [payouts]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount, currency, destination]
+              properties:
+                amount:
+                  type: integer
+                currency:
+                  type: string
+                destination:
+                  type: string
+      responses:
+        '201':
+          description: Payout created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payout'
+  /v1/payouts/{id}:
+    get:
+      operationId: getPayout
+      summary: Retrieve a payout
+      tags: [payouts]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The payout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payout'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  schemas:
+    Payment:
+      type: object
+      required: [id, amount, currency, status]
+      properties:
+        id:
+          type: string
+        amount:
+          type: integer
+        currency:
+          type: string
+        status:
+          $ref: '#/components/schemas/PaymentStatus'
+        card:
+          $ref: '#/components/schemas/Card'
+        created:
+          type: integer
+        metadata:
+          type: object
+          additionalProperties:
+            type: string
+      example:
+        id: pay_123
+        amount: 1999
+        currency: EUR
+        status: succeeded
+        metadata:
+          order_id: '6735'
+    PaymentSummary:
+      type: object
+      required: [id, status]
+      properties:
+        id:
+          type: string
+        status:
+          $ref: '#/components/schemas/PaymentStatus'
+    PaymentList:
+      type: object
+      required: [data, has_more]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Payment'
+        has_more:
+          type: boolean
+        next_cursor:
+          type: string
+    PaymentStatus:
+      type: string
+      enum: [pending, succeeded, failed, disputed]
+    Card:
+      type: object
+      required: [brand, exp_month]
+      properties:
+        brand:
+          type: string
+          description: Card brand, such as visa or mastercard.
+        fingerprint:
+          type: string
+        exp_month:
+          type: integer
+        exp_year:
+          type: integer
+    Refund:
+      type: object
+      required: [id, payment, amount]
+      properties:
+        id:
+          type: string
+        payment:
+          type: string
+        amount:
+          type: integer
+        reason:
+          type: string
+    Payout:
+      type: object
+      required: [id, amount, currency, status]
+      properties:
+        id:
+          type: string
+        amount:
+          type: integer
+        currency:
+          type: string
+        status:
+          type: string
+          enum: [pending, paid, failed]
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string

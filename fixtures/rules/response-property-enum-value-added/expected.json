@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "response-property-enum-value-added",
+      "severity": "possibly",
+      "direction": "response",
+      "path": "GET /a › response 200 › status",
+      "kind": "added"
+    }
+  ],
+  "modelRefs": []
+}

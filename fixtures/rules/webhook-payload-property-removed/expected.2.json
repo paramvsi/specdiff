@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "response-property-added",
+      "severity": "safe",
+      "direction": "response",
+      "path": "webhook newPet › payload › name",
+      "kind": "added"
+    }
+  ],
+  "modelRefs": []
+}

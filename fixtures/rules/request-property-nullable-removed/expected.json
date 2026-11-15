@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "request-property-nullable-removed",
+      "severity": "breaking",
+      "direction": "request",
+      "path": "POST /a › requestBody › note",
+      "kind": "changed"
+    }
+  ],
+  "modelRefs": []
+}

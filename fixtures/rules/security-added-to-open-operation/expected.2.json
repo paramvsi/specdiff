@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "security-added-to-open-operation",
+      "severity": "breaking",
+      "direction": "request",
+      "path": "GET /a › security",
+      "kind": "added"
+    }
+  ],
+  "modelRefs": []
+}

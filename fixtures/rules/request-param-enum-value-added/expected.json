@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "request-param-enum-value-added",
+      "severity": "safe",
+      "direction": "request",
+      "path": "GET /a › query q",
+      "kind": "added"
+    }
+  ],
+  "modelRefs": []
+}

@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "request-schema-became-false",
+      "severity": "breaking",
+      "direction": "request",
+      "path": "POST /a › requestBody › legacy",
+      "kind": "changed"
+    }
+  ],
+  "modelRefs": []
+}

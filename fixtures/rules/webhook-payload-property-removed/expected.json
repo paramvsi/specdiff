@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "webhook-payload-property-removed",
+      "severity": "breaking",
+      "direction": "response",
+      "path": "webhook newPet › payload › name",
+      "kind": "removed"
+    }
+  ],
+  "modelRefs": []
+}

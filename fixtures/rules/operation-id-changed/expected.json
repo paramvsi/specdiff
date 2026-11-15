@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "operation-id-changed",
+      "severity": "possibly",
+      "direction": "both",
+      "path": "GET /a",
+      "kind": "renamed"
+    }
+  ],
+  "modelRefs": []
+}

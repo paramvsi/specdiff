@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "request-property-added-optional",
+      "severity": "safe",
+      "direction": "request",
+      "path": "POST /a › requestBody › nickname",
+      "kind": "added"
+    }
+  ],
+  "modelRefs": []
+}

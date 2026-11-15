@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "response-required-became-write-only",
+      "severity": "breaking",
+      "direction": "response",
+      "path": "GET /a › response 200 › secret",
+      "kind": "changed"
+    }
+  ],
+  "modelRefs": []
+}

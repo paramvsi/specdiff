@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "request-union-branch-removed",
+      "severity": "possibly",
+      "direction": "request",
+      "path": "POST /a › requestBody",
+      "kind": "removed"
+    }
+  ],
+  "modelRefs": []
+}

@@ -1,0 +1,13 @@
+{
+  "today": "2026-11-15",
+  "changes": [
+    {
+      "ruleId": "sunset-date-removed",
+      "severity": "possibly",
+      "direction": "both",
+      "path": "GET /a",
+      "kind": "removed"
+    }
+  ],
+  "modelRefs": []
+}

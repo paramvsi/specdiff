@@ -1,0 +1,13 @@
+{
+  "today": "2026-11-15",
+  "changes": [
+    {
+      "ruleId": "endpoint-removed-after-deprecation",
+      "severity": "breaking",
+      "direction": "both",
+      "path": "GET /b",
+      "kind": "removed"
+    }
+  ],
+  "modelRefs": []
+}

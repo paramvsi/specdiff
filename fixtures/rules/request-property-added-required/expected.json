@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "request-property-added-required",
+      "severity": "breaking",
+      "direction": "request",
+      "path": "POST /a › requestBody › age",
+      "kind": "added"
+    }
+  ],
+  "modelRefs": []
+}

@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "schema-renamed",
+      "severity": "docs",
+      "direction": "both",
+      "path": "components.schemas.Pet",
+      "kind": "renamed"
+    }
+  ],
+  "modelRefs": []
+}

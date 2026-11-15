@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "request-property-added-required",
+      "severity": "docs",
+      "direction": "request",
+      "path": "POST /a › requestBody › id",
+      "kind": "added"
+    }
+  ],
+  "modelRefs": []
+}

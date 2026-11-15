@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "endpoint-added",
+      "severity": "safe",
+      "direction": "both",
+      "path": "GET /b",
+      "kind": "added"
+    }
+  ],
+  "modelRefs": []
+}

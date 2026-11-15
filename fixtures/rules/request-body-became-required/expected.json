@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "request-body-became-required",
+      "severity": "breaking",
+      "direction": "request",
+      "path": "POST /a › requestBody",
+      "kind": "changed"
+    }
+  ],
+  "modelRefs": []
+}

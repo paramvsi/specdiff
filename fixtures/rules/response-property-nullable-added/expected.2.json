@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "response-property-nullable-added",
+      "severity": "possibly",
+      "direction": "response",
+      "path": "GET /a › response 200 › note",
+      "kind": "changed"
+    }
+  ],
+  "modelRefs": []
+}

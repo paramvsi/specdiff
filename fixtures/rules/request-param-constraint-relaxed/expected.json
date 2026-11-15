@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "request-param-constraint-relaxed",
+      "severity": "safe",
+      "direction": "request",
+      "path": "GET /a › query limit › maximum",
+      "kind": "changed"
+    }
+  ],
+  "modelRefs": []
+}

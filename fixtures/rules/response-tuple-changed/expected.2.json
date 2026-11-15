@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "response-tuple-changed",
+      "severity": "breaking",
+      "direction": "response",
+      "path": "GET /a › response 200",
+      "kind": "changed"
+    }
+  ],
+  "modelRefs": []
+}

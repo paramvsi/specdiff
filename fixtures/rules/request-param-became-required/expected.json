@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "request-param-became-required",
+      "severity": "breaking",
+      "direction": "request",
+      "path": "GET /a › query q",
+      "kind": "changed"
+    }
+  ],
+  "modelRefs": []
+}

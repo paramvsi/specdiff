@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "response-status-added",
+      "severity": "possibly",
+      "direction": "response",
+      "path": "GET /a › response 404",
+      "kind": "added"
+    }
+  ],
+  "modelRefs": []
+}

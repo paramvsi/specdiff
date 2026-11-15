@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "enum-name-changed",
+      "severity": "docs",
+      "direction": "both",
+      "path": "components.schemas.Status",
+      "kind": "renamed"
+    }
+  ],
+  "modelRefs": []
+}

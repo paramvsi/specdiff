@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "server-url-changed",
+      "severity": "possibly",
+      "direction": "both",
+      "path": "servers",
+      "kind": "changed"
+    }
+  ],
+  "modelRefs": []
+}

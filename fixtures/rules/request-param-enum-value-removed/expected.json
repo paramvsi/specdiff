@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "request-param-enum-value-removed",
+      "severity": "breaking",
+      "direction": "request",
+      "path": "GET /a › query q",
+      "kind": "removed"
+    }
+  ],
+  "modelRefs": []
+}

@@ -30,7 +30,6 @@
     "typecheck": "tsc -p ."
   },
   "dependencies": {
-    "@apidevtools/json-schema-ref-parser": "16.0.5",
     "@scalar/openapi-parser": "0.29.19",
     "diff": "9.0.0",
     "fflate": "0.8.3",

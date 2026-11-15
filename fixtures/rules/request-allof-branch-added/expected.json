@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "request-allof-branch-added",
+      "severity": "breaking",
+      "direction": "request",
+      "path": "POST /a › requestBody",
+      "kind": "added"
+    }
+  ],
+  "modelRefs": []
+}

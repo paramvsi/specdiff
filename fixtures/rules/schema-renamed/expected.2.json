@@ -1,0 +1,15 @@
+{
+  "config": {
+    "preset": "sdk"
+  },
+  "changes": [
+    {
+      "ruleId": "schema-renamed",
+      "severity": "breaking",
+      "direction": "both",
+      "path": "components.schemas.Pet",
+      "kind": "renamed"
+    }
+  ],
+  "modelRefs": []
+}

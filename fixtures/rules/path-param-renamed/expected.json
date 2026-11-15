@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "path-param-renamed",
+      "severity": "safe",
+      "direction": "request",
+      "path": "/users/{userId}",
+      "kind": "renamed"
+    }
+  ],
+  "modelRefs": []
+}

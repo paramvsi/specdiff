@@ -1,0 +1,28 @@
+openapi: 3.1.0
+info:
+  title: Fixture
+  version: 1.0.0
+paths:
+  /a:
+    get:
+      operationId: getA
+      responses:
+        "200":
+          description: OK
+security:
+  - oauth:
+      - read
+components:
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      in: header
+      name: X-API-Key
+    oauth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: HTTPS://AUTH.EXAMPLE.COM:443/token/
+          scopes:
+            read: Read
+            write: Write

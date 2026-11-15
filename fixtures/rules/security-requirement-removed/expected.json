@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "security-requirement-removed",
+      "severity": "breaking",
+      "direction": "request",
+      "path": "GET /a › security",
+      "kind": "removed"
+    }
+  ],
+  "modelRefs": []
+}

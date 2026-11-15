@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "request-property-type-changed",
+      "severity": "breaking",
+      "direction": "request",
+      "path": "POST /a › requestBody › age",
+      "kind": "typeChanged"
+    }
+  ],
+  "modelRefs": []
+}

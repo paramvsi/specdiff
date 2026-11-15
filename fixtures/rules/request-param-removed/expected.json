@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "request-param-removed",
+      "severity": "possibly",
+      "direction": "request",
+      "path": "GET /a › query q",
+      "kind": "removed"
+    }
+  ],
+  "modelRefs": []
+}

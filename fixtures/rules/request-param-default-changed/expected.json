@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "request-param-default-changed",
+      "severity": "docs",
+      "direction": "request",
+      "path": "GET /a › query q",
+      "kind": "changed"
+    }
+  ],
+  "modelRefs": []
+}

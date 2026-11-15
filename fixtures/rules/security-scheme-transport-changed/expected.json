@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "security-scheme-transport-changed",
+      "severity": "breaking",
+      "direction": "request",
+      "path": "components.securitySchemes.apiKey",
+      "kind": "changed"
+    }
+  ],
+  "modelRefs": []
+}

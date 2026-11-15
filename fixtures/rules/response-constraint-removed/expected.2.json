@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "response-constraint-removed",
+      "severity": "breaking",
+      "direction": "response",
+      "path": "GET /a › response 200 › status",
+      "kind": "changed"
+    }
+  ],
+  "modelRefs": []
+}

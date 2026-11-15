@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "response-property-added",
+      "severity": "safe",
+      "direction": "response",
+      "path": "GET /a › response 200 › created",
+      "kind": "added"
+    }
+  ],
+  "modelRefs": []
+}

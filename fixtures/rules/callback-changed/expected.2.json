@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "request-property-added-required",
+      "severity": "breaking",
+      "direction": "request",
+      "path": "POST /subscribe › callback onEvent › POST {$request.body#/url} › response 200 › ref",
+      "kind": "added"
+    }
+  ],
+  "modelRefs": []
+}

@@ -1,0 +1,36 @@
+openapi: 3.1.0
+info:
+  title: Fixture
+  version: 1.0.0
+paths:
+  /subscribe:
+    post:
+      operationId: subscribe
+      responses:
+        "201":
+          description: Subscribed
+      callbacks:
+        onEvent:
+          "{$request.body#/url}":
+            post:
+              requestBody:
+                content:
+                  application/json:
+                    schema:
+                      type: object
+                      required:
+                        - id
+                        - at
+                      properties:
+                        id:
+                          type: string
+                        at:
+                          type: string
+              responses:
+                "200":
+                  description: Received
+                  content:
+                    application/json:
+                      schema:
+                        type: object
+                        properties: {}

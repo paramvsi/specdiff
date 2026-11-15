@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "response-property-type-changed",
+      "severity": "breaking",
+      "direction": "response",
+      "path": "GET /a › response 200 › day",
+      "kind": "typeChanged"
+    }
+  ],
+  "modelRefs": []
+}

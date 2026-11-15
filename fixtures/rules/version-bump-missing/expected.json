@@ -1,0 +1,19 @@
+{
+  "changes": [
+    {
+      "ruleId": "endpoint-removed",
+      "severity": "breaking",
+      "direction": "both",
+      "path": "GET /b",
+      "kind": "removed"
+    }
+  ],
+  "versionCheck": {
+    "from": "1.0.0",
+    "to": "1.1.0",
+    "suggested": "2.0.0",
+    "bump": "major",
+    "verdict": "missing-major"
+  },
+  "modelRefs": []
+}

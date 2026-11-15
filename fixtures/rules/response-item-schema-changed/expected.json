@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "response-property-removed",
+      "severity": "breaking",
+      "direction": "response",
+      "path": "GET /events › response 200 › itemSchema › id",
+      "kind": "removed"
+    }
+  ],
+  "modelRefs": []
+}

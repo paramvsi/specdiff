@@ -9,3 +9,4 @@ playwright-report
 specdiff-handover.zip
 .astro
 target
+fixtures/specs/large/

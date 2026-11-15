@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "request-body-content-type-removed",
+      "severity": "breaking",
+      "direction": "request",
+      "path": "POST /a › requestBody › application/xml",
+      "kind": "removed"
+    }
+  ],
+  "modelRefs": []
+}

@@ -1,0 +1,24 @@
+{
+  "config": {
+    "openapi": {
+      "includePathParamNames": true
+    }
+  },
+  "changes": [
+    {
+      "ruleId": "endpoint-removed",
+      "severity": "breaking",
+      "direction": "both",
+      "path": "GET /users/{id}",
+      "kind": "removed"
+    },
+    {
+      "ruleId": "endpoint-added",
+      "severity": "safe",
+      "direction": "both",
+      "path": "GET /users/{userId}",
+      "kind": "added"
+    }
+  ],
+  "modelRefs": []
+}

@@ -1,0 +1,17 @@
+{
+  "config": {
+    "ignore": {
+      "extensions": false
+    }
+  },
+  "changes": [
+    {
+      "ruleId": "extension-changed",
+      "severity": "docs",
+      "direction": "both",
+      "path": "GET /a",
+      "kind": "changed"
+    }
+  ],
+  "modelRefs": []
+}

@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "request-property-became-required",
+      "severity": "breaking",
+      "direction": "request",
+      "path": "QUERY /search › requestBody › text",
+      "kind": "changed"
+    }
+  ],
+  "modelRefs": []
+}

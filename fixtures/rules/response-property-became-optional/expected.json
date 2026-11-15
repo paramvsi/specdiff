@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "response-property-became-optional",
+      "severity": "breaking",
+      "direction": "response",
+      "path": "GET /a › response 200 › name",
+      "kind": "changed"
+    }
+  ],
+  "modelRefs": []
+}

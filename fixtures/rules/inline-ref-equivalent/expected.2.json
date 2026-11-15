@@ -1,0 +1,17 @@
+{
+  "config": {
+    "openapi": {
+      "matchInlineRefs": false
+    }
+  },
+  "changes": [
+    {
+      "ruleId": "inline-ref-equivalent",
+      "severity": "docs",
+      "direction": "both",
+      "path": "GET /a › response 200",
+      "kind": "moved"
+    }
+  ],
+  "modelRefs": []
+}

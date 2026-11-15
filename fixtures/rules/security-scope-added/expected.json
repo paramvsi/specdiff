@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "security-scope-added",
+      "severity": "breaking",
+      "direction": "request",
+      "path": "GET /a › security",
+      "kind": "added"
+    }
+  ],
+  "modelRefs": []
+}

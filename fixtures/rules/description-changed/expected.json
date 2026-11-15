@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "description-changed",
+      "severity": "docs",
+      "direction": "both",
+      "path": "GET /a",
+      "kind": "changed"
+    }
+  ],
+  "modelRefs": []
+}

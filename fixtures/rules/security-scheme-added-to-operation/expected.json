@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "security-scheme-added-to-operation",
+      "severity": "breaking",
+      "direction": "request",
+      "path": "GET /a › security",
+      "kind": "added"
+    }
+  ],
+  "modelRefs": []
+}

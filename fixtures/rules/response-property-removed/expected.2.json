@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "response-property-removed",
+      "severity": "possibly",
+      "direction": "response",
+      "path": "GET /a › response 200 › name",
+      "kind": "removed"
+    }
+  ],
+  "modelRefs": []
+}

@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "request-property-read-only-added",
+      "severity": "possibly",
+      "direction": "request",
+      "path": "POST /a › requestBody › id",
+      "kind": "changed"
+    }
+  ],
+  "modelRefs": []
+}

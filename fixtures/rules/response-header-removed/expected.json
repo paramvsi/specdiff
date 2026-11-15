@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "response-header-removed",
+      "severity": "possibly",
+      "direction": "response",
+      "path": "GET /a › response 200 › header X-Rate-Limit",
+      "kind": "removed"
+    }
+  ],
+  "modelRefs": []
+}

@@ -1,0 +1,19 @@
+{
+  "changes": [
+    {
+      "ruleId": "request-property-constraint-tightened",
+      "severity": "breaking",
+      "direction": "request",
+      "path": "POST /a › requestBody › tags › maxItems",
+      "kind": "changed"
+    },
+    {
+      "ruleId": "request-property-constraint-tightened",
+      "severity": "breaking",
+      "direction": "request",
+      "path": "POST /a › requestBody › tags[] › pattern",
+      "kind": "changed"
+    }
+  ],
+  "modelRefs": []
+}

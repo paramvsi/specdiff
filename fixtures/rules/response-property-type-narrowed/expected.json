@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "response-property-type-narrowed",
+      "severity": "safe",
+      "direction": "response",
+      "path": "GET /a › response 200 › count",
+      "kind": "typeChanged"
+    }
+  ],
+  "modelRefs": []
+}

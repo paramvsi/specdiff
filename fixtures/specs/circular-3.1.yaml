@@ -1,0 +1,58 @@
+openapi: 3.1.0
+info:
+  title: Circular references
+  version: 1.0.0
+paths:
+  /nodes/{id}:
+    get:
+      operationId: getNode
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A tree node
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Node'
+  /people:
+    get:
+      operationId: listPeople
+      responses:
+        '200':
+          description: People
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: './people.yaml#/Person'
+components:
+  schemas:
+    Node:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: string
+        parent:
+          $ref: '#/components/schemas/Node'
+        children:
+          type: array
+          items:
+            $ref: '#/components/schemas/Node'
+        owner:
+          $ref: '#/components/schemas/Owner'
+    Owner:
+      type: object
+      properties:
+        name:
+          type: string
+        nodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/Node'

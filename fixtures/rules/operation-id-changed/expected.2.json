@@ -1,0 +1,15 @@
+{
+  "config": {
+    "preset": "sdk"
+  },
+  "changes": [
+    {
+      "ruleId": "operation-id-changed",
+      "severity": "breaking",
+      "direction": "both",
+      "path": "GET /a",
+      "kind": "renamed"
+    }
+  ],
+  "modelRefs": []
+}

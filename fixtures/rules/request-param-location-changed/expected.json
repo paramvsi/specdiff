@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "request-param-location-changed",
+      "severity": "breaking",
+      "direction": "request",
+      "path": "GET /a › header q",
+      "kind": "moved"
+    }
+  ],
+  "modelRefs": []
+}

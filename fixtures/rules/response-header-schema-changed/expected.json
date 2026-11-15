@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "response-header-schema-changed",
+      "severity": "breaking",
+      "direction": "response",
+      "path": "GET /a › response 200 › header X-Reset",
+      "kind": "typeChanged"
+    }
+  ],
+  "modelRefs": []
+}

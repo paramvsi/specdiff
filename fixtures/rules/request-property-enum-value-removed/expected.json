@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "request-property-enum-value-removed",
+      "severity": "breaking",
+      "direction": "request",
+      "path": "POST /a › requestBody › kind",
+      "kind": "removed"
+    }
+  ],
+  "modelRefs": []
+}

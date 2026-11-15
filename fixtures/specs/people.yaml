@@ -1,0 +1,9 @@
+Person:
+  type: object
+  properties:
+    name:
+      type: string
+    friends:
+      type: array
+      items:
+        $ref: '#/Person'

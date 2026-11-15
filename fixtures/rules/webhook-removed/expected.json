@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "webhook-removed",
+      "severity": "possibly",
+      "direction": "response",
+      "path": "webhook newPet",
+      "kind": "removed"
+    }
+  ],
+  "modelRefs": []
+}

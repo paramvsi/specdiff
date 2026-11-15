@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "response-optional-property-removed",
+      "severity": "docs",
+      "direction": "response",
+      "path": "GET /a › response 200 › nickname",
+      "kind": "removed"
+    }
+  ],
+  "modelRefs": []
+}

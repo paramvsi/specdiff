@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "response-body-schema-removed",
+      "severity": "breaking",
+      "direction": "response",
+      "path": "GET /a › response 200",
+      "kind": "removed"
+    }
+  ],
+  "modelRefs": []
+}

@@ -1,0 +1,9 @@
+{
+  "config": {
+    "openapi": {
+      "ignoreExamples": true
+    }
+  },
+  "changes": [],
+  "modelRefs": []
+}

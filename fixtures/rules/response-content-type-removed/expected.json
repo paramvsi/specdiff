@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "response-content-type-removed",
+      "severity": "breaking",
+      "direction": "response",
+      "path": "GET /a › response 200 › application/xml",
+      "kind": "removed"
+    }
+  ],
+  "modelRefs": []
+}

@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "security-flow-url-changed",
+      "severity": "possibly",
+      "direction": "request",
+      "path": "components.securitySchemes.oauth",
+      "kind": "changed"
+    }
+  ],
+  "modelRefs": []
+}
