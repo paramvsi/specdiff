@@ -33,6 +33,9 @@ Owner asleep. Claude runs self-paced loops: audit → fix → commit, then enhan
 - **M-9 (row 56):** two security changes have no rule. (a) `security-removed-from-operation`: an operation that required auth now requires none. Not breaking for clients, but a reviewer must see it; suggest severity **safe** with an explanation that calls out the dropped auth, so it shows in the review list. (b) `security-scope-removed-from-scheme`: a scope deleted from a scheme's flow; clients that still request it are refused by the auth server; suggest **possibly**. Both need fixtures and a docs/06 row.
 
 ## Log
+
+> **Note on the Time column (added 02:54):** from about row 25 onward the times were written as estimates and run up to ~30 minutes ahead of the clock. Commit timestamps (`git log --date=format:%H:%M`) are the accurate record; rows from 73 on use the real time.
+
 | # | Time | Area | Finding | Evidence | Fix / commit |
 |---|------|------|---------|----------|--------------|
 | 1 | 00:05 | core · json/parse (JS-04) | `<<` merge keys not applied in JSON/YAML mode (OpenAPI mode applies them); alias bomb threw `ReferenceError` instead of returning a parse error; multi-document YAML got a generic hint; duplicate dead `MISSING_CHAR` branch | probe + 3 new tests failing before, 19/19 after; worker + CLI caller tests green | `9eb0d57` |
