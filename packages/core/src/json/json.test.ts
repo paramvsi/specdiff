@@ -79,9 +79,16 @@ describe('exports', () => {
       fc.pre(!JSON.stringify([a, b]).includes('"__proto__"'));
       const ops = jsonPatch(a, b);
       const doc = jsonpatch.deepClone({ root: a });
-      const res = jsonpatch.applyPatch(doc, ops.map((op) => ({ ...op, path: '/root' + op.path })) as Operation[], true).newDocument;
+      // Re-root every pointer, including a move's `from`.
+      const rooted = ops.map((op) => ('from' in op ? { ...op, from: '/root' + op.from, path: '/root' + op.path } : { ...op, path: '/root' + op.path }));
+      const res = jsonpatch.applyPatch(doc, rooted as Operation[], true).newDocument;
       expect(JSON.stringify(res.root) === JSON.stringify(b) || JSON.stringify(stableSort(res.root)) === JSON.stringify(stableSort(b))).toBe(true);
     }), { numRuns: 300 });
+  });
+  it('JSON Patch moves apply (fast-check counterexample: [null, "d"] → ["d", null])', () => {
+    const ops = jsonPatch([null, 'd'], ['d', null]);
+    expect(ops).toEqual([{ op: 'move', from: '/0', path: '/1' }]);
+    expect(jsonpatch.applyPatch([null, 'd'], ops as Operation[], true).newDocument).toEqual(['d', null]);
   });
   it('Merge Patch round-trips when lossless', () => {
     fc.assert(fc.property(arb, arb, (a, b) => {
