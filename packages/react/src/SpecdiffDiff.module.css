@@ -1,0 +1,63 @@
+.wrap {
+  font-family: var(--sd-font-mono);
+  font-size: 13px;
+  font-variant-ligatures: none;
+  color: var(--sd-ink);
+  background: var(--sd-surface);
+  border: 1px solid var(--sd-line);
+  border-radius: var(--sd-radius-lg);
+  overflow: auto;
+}
+.stats {
+  margin: 0;
+  padding: var(--sd-space-2) var(--sd-space-3);
+  color: var(--sd-muted);
+  border-bottom: 1px solid var(--sd-line);
+}
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+.table td {
+  padding: 0 var(--sd-space-2);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  vertical-align: top;
+  line-height: 1.6;
+}
+.num {
+  width: 48px;
+  text-align: right;
+  color: var(--sd-muted);
+  user-select: none;
+}
+.mark {
+  display: inline-block;
+  width: 1.4ch;
+}
+.add {
+  background: var(--sd-added-bg);
+}
+.del {
+  background: var(--sd-removed-bg);
+}
+.add ins {
+  background: var(--sd-added-word);
+  text-decoration: none;
+}
+.del del {
+  background: var(--sd-removed-word);
+  text-decoration: none;
+}
+.empty {
+  background: var(--sd-raised);
+}
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

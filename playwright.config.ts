@@ -37,5 +37,11 @@ export default defineConfig({
       reuseExistingServer: true,
       timeout: 180_000,
     },
+    {
+      // Viewer harness (packages/viewer/harness). Viewer tests use absolute URLs.
+      command: 'pnpm exec vite packages/viewer/harness --port 5174',
+      url: 'http://localhost:5174/',
+      reuseExistingServer: true,
+    },
   ],
 });

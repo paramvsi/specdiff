@@ -1,0 +1,3 @@
+/* Tokens and fonts for the Viewer. Import once: '@specdiff/viewer/styles.css'. Scoped: no body rules. */
+@import '../../ui/src/fonts.css';
+@import '../../ui/src/tokens.css';
