@@ -14,7 +14,7 @@ import { useExplain } from './explainStore';
 import { DecisionsActions } from './DecisionsActions';
 import { Md, Title, useSpecContext } from './Title';
 import { changeTitleText, fixChangelogLine } from './titles';
-import { copy, decisionOf, excerpts, groupKey, matchesSearch, methodOf, needsDecision, reviewCounts, SEV_LABEL, type GroupBy } from './util';
+import { copy, decisionOf, excerpts, groupKey, schemaLocation, matchesSearch, methodOf, needsDecision, reviewCounts, SEV_LABEL, type GroupBy } from './util';
 import css from './Workspace.module.css';
 
 type Filter = 'review' | 'breaking' | 'possibly' | 'safe' | 'docs' | 'all';
@@ -89,7 +89,7 @@ export function Workspace() {
     const dc = decisionOf(decisions, c);
     return (
       <li key={c.id} {...slotProps(slot)}>
-        <button type="button" className={css.item} aria-current={c.id === current.id ? 'true' : undefined} onClick={() => focusChange(c.id)}>
+        <button type="button" className={css.item} aria-current={c.id === current.id ? 'true' : undefined} data-decided={review && dc ? 'true' : undefined} title={changeTitleText(c, ctx)} onClick={() => focusChange(c.id)}>
           {review && <span className={css.state} data-d={dc ?? (needsDecision(c) ? 'open' : 'none')} aria-label={dc ? dc : needsDecision(c) ? 'to review' : undefined}>{dc === 'accepted' ? <icons.Check size={11} /> : dc === 'rejected' ? <icons.X size={11} /> : null}</span>}
           <SeverityBadge severity={c.severity ?? 'docs'} compact />
           {methodOf(c) ? <MethodChip method={methodOf(c)!} /> : <span className={css.all}>ALL</span>}
@@ -165,7 +165,7 @@ export function Workspace() {
           <div className={css.usages}>
             <h3 className={css.h3}>Endpoints that {current.direction === 'response' ? 'return' : current.direction === 'request' ? 'accept' : 'use'} {current.sharedSchema.name}</h3>
             <ul className={css.usageList}>
-              {current.sharedSchema.usages.map((u) => { const [m, p] = u.split(' '); return <li key={u}>{['GET', 'POST', 'PUT', 'PATCH', 'DELETE'].includes(m!) ? <MethodChip method={m as 'GET'} /> : null}<code>{p ?? u}</code></li>; })}
+              {current.sharedSchema.usages.map((u) => { const [m, p] = u.split(' '); const at = schemaLocation(spec, u, current.sharedSchema!.name); return <li key={u}>{['GET', 'POST', 'PUT', 'PATCH', 'DELETE'].includes(m!) ? <MethodChip method={m as 'GET'} /> : null}<code>{p ?? u}</code>{at && <code className={css.usageAt} aria-label={`at ${at}`}>{at}</code>}</li>; })}
               {current.sharedSchema.usageCount > current.sharedSchema.usages.length && <li className={css.muted}>and {current.sharedSchema.usageCount - current.sharedSchema.usages.length} more</li>}
             </ul>
           </div>
@@ -182,7 +182,7 @@ export function Workspace() {
         {review && needsDecision(current) && (
           <section className={css.card} aria-labelledby="decision-h">
             <h2 id="decision-h" className={css.cardTitle}>Your decision</h2>
-            <DecisionButtons value={d} onChange={setDecision} />
+            <DecisionButtons value={d} onChange={setDecision} className={css.decide} />
             <NoteField c={current} />
             <p className={css.small}>Recorded as <code>{current.fingerprint.slice(0, 4)}…{current.fingerprint.slice(-4)}</code>. Download <code>decisions.json</code>, put it in <code>.specdiff/</code> and commit it so the CLI and pre-commit hook honour it.</p>
             <DecisionsActions className={css.fileActions} />

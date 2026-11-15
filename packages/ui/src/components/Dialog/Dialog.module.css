@@ -63,6 +63,20 @@
   font-size: 15px;
   line-height: 1.6;
 }
+/* Alert layout: icon tile, then the title; the body continues without a divider. */
+.alert .head {
+  border-bottom: 0;
+  padding: var(--sd-space-6) var(--sd-space-6) 0;
+}
+.alert .heading {
+  gap: var(--sd-space-3);
+}
+.alert .body {
+  padding: var(--sd-space-3) var(--sd-space-6) var(--sd-space-6);
+}
+.icon {
+  display: inline-flex;
+}
 /* Footer band (O-03, O-05, O-08, O-09): full width, raised grey, divider above. */
 .actions {
   flex: none;

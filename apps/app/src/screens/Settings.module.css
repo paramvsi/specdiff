@@ -14,13 +14,14 @@
 .tools .muted { margin-left: auto; }
 .muted { margin: 0; color: var(--sd-muted); font-size: 13.5px; }
 .table { width: 100%; border-collapse: separate; border-spacing: 0; background: var(--sd-surface); border: 1px solid var(--sd-line); border-radius: var(--sd-radius-xl); overflow: hidden; font-size: 13.5px; }
-.table th, .table td { padding: var(--sd-space-3) var(--sd-space-4); border-bottom: 1px solid var(--sd-line); text-align: left; vertical-align: middle; }
+.table th, .table td { padding: 10px var(--sd-space-4); border-bottom: 1px solid var(--sd-line); text-align: left; vertical-align: middle; }
 .table thead th { background: var(--sd-raised); font-family: var(--sd-font-mono); font-size: 12px; font-weight: 400; color: var(--sd-muted); }
 .table tbody tr:last-child > * { border-bottom: 0; }
 .table tbody th { font-weight: 400; }
 .table tbody th code { font-family: var(--sd-font-mono); font-size: 13px; display: block; }
 .table tr[data-off] th, .table tr[data-off] td:first-of-type { color: var(--sd-muted); }
 .table td:last-child, .table th:last-child { text-align: right; }
+.table tr[data-fixed] td:last-child { text-align: left; }
 .tagChanged, .tagSdk { display: inline-block; margin-top: 4px; margin-right: 4px; padding: 0 6px; border-radius: var(--sd-radius-xs); font-size: 11px; font-weight: 600; }
 .tagChanged { background: var(--sd-changed-bg); color: var(--sd-changed); }
 .tagSdk { background: var(--sd-brand-tint); color: var(--sd-brand-ink); }

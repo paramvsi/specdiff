@@ -58,7 +58,7 @@ export function AffectsMeView({ changes }: { changes: Change[] }) {
   const rows = affectsRows(changes, filter.keys, filter.calls);
   const hasCalls = Object.keys(filter.calls).length > 0;
   return (
-    <>
+    <div className={css.affects}>
       <div className={css.banner} role="status">
         <icons.Filter size={16} aria-hidden="true" />
         <strong>Only changes to the {filter.keys.length} endpoint{filter.keys.length === 1 ? '' : 's'} in {filter.source}</strong>
@@ -69,16 +69,16 @@ export function AffectsMeView({ changes }: { changes: Change[] }) {
       </div>
       <section className={css.card} aria-label="Changes that affect you">
         <table className={css.table}>
-          <thead><tr><th scope="col"><span className="sd-visually-hidden">Severity</span></th><th scope="col">Method</th><th scope="col">Path</th><th scope="col">Change</th><th scope="col" className={css.num}>Your calls</th></tr></thead>
+          <thead><tr><th scope="col" className={css.tight}><span className="sd-visually-hidden">Severity</span></th><th scope="col" className={css.tight}>Method</th><th scope="col" className={css.pathCol}>Path</th><th scope="col">Change</th><th scope="col" className={css.num}>Your calls</th></tr></thead>
           <tbody>
             {rows.map(({ change: c, endpoint, calls }) => {
               const [m, p] = [endpoint.slice(0, endpoint.indexOf(' ')), endpoint.slice(endpoint.indexOf(' ') + 1)];
               return (
                 <tr key={c.id}>
-                  <td><SeverityBadge severity={c.severity ?? 'docs'} compact /></td>
-                  <td>{['GET', 'POST', 'PUT', 'PATCH', 'DELETE'].includes(m) ? <MethodChip method={m as 'GET'} /> : <span className={css.muted}>{m}</span>}</td>
+                  <td className={css.tight}><SeverityBadge severity={c.severity ?? 'docs'} compact /></td>
+                  <td className={css.tight}>{['GET', 'POST', 'PUT', 'PATCH', 'DELETE'].includes(m) ? <MethodChip method={m as 'GET'} /> : <span className={css.muted}>{m}</span>}</td>
                   <td><code>{p}</code></td>
-                  <td><button type="button" className={css.link} onClick={() => focusChange(c.id)}><Title c={c} short /></button></td>
+                  <td><button type="button" className={css.link} onClick={() => focusChange(c.id)}><Title c={c} short codeClass={css.plain} /></button></td>
                   <td className={css.num}>{calls?.toLocaleString('en') ?? (hasCalls ? '0' : '—')}</td>
                 </tr>
               );
@@ -87,7 +87,7 @@ export function AffectsMeView({ changes }: { changes: Change[] }) {
         </table>
         {filter.failing.map((f) => <p key={f.change.id} className={css.foot}>Your {filter.source.endsWith('.har') ? 'HAR' : 'list'} also has <strong>{f.reason}</strong>. They will be rejected after the upgrade.</p>)}
       </section>
-    </>
+    </div>
   );
 }
 

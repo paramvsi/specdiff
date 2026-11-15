@@ -11,7 +11,7 @@ const prefs = createStore('specdiff-settings', 'settings');
 
 /** What the History "Result" column counts, per mode (A-11): the same number the result screen shows. */
 export interface ResultCount {
-  unit: 'changes' | 'blocks' | 'lines';
+  unit: 'changes' | 'blocks' | 'sections' | 'lines';
   n: number;
 }
 /** History rows written since per-mode counts; older rows have no `count` and stay readable. */
@@ -22,6 +22,9 @@ export function countOf(r: CompareResult): ResultCount | undefined {
   if ('report' in r) return { unit: 'changes', n: r.report.summary.total };
   if ('json' in r) return { unit: 'changes', n: r.json.changes.length };
   if ('markdown' in r) {
+    // A-11 counts Markdown by section ("6 sections edited"); results without section counts fall back to blocks.
+    const sec = (r.markdown as { sections?: { added: number; removed: number; edited: number } }).sections;
+    if (sec) return { unit: 'sections', n: sec.added + sec.removed + sec.edited };
     const s = r.markdown.stats;
     return { unit: 'blocks', n: s.added + s.removed + s.edited };
   }

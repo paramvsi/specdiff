@@ -2,7 +2,7 @@
 import { Config, rules, type ConfigInput, type Severity } from '@specdiff/core';
 import { Button, Checkbox, RadioCardGroup, SeverityBadge, Switch, TextField, useToast } from '@specdiff/ui';
 import * as icons from 'lucide-react';
-import { useMemo, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { parse, stringify } from 'yaml';
 import { useApp, type DiffTheme, type Theme } from '../state/store';
 import { download, rulesOn } from './openapi/util';
@@ -12,6 +12,13 @@ type Section = 'rules' | 'ignore' | 'diff' | 'appearance' | 'file';
 const SECTIONS: Array<[Section, string]> = [['rules', 'Rules'], ['ignore', 'Ignore paths'], ['diff', 'Diff options'], ['appearance', 'Appearance'], ['file', 'Rule-set file']];
 const SEV: Array<[Severity, string]> = [['breaking', 'Breaking'], ['possibly', 'Possibly breaking'], ['safe', 'Safe'], ['docs', 'Docs only']];
 const reported = rules.filter((r) => r.reportedAs === 'change' && r.severity);
+// The rules reference lists every rule (76); these few aren't changes of their own, so they have no severity to set.
+const notSet = rules.filter((r) => !(r.reportedAs === 'change' && r.severity));
+const WHY: Record<string, string> = {
+  contained: 'Reported as the changes inside it',
+  'version-check': 'The version check on the Summary',
+  'not-reported': 'Set in Diff options',
+};
 
 export default function Settings() {
   const { settings, updateConfig, setSettings } = useApp();
@@ -38,7 +45,9 @@ export default function Settings() {
     const { toast } = useToast();
     const [q, setQ] = useState('');
     const fileInput = useRef<HTMLInputElement>(null);
-    const list = useMemo(() => reported.filter((r) => !q || r.id.includes(q.toLowerCase()) || r.area.toLowerCase().includes(q.toLowerCase())), [q]);
+    const match = (r: (typeof rules)[number]) => !q || r.id.includes(q.toLowerCase()) || r.area.toLowerCase().includes(q.toLowerCase());
+    const list = reported.filter(match);
+    const fixed = notSet.filter(match);
     const effective = (id: string, def: Severity) => config.rules[id]?.severity ?? (config.preset === 'sdk' && reported.find((r) => r.id === id)?.preset === 'K→B' ? 'breaking' : def);
     const changed = Object.keys(config.rules).filter((k) => config.rules[k]?.severity || config.rules[k]?.enabled === false).length;
     // Same count as the Summary's "Rules on N of M" (A-04).
@@ -57,7 +66,7 @@ export default function Settings() {
         <header className={css.head}>
           <div>
             <h1 className={css.h1}>Rules</h1>
-            <p className={css.lead}>Choose which changes count as breaking. These settings live in <code>.specdiff.yaml</code>, which the CLI and pre-commit hook read too. {rules.length - reported.length} more rules in the rules reference aren't changes of their own (the version check, callbacks, streamed items and inline <code>$ref</code> matching), so they have no severity here.</p>
+            <p className={css.lead}>Choose which changes count as breaking. These settings live in <code>.specdiff.yaml</code>, which the CLI and pre-commit hook read too. All {rules.length} rules from the rules reference are listed; {notSet.length} of them aren't changes of their own, so they have no severity to set.</p>
           </div>
           <div className={css.headActions}>
             <Button variant="secondary" icon={<icons.Upload size={15} />} onClick={() => fileInput.current?.click()}>Import .specdiff.yaml</Button>
@@ -76,7 +85,7 @@ export default function Settings() {
           { value: 'sdk', title: 'SDK', description: 'Also flags changes that break generated clients: renamed operationIds, schemas and enum names.' },
         ]} />
         <div className={css.tools}>
-          <TextField label={`Search ${reported.length} rules`} hideLabel placeholder={`Search ${reported.length} rules`} value={q} onChange={(e) => setQ(e.target.value)} icon={<icons.Search size={15} />} />
+          <TextField label={`Search ${rules.length} rules`} hideLabel placeholder={`Search ${rules.length} rules`} value={q} onChange={(e) => setQ(e.target.value)} icon={<icons.Search size={15} />} />
           <span className={css.muted}>{on} on · {changed} changed by you</span>
           <Button variant="secondary" disabled={!changed} onClick={() => updateConfig((c) => ({ ...c, rules: {} }))}>Reset to defaults</Button>
         </div>
@@ -100,6 +109,14 @@ export default function Settings() {
                 </tr>
               );
             })}
+            {fixed.map((r) => (
+              <tr key={r.id} data-fixed>
+                <th scope="row"><code>{r.id}</code></th>
+                <td>{r.area}</td>
+                <td><span className={css.muted}>No severity</span></td>
+                <td colSpan={2}><span className={css.muted}>{WHY[r.reportedAs ?? ''] ?? 'Not configurable'}</span></td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </>

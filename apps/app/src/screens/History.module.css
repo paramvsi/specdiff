@@ -26,6 +26,8 @@
   font-size: 14.5px;
 }
 .empty {
+  /* A-11 empty: a roomy card (clock, title, line, buttons, the save checkbox). */
+  padding: 56px var(--sd-space-6);
   background: var(--sd-surface);
   border: 1px solid var(--sd-line);
   border-radius: var(--sd-radius-xl);

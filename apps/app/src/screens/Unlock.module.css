@@ -1,8 +1,13 @@
 .page {
+  /* O-10: a dialog centred over the dimmed app, top bar included (the bar is made inert meanwhile). */
+  position: fixed;
+  inset: 0;
+  z-index: 40;
   display: grid;
   place-items: center;
-  min-height: 60vh;
-  padding: var(--sd-space-8) 0;
+  padding: var(--sd-space-4);
+  overflow: auto;
+  background: color-mix(in srgb, var(--sd-inverse) 45%, transparent);
 }
 .card {
   width: min(480px, 100%);

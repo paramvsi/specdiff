@@ -46,6 +46,18 @@
   font-weight: 600;
   letter-spacing: -0.2px;
 }
+.titles {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sd-space-2);
+  min-width: 0;
+}
+.eyebrow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sd-space-2);
+}
 .body {
   flex: 1;
   overflow: auto;

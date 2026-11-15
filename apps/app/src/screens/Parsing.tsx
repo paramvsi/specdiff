@@ -1,7 +1,8 @@
 // A-02 Parsing (IN-08, X-02): per-file and per-step progress; Cancel terminates the worker.
+import { detectMode } from '@specdiff/core/detect';
 import { Button, Skeleton } from '@specdiff/ui';
 import * as icons from 'lucide-react';
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { formatBytes } from '../lib/input';
 import { STEPS, useApp } from '../state/store';
 import type { Step } from '../worker/protocol';
@@ -19,9 +20,15 @@ export function Parsing() {
   const { before, after, progress, cancel, mode } = useApp();
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => heading.current?.focus(), []);
+  // Before the worker reports its detection, guess from the first file, so the step list doesn't grow 3 → 5.
+  const guess = useMemo(() => {
+    const src = before ?? after;
+    return src ? detectMode(src.name, src.content.slice(0, 65536)).mode : null;
+  }, [before, after]);
   // OpenAPI shows all five stages (A-02); other modes have no $refs to resolve or versions to normalise.
   const isOpenApi =
     mode === 'openapi' ||
+    (mode === 'auto' && !progress.detect?.detail && guess === 'openapi') ||
     progress.detect?.detail?.startsWith('OpenAPI') ||
     progress.detect?.detail?.startsWith('Swagger');
   const steps = STEPS.filter((s) => isOpenApi || (s !== 'resolve' && s !== 'normalise'));

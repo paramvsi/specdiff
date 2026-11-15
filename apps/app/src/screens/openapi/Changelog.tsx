@@ -1,4 +1,4 @@
-// A-10 Changelog, export and share (OUT-01, OUT-02, OUT-03, OUT-05, OA-21).
+// A-10 Changelog, export and share (OUT-01, OUT-02, OUT-03, OUT-05). decisions.json lives in the review panel (OA-21).
 import { reportToHtml, type ChangelogTemplate } from '@specdiff/core';
 import { encodeShare } from '@specdiff/core/share';
 import { Button, Checkbox, useToast } from '@specdiff/ui';
@@ -6,9 +6,8 @@ import * as icons from 'lucide-react';
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useNav } from '../../shell/nav';
 import { useApp } from '../../state/store';
-import { ShareDialog, sharePayload } from '../ShareDialog';
+import { sharePayload } from '../ShareDialog';
 import { designChangelog, headingTone } from './changelogText';
-import { DecisionsActions } from './DecisionsActions';
 import { useSpecContext } from './Title';
 import { copy, download } from './util';
 import css from './Changelog.module.css';
@@ -38,7 +37,7 @@ export function Changelog() {
   const [group, setGroup] = useState(true);
   const [docs, setDocs] = useState(false);
   const [edits, setEdits] = useState<Record<string, string>>({});
-  const [share, setShare] = useState(false);
+  const [shareCard, setShareCard] = useState(true);
   const report = result && 'report' in result ? result.report : null;
   const key = `${template}|${group}|${docs}`;
   const generated = useMemo(() => (report ? designChangelog(report, template, { groupBySeverity: group, includeDocs: docs, version: report.versionCheck?.suggested ?? report.inputs.after.infoVersion ?? '', date: new Date().toISOString().slice(0, 10) }, spec) : ''), [report, template, group, docs, spec]);
@@ -74,7 +73,7 @@ export function Changelog() {
         </div>
       </section>
       <aside className={css.side}>
-        <ShareCard onMore={() => setShare(true)} />
+        {shareCard && <ShareCard onClose={() => setShareCard(false)} />}
         <h2 className={css.exportTitle}>Export</h2>
         <div className={css.exports}>
           <ExportCard title="Markdown" body="The changelog above, ready for a release." ext=".md" onClick={() => download(`${base}-changelog.md`, text, 'text/markdown')} />
@@ -82,19 +81,13 @@ export function Changelog() {
           <ExportCard title="HTML report" body="A standalone page to share with people who don’t use Specdiff." ext=".html" onClick={() => download(`${base}-report.html`, reportToHtml(report), 'text/html')} />
           <ExportCard title="Comparison file" body="Both files and your options, to open later or share when the link is too long." ext=".specdiff.json" onClick={() => download(`${base}.specdiff.json`, JSON.stringify({ left: { name: before?.name ?? 'before', content: before?.content ?? '' }, right: { name: after?.name ?? 'after', content: after?.content ?? '' }, mode: mode === 'auto' ? 'openapi' : mode, options: settings.config, decisions }, null, 2), 'application/json')} />
         </div>
-        <section className={css.card} aria-labelledby="dec-h">
-          <h2 id="dec-h" className={css.h2}>Review decisions</h2>
-          <p className={css.muted}>Saves as <code>decisions.json</code>: put it in <code>.specdiff/</code> next to your spec and commit it. The CLI and pre-commit hook honour it.</p>
-          <DecisionsActions className={css.decisionActions} />
-        </section>
       </aside>
-      {share && <ShareDialog open onOpenChange={setShare} />}
     </div>
   );
 }
 
-/** A-10 share card: the link, Copy link, and the two designed options. Lock and decisions live in "More options". */
-function ShareCard({ onMore }: { onMore: () => void }) {
+/** A-10 share card: the link, Copy link and the two designed options. Lock and decisions live in the top bar's Share. */
+function ShareCard({ onClose }: { onClose: () => void }) {
   const { before, after, result, mode, settings, decisions } = useApp();
   const changeId = useNav((s) => s.changeId);
   const { toast } = useToast();
@@ -111,7 +104,10 @@ function ShareCard({ onMore }: { onMore: () => void }) {
   }, [before, after, result, mode, settings, decisions, rules, openOnChanges, changeId]);
   return (
     <section className={css.card} aria-labelledby="share-h">
-      <h2 id="share-h" className={css.h2}>Share this comparison</h2>
+      <div className={css.shareHead}>
+        <h2 id="share-h" className={css.h2}>Share this comparison</h2>
+        <Button variant="secondary" iconOnly icon={<icons.X size={16} />} aria-label="Close" onClick={onClose} />
+      </div>
       <p className={css.muted}>The link holds both files, compressed. Nothing is stored on a server, so anyone with the link can see the content.</p>
       <div className={css.linkRow}>
         <input className={css.linkField} readOnly value={link} aria-label="Comparison link" onFocus={(e) => e.currentTarget.select()} />
@@ -119,7 +115,6 @@ function ShareCard({ onMore }: { onMore: () => void }) {
       </div>
       <Checkbox label="Open on the Changes view" checked={openOnChanges} onCheckedChange={setOpenOnChanges} />
       <Checkbox label="Include my rules and filters" checked={rules} onCheckedChange={setRules} />
-      <button type="button" className={css.more} onClick={onMore}>Lock with a passphrase, include decisions…</button>
     </section>
   );
 }

@@ -3,7 +3,8 @@ import type { Change } from '@specdiff/core';
 import { stringify } from 'yaml';
 import { resolveJsonPath } from './util';
 
-export interface FixOption { title: string; code: string }
+/** `mark`: the parts of `code` that are the fix, highlighted in O-04. */
+export interface FixOption { title: string; code: string; mark?: string[] }
 
 const yaml = (v: unknown) => stringify(v, { lineWidth: 0 }).trimEnd();
 const lastSeg = (c: Change) => c.path.split(' › ').at(-1)!.replace(/^(query|header|path|cookie) /, '');
@@ -32,7 +33,7 @@ function defaultFor(schema: Record<string, unknown> | undefined): unknown {
 /** "Ship it in 2.0.0 and say so": the major version, when the comparison suggests one. */
 function majorOption(version: string | undefined): FixOption | null {
   if (!version) return null;
-  return { title: `ship it in ${version} and say so`, code: yaml({ info: { version } }) };
+  return { title: `ship it in ${version} and say so`, code: yaml({ info: { version } }), mark: [version] };
 }
 
 /** 1–2 fix options for a breaking or possibly-breaking change. `spec` is the new (after) document. */
@@ -47,7 +48,7 @@ export function fixOptions(c: Change, spec: unknown, suggested?: string): FixOpt
     const prop = obj?.properties?.[name];
     const rest = (obj?.required ?? []).filter((r) => r !== name);
     const keep = { ...(prop ? { type: prop.type ?? 'string' } : { type: 'string' }), default: defaultFor(prop) };
-    out.push({ title: 'keep it optional, with a default', code: `${yaml({ [name]: keep })}\nrequired: [${rest.join(', ')}]` });
+    out.push({ title: 'keep it optional, with a default', code: `${yaml({ [name]: keep })}\nrequired: [${rest.join(', ')}]`, mark: [yaml({ default: keep.default })] });
   } else if (id.startsWith('request-param-constraint-tightened') || id === 'request-property-constraint-tightened') {
     const p = param(c);
     const bound = c.before && typeof c.before === 'object' ? (c.before as Record<string, unknown>) : undefined;
@@ -58,10 +59,10 @@ export function fixOptions(c: Change, spec: unknown, suggested?: string): FixOpt
   } else if (id === 'response-property-removed' || id === 'response-property-became-optional' || id === 'response-required-became-write-only') {
     const name = lastSeg(c);
     const old = c.before && typeof c.before === 'object' ? (c.before as Record<string, unknown>) : { type: 'string' };
-    out.push({ title: 'keep it, deprecated, for a release', code: yaml({ [name]: { ...old, deprecated: true } }) });
+    out.push({ title: 'keep it, deprecated, for a release', code: yaml({ [name]: { ...old, deprecated: true } }), mark: ['deprecated: true'] });
   } else if (id === 'endpoint-removed') {
     const op = c.operation;
-    if (op) out.push({ title: 'deprecate it first, remove it later', code: yaml({ [op.path]: { [op.method.toLowerCase()]: { deprecated: true, 'x-sunset': sixMonths } } }) });
+    if (op) out.push({ title: 'deprecate it first, remove it later', code: yaml({ [op.path]: { [op.method.toLowerCase()]: { deprecated: true, 'x-sunset': sixMonths } } }), mark: ['deprecated: true', `x-sunset: ${yaml(sixMonths)}`] });
   } else if (id === 'response-property-enum-value-added') {
     const name = c.path.split(' › ').length > 1 ? lastSeg(c) : 'status';
     out.push({ title: 'tell clients to expect new values', code: yaml({ [name]: { description: 'New values may be added. Treat unknown values as a generic state.' } }) });

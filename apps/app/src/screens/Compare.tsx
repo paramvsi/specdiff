@@ -145,10 +145,10 @@ export function Compare() {
   );
   useCommand('swap', swap);
 
-  const detected = before
-    ? detectMode(before.name, before.content).mode
+  const detectedInfo = before
+    ? detectMode(before.name, before.content)
     : after
-      ? detectMode(after.name, after.content).mode
+      ? detectMode(after.name, after.content)
       : null;
   const parseError = result && 'kind' in result ? result : null;
   const ignoreWs = settings.config.text?.ignoreWhitespace ?? false;
@@ -169,10 +169,11 @@ export function Compare() {
     );
 
   return (
-    <div className={css.page}>
+    // A-01 drag over: the page becomes two tall drop zones (the rest of the Compare chrome steps aside).
+    <div className={css.page} data-dragging={dragging ? '' : undefined}>
       <header className={css.head}>
         <div>
-          <h1 className={css.h1}>Compare two files</h1>
+          <h1 className={css.h1}>{dragging ? 'Compare two versions' : 'Compare two files'}</h1>
           <p className={css.lead}>
             OpenAPI, JSON, YAML, Markdown, code or plain text. Everything stays in your browser.
           </p>
@@ -296,7 +297,7 @@ export function Compare() {
           aria-label="Swap before and after"
           aria-keyshortcuts="Shift+S"
         >
-          <icons.ArrowLeftRight size={16} aria-hidden="true" />
+          <icons.ArrowRightLeft size={16} aria-hidden="true" />
         </button>
       </div>
 
@@ -313,7 +314,7 @@ export function Compare() {
               accept(fileSide.current, await fromFile(f));
             } catch (err) {
               toast({
-                title: "Couldn't read that file",
+                title: `Couldn’t read ${f.name}`,
                 description: String((err as LoadError).message ?? err),
                 tone: 'error',
               });
@@ -324,7 +325,7 @@ export function Compare() {
 
       <div className={css.options}>
         <span className={css.detected}>
-          Detected <span className={css.detectedValue}>{detected ? DETECTED[detected] : ''}</span>
+          Detected <span className={css.detectedValue}>{detectedInfo ? detectedLabel(detectedInfo) : ''}</span>
         </span>
         <label className={css.compareAs}>
           Compare as
@@ -403,6 +404,16 @@ export function Compare() {
 
 const SIDE_LABEL: Record<Side, string> = { before: 'Before', after: 'After' };
 
+const LANGUAGE_NAME: Record<string, string> = {
+  typescript: 'TypeScript', javascript: 'JavaScript', java: 'Java', python: 'Python', go: 'Go', ruby: 'Ruby',
+  rust: 'Rust', kotlin: 'Kotlin', csharp: 'C#', c: 'C', cpp: 'C++', swift: 'Swift', php: 'PHP', shell: 'Shell',
+  sql: 'SQL', css: 'CSS', html: 'HTML',
+};
+/** "Code · Java": code names its language (detected from the extension). */
+export function detectedLabel(d: { mode: Mode; language?: string | undefined }): string {
+  return d.mode === 'code' && d.language ? `Code · ${LANGUAGE_NAME[d.language] ?? d.language}` : DETECTED[d.mode];
+}
+
 function describeSource(src: Source): string {
   const d = detectMode(src.name, src.content.slice(0, 65536));
   const kind =
@@ -468,6 +479,11 @@ function TooLargeDialog({
         if (!o) onClose();
       }}
       className={css.wideDialog}
+      icon={
+        <span className={css.warnTile} aria-hidden="true">
+          <icons.TriangleAlert size={20} />
+        </span>
+      }
       actions={
         <div className={css.band}>
           <span className={css.bandNote}>
@@ -481,9 +497,6 @@ function TooLargeDialog({
       }
     >
       <div className={css.tooLarge}>
-        <span className={css.warnTile} aria-hidden="true">
-          <icons.TriangleAlert size={20} />
-        </span>
         <p className={css.tooLargeBody}>
           Structural {format} comparison works up to 25 MB in the browser. Above that, building the
           tree uses more memory than most tabs allow and the page can freeze.

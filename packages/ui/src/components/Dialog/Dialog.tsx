@@ -19,6 +19,8 @@ export interface DialogProps {
   defaultOpen?: boolean | undefined;
   onOpenChange?: ((open: boolean) => void) | undefined;
   className?: string | undefined;
+  /** Alert layout (O-08): an icon tile above the title, no header divider and no ×; Esc and the footer close it. */
+  icon?: ReactNode | undefined;
 }
 
 /** Modal dialog: focus trapped, Esc closes, focus returns to the trigger. */
@@ -32,6 +34,7 @@ export function Dialog({
   defaultOpen,
   onOpenChange,
   className,
+  icon,
 }: DialogProps) {
   const container = usePortalContainer();
   return (
@@ -44,20 +47,23 @@ export function Dialog({
       <RadixDialog.Portal container={container}>
         <RadixDialog.Overlay className={css.overlay} />
         <RadixDialog.Content
-          className={cx(css.content, className)}
+          className={cx(css.content, icon ? css.alert : null, className)}
           {...(description ? {} : { 'aria-describedby': undefined })}
         >
           {/* Header (title, description, close) over a divider; actions sit in a grey footer band. */}
           <div className={css.head}>
             <div className={css.heading}>
+              {icon ? <span className={css.icon}>{icon}</span> : null}
               <RadixDialog.Title className={css.title}>{title}</RadixDialog.Title>
               {description ? (
                 <RadixDialog.Description className={css.description}>{description}</RadixDialog.Description>
               ) : null}
             </div>
-            <RadixDialog.Close asChild>
-              <Button variant="secondary" iconOnly icon={<X />} aria-label="Close" />
-            </RadixDialog.Close>
+            {icon ? null : (
+              <RadixDialog.Close asChild>
+                <Button variant="secondary" iconOnly icon={<X />} aria-label="Close" />
+              </RadixDialog.Close>
+            )}
           </div>
           {children ? <div className={css.body}>{children}</div> : null}
           {actions ? <div className={css.actions}>{actions}</div> : null}

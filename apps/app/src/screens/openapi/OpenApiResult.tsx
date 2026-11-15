@@ -6,7 +6,7 @@ import { useApp } from '../../state/store';
 import { Changelog } from './Changelog';
 import { AffectsMeDialog, AffectsMeView, ConsumerControls, SdkView, useConsumer } from './Consumer';
 import { Explain } from './Explain';
-import { RawDiff } from './RawDiff';
+import { RawDiff, RawLegend } from './RawDiff';
 import { Summary } from './Summary';
 import { PhoneOpenApi } from './Phone';
 import { reviewCounts } from './util';
@@ -56,7 +56,8 @@ export default function OpenApiResult() {
         </div>
         {tab === 'workspace' && <ConsumerControls />}
         {/* One review progress per view: the Workspace tree has its own, the other tabs show it here (A-04). */}
-        {r.total > 0 && tab !== 'workspace' && (
+        {tab === 'raw' && <RawLegend />}
+        {r.total > 0 && tab !== 'workspace' && tab !== 'raw' && (
           <div className={css.progress}>
             <span className={css.progressLabel} id="review-progress-l">Review progress</span>
             <span role="progressbar" aria-labelledby="review-progress-l" aria-valuemin={0} aria-valuemax={r.total} aria-valuenow={r.accepted + r.rejected}

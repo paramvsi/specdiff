@@ -125,8 +125,9 @@ test('@phone M-02 change list: shared-schema changes grouped first, docs-only co
   await expect(page.getByRole('button', { name: /9 operations · Descriptions updated/ })).toHaveCount(1);
   await expect(page.getByRole('button', { name: /description of/i })).toHaveCount(0);
   await expect(groups.last()).toHaveAttribute('aria-label', '9 operations');
-  // 4 breaking + 1 possibly + 14 safe rows, plus the docs row.
-  await expect(page.locator('main section[aria-label] li')).toHaveCount(20);
+  // 4 breaking + 1 possibly rows, then one row for the 14 safe changes and one for the docs-only ones.
+  await expect(page.getByRole('button', { name: /14 safe changes · Additions and relaxed rules/ })).toHaveCount(1);
+  await expect(page.locator('main section[aria-label] li')).toHaveCount(7);
   await expectAxeClean(page);
   // The docs row opens the docs-only list.
   await page.getByRole('button', { name: /9 operations · Descriptions updated/ }).click();

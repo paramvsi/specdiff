@@ -38,7 +38,7 @@ export async function runCompare(
   if (mode === 'code') {
     onProgress({ step: 'parse', state: 'running', detail: 'loading the grammar' });
     const code = await compareCode(req.before.name, req.after.name, req.before.content, req.after.content);
-    // A-09: the badge and the fallback notice name the language ("Code: Java", "Go is on the list").
+    // A-09: the badge and the fallback notice name the language ("Java · Beta", "Go is on the list").
     const id = code.language ?? pair.language ?? a.language ?? b.language;
     const language = id ? (LANGUAGE_NAMES[id] ?? id[0]!.toUpperCase() + id.slice(1)) : undefined;
     onProgress({ step: 'parse', state: 'done', ...(language ? { detail: language } : {}) });

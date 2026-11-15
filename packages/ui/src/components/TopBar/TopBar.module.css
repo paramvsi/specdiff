@@ -4,7 +4,8 @@
   border-bottom: 1px solid var(--sd-line);
 }
 .inner {
-  max-width: var(--sd-layout-max);
+  /* The bar's content lines up with the page content (40 px inset at 1440): layout max plus its own padding. */
+  max-width: calc(var(--sd-layout-max) + 2 * var(--sd-space-6));
   min-height: 64px;
   margin: 0 auto;
   padding: var(--sd-space-3) var(--sd-space-6);

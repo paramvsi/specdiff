@@ -2,7 +2,7 @@
 import { decodeShare, ShareError } from '@specdiff/core/share';
 import { Button, TextField } from '@specdiff/ui';
 import * as icons from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { openPayload, usePending } from '../shell/boot';
 import { useApp } from '../state/store';
 import css from './Unlock.module.css';
@@ -11,6 +11,14 @@ export default function Unlock() {
   const [pass, setPass] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // O-10 is a modal over the dimmed app: the top bar behind the backdrop is inert until the dialog goes.
+  useEffect(() => {
+    const behind = [...document.querySelectorAll('header')];
+    for (const el of behind) el.setAttribute('inert', '');
+    return () => {
+      for (const el of behind) el.removeAttribute('inert');
+    };
+  }, []);
 
   const unlock = async () => {
     if (!pass || busy) return;
@@ -34,7 +42,7 @@ export default function Unlock() {
 
   return (
     <div className={css.page}>
-      <section className={css.card} aria-labelledby="unlock-title">
+      <section className={css.card} role="dialog" aria-modal="true" aria-labelledby="unlock-title">
         <div className={css.inner}>
           <span className={css.icon} aria-hidden="true">
             <icons.Lock size={18} />

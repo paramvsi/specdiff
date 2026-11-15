@@ -215,23 +215,22 @@ export function ShareDialog({
             checked={includeRules}
             onCheckedChange={setIncludeRules}
           />
-          {title && (
-            <div>
-              <Checkbox
-                label="Open on the current change"
-                checked={openOnChange}
-                onCheckedChange={setOpenOnChange}
-              />
-              <p className={css.sub}>{title}</p>
-            </div>
-          )}
-          {hasDecisions && (
+          {/* O-09 shows both options; they're disabled (with the reason) until there is a change or a decision. */}
+          <div>
             <Checkbox
-              label="Include review decisions"
-              checked={includeDecisions}
-              onCheckedChange={setIncludeDecisions}
+              label="Open on the current change"
+              checked={!!title && openOnChange}
+              disabled={!title}
+              onCheckedChange={setOpenOnChange}
             />
-          )}
+            <p className={css.sub}>{title ?? 'Open a change in the Workspace first.'}</p>
+          </div>
+          <Checkbox
+            label="Include review decisions"
+            checked={hasDecisions && includeDecisions}
+            disabled={!hasDecisions}
+            onCheckedChange={setIncludeDecisions}
+          />
         </div>
 
         <div className={css.lock}>

@@ -43,16 +43,25 @@ export function PassphraseField({
           {visible ? 'Hide' : 'Show'}
         </Button>
       </span>
-      <span className={css.meter} aria-hidden="true">
-        {[1, 2, 3, 4].map((n) => (
-          <span
-            key={n}
-            className={cx(css.segment, n <= strength.score && TONE[strength.score])}
-          />
-        ))}
-      </span>
-      <span id={`${id}-strength`} className={css.strength} aria-live="polite">
-        Strength: {strength.label}
+      {/* O-09: the meter with its level to the right ("Strong"), coloured like the filled segments. */}
+      <span className={css.meterRow}>
+        <span className={css.meter} aria-hidden="true">
+          {[1, 2, 3, 4].map((n) => (
+            <span
+              key={n}
+              className={cx(css.segment, n <= strength.score && TONE[strength.score])}
+            />
+          ))}
+        </span>
+        <span
+          id={`${id}-strength`}
+          className={css.strength}
+          data-score={strength.score}
+          aria-live="polite"
+        >
+          <span className={css.hidden}>Strength: </span>
+          {strength.label}
+        </span>
       </span>
     </div>
   );

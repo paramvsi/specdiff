@@ -38,11 +38,14 @@ export function sdkCall(c: Change, lang: Lang): string {
   if (!c.operation) return c.path;
   const { resource, method } = sdkName(c.operation);
   const arg = tail(c)[0];
+  // Endpoint-level changes take the path parameters: refunds.cancel(id) (A05-SdkImpact).
+  const params = arg ? [] : [...c.operation.path.matchAll(/\{([^}]+)\}/g)].map((m) => words(m[1]!));
+  const plain = (f: (w: string[]) => string) => params.map(f).join(', ');
   const fmt = {
-    ts: () => `${camel(resource)}.${camel(method)}(${arg ? `{ ${camel(words(arg))} }` : ''})`,
-    python: () => `client.${snake(resource)}.${snake(method)}(${arg ? `${snake(words(arg))}=…` : ''})`,
-    java: () => `client.${camel(resource)}().${camel(method)}(${arg ? `${camel(words(arg))}` : ''})`,
-    go: () => `client.${pascal(resource)}.${pascal(method)}(ctx${arg ? `, ${camel(words(arg))}` : ''})`,
+    ts: () => `${camel(resource)}.${camel(method)}(${arg ? `{ ${camel(words(arg))} }` : plain(camel)})`,
+    python: () => `client.${snake(resource)}.${snake(method)}(${arg ? `${snake(words(arg))}=…` : plain(snake)})`,
+    java: () => `client.${camel(resource)}().${camel(method)}(${arg ? `${camel(words(arg))}` : plain(camel)})`,
+    go: () => `client.${pascal(resource)}.${pascal(method)}(ctx${arg ? `, ${camel(words(arg))}` : params.length ? `, ${plain(camel)}` : ''})`,
   };
   return fmt[lang]();
 }

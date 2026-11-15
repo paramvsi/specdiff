@@ -391,7 +391,8 @@ test('OA-08 summary: counts per severity, change-type breakdown, suggested versi
   const where = page.locator('section[aria-labelledby="where-h"]');
   await expect(where.getByRole('heading', { name: `Where the ${r.summary.total} changes are` })).toBeVisible();
   const shown = await where.locator('dl > div').evaluateAll((ds) => Object.fromEntries(ds.map((d) => [d.querySelector('dt')!.textContent!.trim(), Number(d.querySelector('dd')!.textContent!.trim())])));
-  expect(shown).toEqual(r.summary.byArea);
+  // The designed areas are always listed (A-04: Security shows 0 when nothing changed there).
+  expect(Object.fromEntries(Object.entries(shown).filter(([, n]) => n > 0))).toEqual(r.summary.byArea);
   await expectAxeClean(page);
 });
 

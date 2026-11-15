@@ -497,7 +497,7 @@ test('VW-06 code samples: curl, JavaScript (fetch), Python (requests), Java (Htt
   await ready(page, `${H}#/op/post-v1-payments`);
   const tabs = page.getByRole('tablist').filter({ has: page.getByRole('tab', { name: 'curl' }) });
   await expect(tabs.getByRole('tab')).toHaveText(['curl', 'JavaScript', 'Python', 'Java']);
-  const expected: Record<string, RegExp> = { curl: /curl -X POST 'https:\/\/api\.example\.com\/v1\/payments'/, JavaScript: /fetch\(/, Python: /import requests[\s\S]*requests\.request\("POST"/, Java: /HttpClient/ };
+  const expected: Record<string, RegExp> = { curl: /curl https:\/\/api\.example\.com\/v1\/payments \\[\s\S]*-d '\{/, JavaScript: /fetch\(/, Python: /import requests[\s\S]*requests\.request\("POST"/, Java: /HttpClient/ };
   for (const [tab, re] of Object.entries(expected)) {
     await tabs.getByRole('tab', { name: tab, exact: true }).click();
     await expect(page.getByRole('tabpanel').filter({ hasText: re }), tab).toBeVisible();
@@ -516,7 +516,7 @@ test('VW-07 version timeline: load a third version, pick it, compare any two', a
   const compared = page.getByRole('combobox', { name: 'Compared with' });
   await compared.selectOption('1.0.0');
   await expect(page.getByRole('region', { name: 'Since 1.0.0' })).toBeVisible();
-  await expect(page.locator('main')).toContainText('Removed GET /v1/old');
+  await expect(page.locator('main')).toContainText('GET /v1/old was removed');
   await compared.selectOption('2.0.0');
   await expect(page.getByRole('region', { name: 'Since 2.0.0' })).toBeVisible();
   await page.goto(`${SD}/#/changes`);

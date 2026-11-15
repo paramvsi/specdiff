@@ -1,3 +1,5 @@
+import { Clock, Plus } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { Button } from '../Button/Button';
 import { EmptyState } from '../EmptyState/EmptyState';
 
@@ -5,17 +7,21 @@ export interface EmptyHistoryStateProps {
   onNewComparison?: (() => void) | undefined;
   onTrySample?: (() => void) | undefined;
   className?: string | undefined;
+  /** Shown under the buttons, e.g. the "Save new comparisons to history" checkbox (A-11 empty). */
+  footer?: ReactNode | undefined;
 }
 
 /** Empty history: one line plus "Try a sample". */
-export function EmptyHistoryState({ onNewComparison, onTrySample, className }: EmptyHistoryStateProps) {
+export function EmptyHistoryState({ onNewComparison, onTrySample, className, footer }: EmptyHistoryStateProps) {
   return (
     <EmptyState
       className={className}
+      icon={<Clock size={24} />}
+      footer={footer}
       title="No comparisons yet"
       actions={
         <>
-          <Button variant="brand" onClick={onNewComparison}>
+          <Button variant="brand" icon={<Plus size={15} />} onClick={onNewComparison}>
             New comparison
           </Button>
           <Button variant="secondary" onClick={onTrySample}>

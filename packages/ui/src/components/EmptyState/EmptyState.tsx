@@ -10,6 +10,8 @@ export interface EmptyStateProps {
   level?: 2 | 3 | 4 | undefined;
   children?: ReactNode;
   actions?: ReactNode | undefined;
+  /** Optional content under the actions (a setting, a note). */
+  footer?: ReactNode | undefined;
   className?: string | undefined;
 }
 
@@ -20,6 +22,7 @@ export function EmptyState({
   level = 2,
   children,
   actions,
+  footer,
   className,
 }: EmptyStateProps) {
   const H = `h${level}` as const;
@@ -33,6 +36,7 @@ export function EmptyState({
       <H className={css.title}>{title}</H>
       {children ? <p className={css.body}>{children}</p> : null}
       {actions ? <div className={css.actions}>{actions}</div> : null}
+      {footer ? <div className={css.footer}>{footer}</div> : null}
     </div>
   );
 }

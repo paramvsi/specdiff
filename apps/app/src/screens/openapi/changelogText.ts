@@ -10,6 +10,8 @@ export function designChangelog(report: Report, template: ChangelogTemplate, opt
   let text = buildChangelog(fixed, template, opts);
   if (template === 'release-notes') {
     text = text.replace(/^### (Possibly breaking|New and improved)$/gm, (_, h: string) => `### ${HEADING_NAMES[h]}`);
+    // A-10: items follow their heading directly (no blank line between them).
+    text = text.replace(/^(### .*)\n\n(?=- )/gm, '$1\n');
     if (opts.version) {
       const when = opts.date ? `, ${new Date(`${opts.date}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })}` : '';
       text = text.replace(/^## .*$/m, `## v${opts.version.replace(/^v/, '')}${when}`);

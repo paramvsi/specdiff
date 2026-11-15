@@ -19,7 +19,8 @@ export function Summary() {
   const breaking = report.changes.filter((c) => c.severity === 'breaking');
   const possibly = report.changes.filter((c) => c.severity === 'possibly');
   const shared = groupShared(report.changes);
-  const areas = Object.entries(s.byArea).sort((a, b) => b[1] - a[1]);
+  // A-04: the areas in a fixed order (the design's seven always, others only when they have changes).
+  const areas = AREA_ORDER.filter((a) => ALWAYS.has(a) || (s.byArea[a] ?? 0) > 0).map((a) => [a, s.byArea[a] ?? 0] as const);
   const max = Math.max(1, ...areas.map(([, n]) => n));
   const vc = report.versionCheck;
 
@@ -105,7 +106,7 @@ export function Summary() {
           <section className={css.card} aria-labelledby="checks-h">
             <h2 id="checks-h" className={css.h3}>Checks</h2>
             <p className={css.label}>Strictness</p>
-            <SegmentedControl label="Strictness" value={config.preset} onValueChange={(p) => { updateConfig((c) => ({ ...c, preset: p })); void compare(); }} options={[{ value: 'wire', label: 'Wire' }, { value: 'sdk', label: 'SDK' }]} />
+            <SegmentedControl label="Strictness" size="sm" className={css.strictness} value={config.preset} onValueChange={(p) => { updateConfig((c) => ({ ...c, preset: p })); void compare(); }} options={[{ value: 'wire', label: 'Wire' }, { value: 'sdk', label: 'SDK' }]} />
             <p className={css.muted}>Wire checks what breaks HTTP requests and responses. SDK also flags renamed operationIds, schemas and enums.</p>
             <dl className={css.facts}>
               <div><dt>Rules on</dt><dd>{ruleCount.on} of {ruleCount.total}</dd></div>
@@ -119,6 +120,19 @@ export function Summary() {
     </div>
   );
 }
+
+const AREA_ORDER = [
+  'Endpoints',
+  'Parameters',
+  'Request bodies',
+  'Responses',
+  'Shared schemas',
+  'Security',
+  'Deprecation and versioning',
+  'Servers, webhooks, other',
+  'Descriptions and examples',
+] as const;
+const ALWAYS = new Set<string>(['Endpoints', 'Parameters', 'Request bodies', 'Responses', 'Shared schemas', 'Security', 'Descriptions and examples']);
 
 function Stat({ sev, n, caption }: { sev: Change['severity'] & string; n: number; caption: string }) {
   return (
@@ -146,7 +160,7 @@ function BreakingRow({ c }: { c: Change }) {
         <h3 id={`b-${c.id}`} className={css.browTitle}><Title c={c} codeClass={css.plainCode} /></h3>
         <button type="button" className={css.link} onClick={() => { focusChange(c.id); set({ tab: 'workspace' }); }}>Open in workspace</button>
       </div>
-      {c.explanation && <p className={css.explain}><Md text={`${c.explanation.who} ${c.explanation.see} ${c.explanation.avoid}`} codeClass={css.code} /></p>}
+      {c.explanation && <p className={css.explain}><Md text={`${c.explanation.who} ${c.explanation.see} ${c.explanation.avoid}`} codeClass={css.plainCode} /></p>}
       {c.sharedSchema && <p className={css.muted}>Comes from the shared schema {c.sharedSchema.name}, which {c.sharedSchema.usageCount} endpoint{c.sharedSchema.usageCount === 1 ? '' : 's'} use.</p>}
       <code className={css.rule}>rule: {c.ruleId}</code>
     </article>

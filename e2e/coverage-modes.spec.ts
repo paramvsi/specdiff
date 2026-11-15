@@ -190,7 +190,7 @@ test('IN-07 auto-detects OpenAPI, JSON, YAML, Markdown, code and text; Compare a
     ['data.json', '{"a": 1}\n', /Detected\s*JSON/],
     ['config.yaml', 'a: 1\nb: two\n', /Detected\s*YAML/],
     ['README.md', '# Title\n\n- item\n', /Detected\s*Markdown/],
-    ['pay.py', 'def pay(a):\n    return a\n', /Detected\s*Code/],
+    ['pay.py', 'def pay(a):\n    return a\n', /Detected\s*Code · Python/],
     ['notes.txt', 'just some words\n', /Detected\s*Plain text/],
   ];
   for (const [name, content, want] of cases) {
@@ -201,7 +201,7 @@ test('IN-07 auto-detects OpenAPI, JSON, YAML, Markdown, code and text; Compare a
   await openFile(page, 0, 'pay.py', 'def pay(a):\n    return a\n');
   await openFile(page, 1, 'pay.py', 'def pay(a):\n    return a + 1\n');
   await compareBtn(page).click();
-  await expect(page.getByText('Code: Python')).toBeVisible();
+  await expect(page.getByText('Python · Beta', { exact: true })).toBeVisible();
   // Override: an OpenAPI pair compared as plain text gives a text diff.
   await page.goto('/app/');
   await openFile(page, 0, 'payments-v1.yaml', readFileSync(V1, 'utf8'));
@@ -315,9 +315,14 @@ test('TX-03 highlights Python, Java, Go and Rust files in text mode', async ({ p
 
 test('TX-04 ignore whitespace, case and line endings each turn a difference into "No differences"', async ({ page }) => {
   // Whitespace
+  // On by default (B-52); off shows the lines.
   await pasteCompare(page, 'a  b\n', 'a b\n', 'text');
+  await expect(page.getByText('No differences')).toBeVisible();
+  await page.getByRole('button', { name: 'Show formatting changes' }).click();
   await expect(page.getByRole('heading', { name: '2 lines differ' })).toBeVisible();
-  await page.getByRole('checkbox', { name: 'Ignore whitespace' }).click();
+  const ws = page.getByRole('checkbox', { name: 'Ignore whitespace' });
+  await expect(ws).not.toBeChecked();
+  await ws.click();
   await expect(page.getByText('No differences')).toBeVisible();
   // Case
   await pasteCompare(page, 'Hello\n', 'hello\n', 'text');
@@ -415,6 +420,8 @@ test('TX-09 transform: lowercase', async ({ page }) => {
 });
 test('TX-09 transform: trim lines', async ({ page }) => {
   await pasteCompare(page, 'x\n   y   \n', 'x\ny\n', 'text');
+  // Whitespace is ignored by default (B-52); show formatting changes so only the transform can trim.
+  await page.getByRole('button', { name: 'Show formatting changes' }).click();
   await expect(page.getByRole('heading', { name: '2 lines differ' })).toBeVisible();
   await transform(page, 'Trim lines');
   await expect(page.getByText('No differences')).toBeVisible();
@@ -494,7 +501,7 @@ test('JS-06 ignored keys are not reported, at any depth', async ({ page }) => {
 test('JS-07 Tree, Side by side and Raw text views each show the change', async ({ page }) => {
   await page.goto('/app/?sample=json');
   await expect(page.getByRole('heading', { name: '7 differences in 226 values' })).toBeVisible();
-  await expect(jsonTree(page).getByText('$.limits.timeoutMs')).toBeVisible();
+  await expect(jsonTree(page).getByRole('button', { name: 'Copy JSONPath $.limits.timeoutMs', exact: true })).toBeVisible();
   await page.getByRole('radio', { name: 'Side by side' }).click();
   const sbs = page.getByRole('region', { name: /^Side by side: flags\.prod\.json and flags\.staging\.json/ });
   await expect(sbs).toContainText('"enabled": false');
@@ -515,7 +522,7 @@ test('JS-08 the Markdown export lists every change; JSON Patch says it round-tri
   await page.getByRole('radio', { name: /^Markdown/ }).click();
   await expect(preview).toContainText('flags.prod.changes.md · 7 changes');
   await expect(preview).toContainText('7 changes: 1 added, 1 removed, 2 changed, 1 type changed, 1 moved.');
-  await expect(preview).toContainText('limits › timeoutMs**: `30000` → `45000`');
+  await expect(preview).toContainText('| ~ | limits › timeoutMs | `30000` → `45000` |');
   const { name } = await download(page, () => preview.getByRole('button', { name: 'Download' }).click());
   expect(name).toMatch(/\.md$/);
 });
@@ -523,8 +530,8 @@ test('JS-08 the Markdown export lists every change; JSON Patch says it round-tri
 test('JS-10 100.00 equals 100; a decimal tolerance absorbs small differences', async ({ page }) => {
   await pasteCompare(page, '{"p": 100.00, "q": 1.004}', '{"p": 100, "q": 1}', 'yaml');
   await expect(page.getByRole('heading', { name: /^1 difference/ })).toBeVisible();
-  await expect(jsonTree(page).getByText('$.q')).toBeVisible();
-  await expect(jsonTree(page).getByText('$.p')).toHaveCount(0);
+  await expect(jsonTree(page).getByRole('button', { name: 'Copy JSONPath $.q', exact: true })).toBeVisible();
+  await expect(jsonTree(page).getByRole('button', { name: 'Copy JSONPath $.p', exact: true })).toHaveCount(0);
   await setField(page, 'Number tolerance', '0.01');
   await expect(page.getByRole('heading', { name: 'No differences' })).toBeVisible();
 });
@@ -537,8 +544,8 @@ test('JS-11 "Type changed" is its own category in the stats and the filter chips
   await expect(jsonTree(page).getByText('number → string')).toBeVisible();
   await chip.click();
   await expect(chip).toHaveAttribute('aria-pressed', 'true');
-  await expect(jsonTree(page).getByText('$.t')).toBeVisible();
-  await expect(jsonTree(page).getByText('$.s')).toHaveCount(0);
+  await expect(jsonTree(page).getByRole('button', { name: 'Copy JSONPath $.t', exact: true })).toBeVisible();
+  await expect(jsonTree(page).getByRole('button', { name: 'Copy JSONPath $.s', exact: true })).toHaveCount(0);
 });
 
 // ===================================================================== MD · Markdown
@@ -603,7 +610,8 @@ async function mdCompare(page: Page) {
 test('MD-03 the outline marks headings added, removed or edited; clicking one jumps to it', async ({ page }) => {
   await mdCompare(page);
   const outline = page.getByRole('navigation', { name: 'Outline' });
-  await expect(outline.getByRole('button', { name: 'Guide', exact: true })).toBeVisible();
+  // The paragraph under Guide changed, so its section is edited too (round 4: edited sections are marked).
+  await expect(outline.getByRole('button', { name: 'Guide (edited)', exact: true })).toBeVisible();
   const install = outline.getByRole('button', { name: /^Installation \((edited|added)\)$/ });
   await expect(install).toBeVisible();
   await expect(outline.getByRole('button', { name: /\((added|removed|edited)\)$/ })).not.toHaveCount(0);
@@ -615,12 +623,16 @@ test('MD-03 the outline marks headings added, removed or edited; clicking one ju
 
 test('MD-04 changed links and images show before and after in a tooltip', async ({ page }) => {
   await mdCompare(page);
-  const link = page.getByRole('button', { name: /^Link changed: docs/ });
-  await expect(link).toBeVisible();
+  // A changed link is marked in the text; hover or focus shows "Link changed · before → after" (AMarkdown).
+  const link = page.getByRole('link', { name: 'docs' });
+  await expect(link).toHaveAttribute('data-link-changed', '0');
+  await expect(link).toHaveAccessibleDescription('Link changed from docs.example.com/v1 to docs.example.com/v2');
   await link.hover();
   const tip = page.getByRole('tooltip');
-  await expect(tip).toContainText('https://docs.example.com/v1');
-  await expect(tip).toContainText('https://docs.example.com/v2');
+  await expect(tip).toContainText('docs.example.com/v1');
+  await expect(tip).toContainText('docs.example.com/v2');
+  await page.mouse.move(0, 0);
+  await expect(page.getByRole('tooltip')).toHaveCount(0);
   const img = page.getByRole('button', { name: /^Link changed: logo/ });
   await expect(img).toBeVisible();
   await img.focus();
@@ -640,8 +652,9 @@ test('MD-05 a changed code block is shown as a line diff', async ({ page }) => {
 test('MD-06 a renamed heading that is still linked is reported as a broken anchor', async ({ page }) => {
   await mdCompare(page);
   const checks = page.getByRole('region', { name: 'Checks' });
-  await expect(checks.getByText('Broken anchor')).toBeVisible();
-  await expect(checks).toContainText('#install is linked from line 3, but that heading was renamed from #install to #installation.');
+  await expect(checks.getByText('1 broken anchor')).toBeVisible();
+  await expect(checks).toContainText('#install is linked from line 3, but that heading was renamed to Installation.');
+  await expect(checks.getByRole('button', { name: 'Go to the link' })).toBeVisible();
 });
 
 test('MD-07 GFM: tables, task lists and callouts render and diff', async ({ page }) => {
@@ -677,13 +690,13 @@ test('CD-01 structural diff for TypeScript, JavaScript and Python files (Java: t
   for (const [name, lang, a, b] of cases) {
     await compareFiles(page, [name, a], [name, b], 'code');
     await expect(page.getByRole('heading', { level: 1, name: /1 logic change/ })).toBeVisible();
-    await expect(page.getByText(`Code: ${lang}`)).toBeVisible();
+    await expect(page.getByText(`${lang} · Beta`, { exact: true })).toBeVisible();
     const panel = page.getByRole('complementary', { name: 'What changed' });
     await expect(panel.getByText(/pay/).first()).toBeVisible();
     await expect(page.getByText(/Showing a text diff/)).toHaveCount(0);
   }
   await page.goto('/app/?sample=code');
-  await expect(page.getByText('Code: Java')).toBeVisible();
+  await expect(page.getByText('Java · Beta', { exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { level: 1, name: /logic change/ })).toBeVisible();
 });
 
@@ -714,7 +727,7 @@ test('CD-05 tree-sitter parsers load per language, only when needed', async ({ p
   await openFile(page, 1, 'a.py', 'def f():\n    return 2\n');
   await page.getByRole('combobox', { name: 'Compare as' }).selectOption('code');
   await compareBtn(page).click();
-  await expect(page.getByText('Code: Python')).toBeVisible();
+  await expect(page.getByText('Python · Beta', { exact: true })).toBeVisible();
   expect(wasm.some((p) => /python/i.test(p))).toBe(true);
   expect(wasm.filter((p) => /java(?!script)|typescript/i.test(p))).toEqual([]);
 });

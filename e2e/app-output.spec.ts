@@ -35,7 +35,7 @@ for (const scheme of ['light', 'dark'] as const) {
     await page.goto('/app/?sample=json');
     await expect(page.getByRole('heading', { name: /\d+ differences?/ })).toBeVisible();
     const tree = page.getByRole('list', { name: 'Changes by path' });
-    await expect(tree.getByText('$.limits.timeoutMs')).toBeVisible();
+    await expect(tree.getByRole('button', { name: 'Copy JSONPath $.limits.timeoutMs', exact: true })).toBeVisible();
     await expect(tree.getByText('~ changed').first()).toBeVisible();
     await expect(page.getByRole('button', { name: 'Copy JSONPath $.limits.timeoutMs' })).toBeVisible();
     await expect(page.getByText(/Auto-detected|Auto: tried/)).toBeVisible();
@@ -72,8 +72,8 @@ for (const scheme of ['light', 'dark'] as const) {
     await page.goto('/app/?sample=markdown');
     const outline = page.getByRole('navigation', { name: 'Outline' });
     await expect(outline.getByRole('button', { name: 'Payments API' })).toBeVisible();
-    await expect(page.getByRole('button', { name: /Link changed: integration guide/ })).toBeVisible();
-    await expect(page.getByText('https://docs.example.com/v1').first()).toBeVisible();
+    await expect(page.getByRole('link', { name: 'integration guide' })).toHaveAttribute('data-link-changed', '0');
+    await expect(page.getByRole('region', { name: 'Checks' }).getByText('docs.example.com/v1')).toBeVisible();
     await expect(page.locator('ins').first()).toBeVisible();
     await expectAxeClean(page);
     await page.getByRole('radio', { name: 'Side by side' }).click();

@@ -45,19 +45,19 @@
   align-self: flex-start;
   padding-top: 1px;
 }
+/* O-13: success is a plain check glyph (no disc), in the brand colour on the inverse card. */
 .disc {
   width: 18px;
   height: 18px;
-  border-radius: 9px;
-  background: var(--sd-brand);
-  color: var(--sd-on-brand);
+  color: var(--sd-brand);
   display: inline-flex;
   align-items: center;
   justify-content: center;
 }
 .disc svg {
-  width: 12px;
-  height: 12px;
+  width: 16px;
+  height: 16px;
+  stroke-width: 2.5;
 }
 .glyph {
   width: 16px;

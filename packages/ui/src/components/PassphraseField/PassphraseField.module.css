@@ -29,7 +29,13 @@
   outline: none;
   box-shadow: var(--sd-shadow-focus);
 }
+.meterRow {
+  display: flex;
+  align-items: center;
+  gap: var(--sd-space-3);
+}
 .meter {
+  flex: 1;
   display: flex;
   gap: 3px;
   height: 6px;
@@ -50,9 +56,28 @@
   background: var(--sd-safe);
 }
 .strength {
+  flex: none;
   font-size: 12.5px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--sd-muted);
+}
+.strength[data-score='1'] {
+  color: var(--sd-breaking);
+}
+.strength[data-score='2'] {
+  color: var(--sd-possibly);
+}
+.strength[data-score='3'],
+.strength[data-score='4'] {
+  color: var(--sd-safe);
+}
+.hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 @media (pointer: coarse) {
   .input {

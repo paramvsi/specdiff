@@ -31,3 +31,6 @@
   justify-content: center;
   gap: var(--sd-space-2);
 }
+.footer {
+  margin-top: var(--sd-space-4);
+}

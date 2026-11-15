@@ -85,6 +85,27 @@ export default function SavedSources() {
     setRows((r) => r?.filter((x) => x.source.id !== s.id) ?? r);
   };
 
+  // A-13 "Changed · 2 breaking": OpenAPI sources that changed are compared (last visit → now) for the count.
+  const [breaking, setBreaking] = useState<Record<string, number>>({});
+  useEffect(() => {
+    for (const r of rows ?? []) {
+      const s = r.source;
+      if (r.status !== 'changed' || s.mode !== 'openapi' || s.id in breaking) continue;
+      void (async () => {
+        const two = await lastTwo(s);
+        if (!two) return;
+        try {
+          const { compareOpenApi } = await import('@specdiff/core');
+          const file = new URL(s.url).pathname.split('/').pop() || 'openapi.yaml';
+          const report = compareOpenApi({ name: file, content: two.prev.content }, { name: file, content: two.cur.content });
+          setBreaking((b) => ({ ...b, [s.id]: report.summary.breaking }));
+        } catch {
+          setBreaking((b) => ({ ...b, [s.id]: -1 }));
+        }
+      })();
+    }
+  }, [rows, breaking]);
+
   if (!rows) return null;
   const changed = rows.filter((r) => r.status === 'changed');
 
@@ -139,7 +160,8 @@ export default function SavedSources() {
                 {status === 'checking' && 'Checking…'}
                 {status === 'changed' && (
                   <>
-                    <span aria-hidden="true" className={css.dot} /> Changed since your last visit
+                    <span aria-hidden="true" className={css.dot} /> Changed
+                    {(breaking[s.id] ?? -1) >= 0 && ` · ${breaking[s.id]} breaking`}
                   </>
                 )}
                 {status === 'same' && 'No changes'}

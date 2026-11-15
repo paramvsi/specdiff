@@ -195,3 +195,47 @@ export function resolveJsonPath(doc: unknown, path: string | undefined): unknown
   }
   return at;
 }
+
+/**
+ * A-05 "Endpoints that return Card": where the shared schema sits in an endpoint's body ("card", "data[].card",
+ * "data[]"), found by walking the operation's response (then request) schemas through local `$ref`s. Empty when
+ * the schema is the whole body or can't be found.
+ */
+export function schemaLocation(spec: unknown, usage: string, schema: string): string {
+  const [method, path] = usage.split(' ');
+  const obj = (v: unknown): Record<string, unknown> | undefined => (v && typeof v === 'object' ? (v as Record<string, unknown>) : undefined);
+  const root = obj(spec);
+  const op = obj(obj(obj(root?.paths)?.[path ?? ''])?.[(method ?? '').toLowerCase()]);
+  if (!op) return '';
+  const target = `#/components/schemas/${schema}`;
+  const deref = (ref: string) => {
+    const name = ref.startsWith('#/components/schemas/') ? ref.slice('#/components/schemas/'.length) : null;
+    return name ? obj(obj(obj(root?.components)?.schemas)?.[name]) : undefined;
+  };
+  const walk = (s: Record<string, unknown> | undefined, at: string, seen: Set<string>, depth: number): string | null => {
+    if (!s || depth > 10) return null;
+    if (typeof s.$ref === 'string') {
+      if (s.$ref === target) return at;
+      if (seen.has(s.$ref)) return null;
+      return walk(deref(s.$ref), at, new Set([...seen, s.$ref]), depth + 1);
+    }
+    for (const k of ['allOf', 'oneOf', 'anyOf'] as const)
+      for (const sub of Array.isArray(s[k]) ? (s[k] as unknown[]) : []) {
+        const r = walk(obj(sub), at, seen, depth + 1);
+        if (r !== null) return r;
+      }
+    for (const [k, v] of Object.entries(obj(s.properties) ?? {}).sort(([a], [b]) => a.localeCompare(b))) {
+      const r = walk(obj(v), at ? `${at}.${k}` : k, seen, depth + 1);
+      if (r !== null) return r;
+    }
+    const items = obj(s.items);
+    return items ? walk(items, `${at}[]`, seen, depth + 1) : null;
+  };
+  const bodies = (container: unknown) => Object.values(obj(obj(container)?.content) ?? {}).map((m) => obj(obj(m)?.schema));
+  const responses = Object.entries(obj(op.responses) ?? {}).sort(([a], [b]) => a.localeCompare(b)).flatMap(([, r]) => bodies(r));
+  for (const s of [...responses, ...bodies(op.requestBody)]) {
+    const r = walk(s, '', new Set(), 0);
+    if (r !== null) return r;
+  }
+  return '';
+}

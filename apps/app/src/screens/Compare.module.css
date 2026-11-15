@@ -452,3 +452,22 @@
     height: 44px;
   }
 }
+/* A-01 drag over (data-dragging on the page): heading, the two zones and the privacy line only. */
+.page[data-dragging] .lead,
+.page[data-dragging] .samples,
+.page[data-dragging] .label,
+.page[data-dragging] .sideActions,
+.page[data-dragging] .swap,
+.page[data-dragging] .options {
+  display: none;
+}
+.page[data-dragging] .h1 {
+  font-size: 26px;
+  letter-spacing: -0.6px;
+}
+.page[data-dragging] .editors {
+  gap: var(--sd-space-4);
+}
+.page[data-dragging] .zone {
+  height: 510px;
+}

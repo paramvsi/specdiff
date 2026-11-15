@@ -1,6 +1,6 @@
 // A-11 History and empty state (OUT-07): kept only in this browser (IndexedDB).
 import type { Mode } from '@specdiff/core';
-import { Button, Dialog, EmptyHistoryState, ModeBadge, TextField } from '@specdiff/ui';
+import { Button, Checkbox, Dialog, EmptyHistoryState, ModeBadge, TextField } from '@specdiff/ui';
 import * as icons from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { formatBytes } from '../lib/input';
@@ -56,13 +56,14 @@ const modeVars = (m: Mode) => {
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
-/** The Result column, per mode: "4 breaking · 28 changes", "17 changes", "6 blocks changed", "9 lines differ". */
+/** The Result column, per mode: "4 breaking · 28 changes", "17 changes", "6 sections edited", "9 lines differ". */
 export function resultLabel(e: HistoryEntry): string {
   const s = e.summary;
   if (e.mode === 'openapi') return `${s.breaking} breaking · ${plural(s.total, 'change', 'changes')}`;
   // Rows saved before per-mode counts only stored a line count.
   const c = e.count ?? { unit: 'lines' as const, n: s.total };
   if (c.unit === 'changes') return plural(c.n, 'change', 'changes');
+  if (c.unit === 'sections') return `${plural(c.n, 'section', 'sections')} edited`;
   if (c.unit === 'blocks') return `${plural(c.n, 'block', 'blocks')} changed`;
   return `${c.n} line${c.n === 1 ? '' : 's'} differ${c.n === 1 ? 's' : ''}`;
 }
@@ -80,7 +81,8 @@ function resultText(e: HistoryEntry) {
 }
 
 export default function History() {
-  const { setScreen, setSource, setMode, compare } = useApp();
+  const { setScreen, setSource, setMode, compare, setSettings } = useApp();
+  const saveHistory = useApp((s) => s.settings.saveHistory !== false);
   const [rows, setRows] = useState<HistoryEntry[] | null>(null);
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
@@ -112,6 +114,13 @@ export default function History() {
           className={css.empty}
           onNewComparison={() => setScreen('compare')}
           onTrySample={() => void openSample('openapi')}
+          footer={
+            <Checkbox
+              label="Save new comparisons to history"
+              checked={saveHistory}
+              onCheckedChange={(v) => setSettings({ saveHistory: v })}
+            />
+          }
         />
       </div>
     );
@@ -146,9 +155,11 @@ export default function History() {
     refresh();
   };
 
+  // "Earlier" only makes sense under a Pinned group; without pins the list has no group heading (A-11).
+  const pinned = shown.filter((e) => e.pinned);
   const groups = [
-    { label: 'Pinned', items: shown.filter((e) => e.pinned) },
-    { label: 'Earlier', items: shown.filter((e) => !e.pinned) },
+    { label: 'Pinned', items: pinned },
+    { label: pinned.length ? 'Earlier' : '', items: shown.filter((e) => !e.pinned) },
   ].filter((g) => g.items.length);
 
   return (
@@ -209,12 +220,14 @@ export default function History() {
               </tr>
             </thead>
             {groups.map((g) => (
-              <tbody key={g.label}>
-                <tr className={css.group}>
-                  <th scope="rowgroup" colSpan={5}>
-                    {g.label}
-                  </th>
-                </tr>
+              <tbody key={g.label || 'all'}>
+                {g.label && (
+                  <tr className={css.group}>
+                    <th scope="rowgroup" colSpan={5}>
+                      {g.label}
+                    </th>
+                  </tr>
+                )}
                 {g.items.map((e) => (
                   <tr key={e.id}>
                     <td>

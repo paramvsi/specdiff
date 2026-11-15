@@ -4,8 +4,10 @@
 .h2 { margin: 0; font-size: 17px; font-weight: 600; }
 .muted { margin: 0; font-size: 13.5px; color: var(--sd-muted); }
 .rows { list-style: none; margin: 0; padding: 0; }
-.row { width: 100%; display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: var(--sd-space-4); padding: var(--sd-space-3) var(--sd-space-4); border: 0; border-top: 1px solid var(--sd-line); background: none; text-align: left; font: inherit; cursor: pointer; }
+/* Fixed badge column so the call and endpoint columns line up on every row (A05-SdkImpact). */
+.row { width: 100%; display: grid; grid-template-columns: 148px minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: var(--sd-space-4); padding: var(--sd-space-3) var(--sd-space-4); border: 0; border-top: 1px solid var(--sd-line); background: none; text-align: left; font: inherit; cursor: pointer; }
 .row:hover { background: var(--sd-raised); }
+.row > :first-child { justify-self: start; }
 .call { font-family: var(--sd-font-mono); font-size: 13.5px; }
 .what { font-size: 13.5px; color: var(--sd-muted); }
 .foot { margin: 0; display: flex; align-items: center; gap: var(--sd-space-2); padding: var(--sd-space-3) var(--sd-space-4); border-top: 1px solid var(--sd-line); background: var(--sd-raised); font-size: 13.5px; color: var(--sd-muted); }
@@ -23,3 +25,8 @@
 .har { display: flex; align-items: center; gap: var(--sd-space-2); margin-top: var(--sd-space-3); font-size: 13.5px; }
 .error { margin: var(--sd-space-3) 0 0; color: var(--sd-breaking); font-size: 13.5px; }
 @media (max-width: 1023px) { .row { grid-template-columns: auto 1fr; } .what { grid-column: 1 / -1; } .head { flex-direction: column; align-items: flex-start; } }
+/* A05-ConsumerFilter: banner and table as two cards; narrow severity and method columns. */
+.affects { display: flex; flex-direction: column; gap: var(--sd-space-4); }
+.table .tight { width: 1%; white-space: nowrap; padding-right: 0; }
+.table .pathCol { width: 36%; }
+.table .plain { font: inherit; }

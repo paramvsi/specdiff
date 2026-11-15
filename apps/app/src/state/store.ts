@@ -16,6 +16,8 @@ export interface Settings {
   diffTheme: DiffTheme;
   config: ConfigInput;
   userName: string;
+  /** A-11: record new comparisons in History (this browser only). */
+  saveHistory: boolean;
 }
 
 export const STEPS: Step[] = ['detect', 'parse', 'resolve', 'normalise', 'compare'];
@@ -62,6 +64,7 @@ export const defaultSettings: Settings = {
   diffTheme: 'default',
   config: {},
   userName: '',
+  saveHistory: true,
 };
 
 export const useApp = create<State>((set, get) => ({
@@ -121,7 +124,7 @@ export const useApp = create<State>((set, get) => ({
         return;
       }
       set({ result, job: null, screen: 'kind' in result ? 'compare' : 'result' });
-      if (!('kind' in result)) void saveHistory(before, after, result).catch(() => {});
+      if (!('kind' in result) && get().settings.saveHistory !== false) void saveHistory(before, after, result).catch(() => {});
     } catch (e) {
       if (get().job !== job && get().job !== null) return;
       if (e instanceof DOMException && e.name === 'AbortError') {

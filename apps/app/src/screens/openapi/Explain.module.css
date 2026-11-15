@@ -3,8 +3,12 @@
 .wrap { display: flex; flex-direction: column; min-height: 100%; }
 .body { flex: 1; display: flex; flex-direction: column; gap: var(--sd-space-4); padding: var(--sd-space-2) var(--sd-space-3) var(--sd-space-4); }
 .body section { border-top: 1px solid var(--sd-line); padding-top: var(--sd-space-3); }
+/* The drawer header already draws a line above the first section. */
+.body section:first-child { border-top: 0; padding-top: var(--sd-space-2); }
 .body p { margin: 0; font-size: 15px; line-height: 1.55; }
-.meta { display: flex; align-items: center; gap: var(--sd-space-2); font-family: var(--sd-font-mono); font-size: 14px; font-weight: 600; }
+.meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sd-space-2); font-family: var(--sd-font-mono); font-size: 14px; font-weight: 600; }
+.plainMono { font-family: var(--sd-font-mono); font-size: .95em; }
+.mark { background: var(--sd-added-word); color: var(--sd-added-strong); border-radius: 2px; }
 .h3 { margin: 0 0 var(--sd-space-2); font-size: 13.5px; font-weight: 600; color: var(--sd-muted); }
 .who { margin: 0; padding-left: 18px; font-size: 15px; line-height: 1.5; }
 .who li::marker { color: var(--sd-breaking); }

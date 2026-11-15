@@ -68,7 +68,8 @@ test('IN-08 A-02: a large spec shows five steps that progress one by one; the he
 });
 
 test('IN-08: a quick comparison never flashes the Parsing screen', async ({ page }) => {
-  await page.goto('/app/');
+  // Production build: the dev server compiles the worker on first use, which is slow under parallel load.
+  await page.goto('http://localhost:4173/app/');
   await page.evaluate(() => {
     const w = window as unknown as { __flash: boolean };
     w.__flash = false;
@@ -316,11 +317,11 @@ for (const scheme of ['light', 'dark'] as const) {
     await expectAxeClean(page);
   });
 
-  test(`A-09 code sample: "Code: Java" badge, logic + move + rename (${scheme})`, async ({ page }) => {
+  test(`A-09 code sample: "Java · Beta" badge, logic + move + rename (${scheme})`, async ({ page }) => {
     await page.emulateMedia({ colorScheme: scheme });
     await page.goto('/app/?sample=code');
     await expect(page.getByRole('heading', { name: /^1 logic change, 1 move, 1 rename/ })).toBeVisible();
-    await expect(page.getByText('Code: Java')).toBeVisible();
+    await expect(page.getByText('Java · Beta', { exact: true })).toBeVisible();
     await expect(page.getByText(/lines reformatted, no logic change/)).toBeVisible();
     await expectAxeClean(page);
   });
@@ -334,7 +335,8 @@ for (const scheme of ['light', 'dark'] as const) {
     await page.getByRole('button', { name: 'Compare', exact: true }).click();
     await expect(page.getByText('Showing a text diff for main.go')).toBeVisible();
     await expect(page.getByText(/Go is on the list\./)).toBeVisible();
-    await expect(page.getByText('Code: Go')).toBeVisible();
+    // A09-Fallback: the badge says Text, since the result is a text diff.
+    await expect(page.getByText('Text', { exact: true }).first()).toBeVisible();
     await expectAxeClean(page);
   });
 

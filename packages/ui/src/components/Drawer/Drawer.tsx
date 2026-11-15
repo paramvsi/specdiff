@@ -8,6 +8,8 @@ import css from './Drawer.module.css';
 
 export interface DrawerProps {
   title: string;
+  /** Optional line above the title in the header (e.g. method, path and severity). */
+  eyebrow?: ReactNode | undefined;
   children?: ReactNode;
   side?: 'left' | 'right' | undefined;
   trigger?: ReactElement | undefined;
@@ -19,6 +21,7 @@ export interface DrawerProps {
 /** Side sheet (modal). Used for the change tree on tablet widths. */
 export function Drawer({
   title,
+  eyebrow,
   children,
   side = 'left',
   trigger,
@@ -40,7 +43,14 @@ export function Drawer({
           aria-describedby={undefined}
         >
           <div className={css.head}>
-            <RadixDialog.Title className={css.title}>{title}</RadixDialog.Title>
+            {eyebrow ? (
+              <div className={css.titles}>
+                <div className={css.eyebrow}>{eyebrow}</div>
+                <RadixDialog.Title className={css.title}>{title}</RadixDialog.Title>
+              </div>
+            ) : (
+              <RadixDialog.Title className={css.title}>{title}</RadixDialog.Title>
+            )}
             <RadixDialog.Close asChild>
               <Button variant="ghost" iconOnly icon={<X />} aria-label="Close" />
             </RadixDialog.Close>

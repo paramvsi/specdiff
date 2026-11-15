@@ -18,6 +18,9 @@ it('A-10 release notes use the designed heading names, version and date, with no
   expect(t).not.toMatch(/Possibly breaking|New and improved/);
   expect(t).toMatch(/^- .*`status` can now be `disputed`.$/m);
   expect(t).not.toMatch(/`(\w+)` (in|on) `\1`/);
+  // Items follow their heading with no blank line (A-10).
+  expect(t).toMatch(/^### Breaking changes\n- /m);
+  expect(t).not.toMatch(/^### .*\n\n/m);
   expect(headingTone('### Worth checking')).toBe('possibly');
   expect(headingTone('- item')).toBe(null);
 });
