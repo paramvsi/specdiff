@@ -6,6 +6,8 @@ import { dirname, join, relative, sep } from 'node:path';
 export interface Input { name: string; content: string; files?: Record<string, string> }
 
 const SPEC = /\.(ya?ml|json)$/i;
+// A `$ref` to another file (not `#/…` in the same file, not a URL): only then are sibling files read.
+const FILE_REF = /\$ref["']?\s*:\s*["']?(?!#|[a-z][a-z0-9+.-]*:\/\/)[^"'\s]/i;
 
 export function git(args: string[], cwd = process.cwd()): string {
   return execFileSync('git', args, { cwd, encoding: 'utf8', maxBuffer: 256 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'] });
@@ -25,12 +27,18 @@ function siblingsOnDisk(file: string): Record<string, string> {
   const out: Record<string, string> = {};
   const walk = (dir: string, depth: number) => {
     if (depth > 4) return;
-    for (const e of readdirSync(dir)) {
+    let entries: string[];
+    try { entries = readdirSync(dir); } catch { return; } // unreadable folder: skip it
+    for (const e of entries) {
       if (e.startsWith('.') || e === 'node_modules') continue;
       const p = join(dir, e);
-      const st = statSync(p);
-      if (st.isDirectory()) walk(p, depth + 1);
-      else if (SPEC.test(e) && st.size < 25 * 1024 * 1024) out[relative(root, p).split(sep).join('/')] = readFileSync(p, 'utf8');
+      try {
+        const st = statSync(p);
+        if (st.isDirectory()) walk(p, depth + 1);
+        else if (SPEC.test(e) && st.size < 25 * 1024 * 1024) out[relative(root, p).split(sep).join('/')] = readFileSync(p, 'utf8');
+      } catch {
+        // dangling link or unreadable file: a $ref to it reports as unresolved
+      }
     }
   };
   walk(root, 0);
@@ -42,11 +50,12 @@ export function readInput(arg: string): Input {
   if (!rp) {
     if (!existsSync(arg)) throw new Error(`File not found: ${arg}`);
     const content = readFileSync(arg, 'utf8');
-    return { name: arg, content, files: SPEC.test(arg) ? siblingsOnDisk(arg) : {} };
+    return { name: arg, content, files: SPEC.test(arg) && FILE_REF.test(content) ? siblingsOnDisk(arg) : {} };
   }
   const content = git(['show', '--end-of-options', `${rp.rev}:${rp.path}`]);
   const dir = rp.path.includes('/') ? rp.path.slice(0, rp.path.lastIndexOf('/')) : '.';
   const files: Record<string, string> = {};
+  if (!FILE_REF.test(content)) return { name: arg, content, files };
   const listed = git(['ls-tree', '-r', '--name-only', '--end-of-options', rp.rev, '--', dir]).split('\n').filter((f) => SPEC.test(f));
   for (const f of listed.slice(0, 500)) files[dir === '.' ? f : f.slice(dir.length + 1)] = git(['show', '--end-of-options', `${rp.rev}:${f}`]);
   return { name: arg, content, files };

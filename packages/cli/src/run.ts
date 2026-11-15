@@ -85,7 +85,8 @@ function nonOpenApi(before: Input, after: Input, io: Io, o: CiOptions): number {
 export function gitDiffDriver(args: string[], io: Io): number {
   const [path, oldFile, , , newFile] = args;
   if (!path || !oldFile || !newFile) { io.err('git-diff-driver expects the 7 arguments git passes to an external diff.'); return 2; }
-  const read = (f: string) => (f === '/dev/null' || !existsSync(f) ? '' : readInput(f).content);
+  // Git hands over temp files: read just the content (readInput would also scan the temp folder).
+  const read = (f: string) => (f === '/dev/null' || !existsSync(f) ? '' : readFileSync(f, 'utf8'));
   const a = read(oldFile), b = read(newFile);
   io.out(`specdiff ${path}\n`);
   if (detectMode(path, b || a).mode !== 'openapi' || !a || !b) {
