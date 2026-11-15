@@ -103,3 +103,12 @@ describe('unquoted info.version (VW-03)', () => {
     expect(keepWrittenVersion({ info: { version: '1.10' } }, 'info:\n  version: "1.10"\n')).toEqual({ info: { version: '1.10' } });
   });
 });
+
+describe('VW-05 response check', () => {
+  it('treats "constructor" and "__proto__" as ordinary field names', async () => {
+    const { checkSchema } = await import('./request');
+    const schema = { type: 'object', required: ['constructor', '__proto__'], properties: { constructor: { type: 'string' } } };
+    expect(checkSchema({}, schema, {})).toEqual(['$.constructor: missing required field', '$.__proto__: missing required field']);
+    expect(checkSchema({}, schema, JSON.parse('{"constructor": "x", "__proto__": 1}'))).toEqual([]);
+  });
+});

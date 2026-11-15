@@ -136,8 +136,8 @@ export function checkSchema(spec: Json, schemaNode: Json, value: unknown, path =
   if (!ok) { out.push(`${path}: expected ${t.join(' or ')}, got ${actual}`); return out; }
   if (actual === 'object' && value && (s.properties || s.required)) {
     const obj = value as Record<string, unknown>;
-    for (const r of s.required ?? []) if (!(r in obj)) out.push(`${path}.${r}: missing required field`);
-    for (const [k, def] of Object.entries<Json>(s.properties ?? {})) if (k in obj) checkSchema(spec, def, obj[k], `${path}.${k}`, depth + 1, out);
+    for (const r of s.required ?? []) if (!Object.hasOwn(obj, r)) out.push(`${path}.${r}: missing required field`);
+    for (const [k, def] of Object.entries<Json>(s.properties ?? {})) if (Object.hasOwn(obj, k)) checkSchema(spec, def, obj[k], `${path}.${k}`, depth + 1, out);
   }
   if (actual === 'array' && s.items) (value as unknown[]).slice(0, 50).forEach((v, i) => checkSchema(spec, s.items, v, `${path}[${i}]`, depth + 1, out));
   return out;
