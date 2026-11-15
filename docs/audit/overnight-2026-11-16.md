@@ -13,6 +13,7 @@ Owner asleep. Claude runs self-paced loops: audit → fix → commit, then enhan
 - **M-1 (row 12):** with `--allow-external-refs`, should the CLI also follow *relative* `$ref`s found inside a fetched remote file (resolved against that file's URL)? Today they stay unresolved. Default kept: no (smaller network reach).
 - **M-2 (row 3):** integers beyond 2^53 lose precision in JSON/YAML mode. Options: (a) leave, (b) flag "number too large to compare exactly" as a warning, (c) compare such numbers by their source text. Suggest (b).
 - **M-3 (row 14):** History on a phone shows the desktop table, scrolling sideways with the Result column cut off. There is no phone design for A-11. Options: (a) leave, (b) stack each row as a card below 640 px (Mode chip, files, result on separate lines). Suggest (b); it is a layout change, so not done.
+- **M-4 (row 17):** Unicode normalisation. Should Text mode get an "Ignore Unicode normalisation (NFC)" option, or a note on lines whose sides are equal after NFC? Adding an option touches the options UI. Suggest: a one-line note on such rows, no new option.
 
 ## Log
 | # | Time | Area | Finding | Evidence | Fix / commit |
@@ -32,3 +33,6 @@ Owner asleep. Claude runs self-paced loops: audit → fix → commit, then enhan
 | 13 | 00:30 | app · phone sweep (UI) | Compare + all 5 sample results + More menu + Viewer/History/Saved sources/Settings at 390 px, light and dark: axe clean everywhere. Undersized: History chips 34 px, file link 42 px. Inline Markdown links are exempt (WCAG 2.5.8 inline) | scratch sweep + guard failing before, passing after | `1f77564` |
 | 14 | 00:30 | app · A11 History on phone | Results table is wider than 390 px: it scrolls inside its card and the Result column is cut ("4 br…") | screenshot | **Morning decision M-3** (layout) |
 | 15 | 00:27 | refactor · operation lists | Method list + \`additionalOperations\` walk exists in core (rules/operations), Viewer (model) and app (consumer-logic); the HAR matcher itself is already shared (\`@specdiff/core/har\`). Consolidating means new public core API for ~15 lines | grep | no change (not worth an API addition) |
+| 16 | 00:45 | research · Unicode in text diff (TX-03) | Lines differing only by BOM / ZWSP / NBSP were "changed" with an invisible highlight; bidi controls in an added line could reorder what the reviewer reads ([Trojan Source, CVE-2021-42574](https://trojansource.codes/)). Now named markers in changed segments, bidi replaced | unit 4/4 + e2e failing before, passing after; visual 30/30; 175.0 kB | `9bfe139` |
+| 17 | 00:45 | text diff · NFC vs NFD | `café` (U+00E9) vs `café` (e + U+0301) shows a changed word that looks identical; markers do not help (the accent is visible) | probe | **Morning decision M-4** |
+| 18 | 00:45 | process note | `eslint -f unix` prints nothing (formatter removed from core ESLint): use the default formatter for counts | ran both | n/a |
