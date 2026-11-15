@@ -74,3 +74,28 @@ describe('CD-06 hidden edits', () => {
     expect(items('def f():\n    return g(a=1, b=2)\n', 'def f():\n    return g(b=2, a=1)\n', 'python')).toEqual([['formatting', ['keyword-argument-order']]]);
   });
 });
+
+describe('CD-02 same-named declarations (overloads, redefinitions)', () => {
+  const calc = (second: string, order: 'int-first' | 'string-first' = 'int-first') => {
+    const i = '  int add(int a, int b) { return a + b; }\n', s = `  String add(String a, String b) { ${second} }\n`;
+    return `class Calc {\n${order === 'int-first' ? i + s : s + i}  int sub(int a, int b) { return a - b; }\n}\n`;
+  };
+  const statuses = (d: CodeDiff) => d.items.map((i) => `${i.name}:${i.status}`);
+  it('identical files with Java overloads report nothing changed', () => {
+    const d = run(calc('return a + b;'), calc('return a + b;'), 'java');
+    expect(d.logicChanged).toBe(false);
+    expect(statuses(d).filter((s) => !s.endsWith(':same'))).toEqual([]);
+  });
+  it('a change in one overload marks only that overload', () => {
+    const d = run(calc('return a + b;'), calc('return a.concat(b);'), 'java');
+    expect(statuses(d).filter((s) => s.startsWith('Calc.add'))).toEqual(['Calc.add:same', 'Calc.add:changed']);
+  });
+  it('reordered overloads read like reordered methods: one same, one moved, none changed', () => {
+    const d = run(calc('return a + b;'), calc('return a + b;', 'string-first'), 'java');
+    expect(statuses(d).filter((s) => s.startsWith('Calc.add')).sort()).toEqual(['Calc.add:moved', 'Calc.add:same']);
+  });
+  it('a Python redefinition changes only the definition that changed', () => {
+    const d = run('def f():\n    return 1\n\ndef f():\n    return 2\n', 'def f():\n    return 1\n\ndef f():\n    return 3\n', 'python');
+    expect(statuses(d)).toEqual(['f:same', 'f:changed']);
+  });
+});

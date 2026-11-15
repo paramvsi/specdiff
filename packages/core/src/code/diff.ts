@@ -57,7 +57,7 @@ const DECL: Record<CodeLang, Record<string, string>> = {
 DECL.tsx = DECL.typescript;
 const CONTAINERS = new Set(['class_body', 'block', 'declaration_list', 'interface_body', 'enum_body', 'export_statement', 'decorated_definition', 'program', 'module']);
 
-interface Decl { name: string; simple: string; kind: string; node: Node; index: number; tokens: string[]; raw: string[]; bodyTokens: string[]; comments: string[] }
+interface Decl { name: string; /** Matching identity: the name, or name#n among same-named declarations. */ key: string; simple: string; kind: string; node: Node; index: number; tokens: string[]; raw: string[]; bodyTokens: string[]; comments: string[] }
 
 function nameOf(n: Node): string | undefined {
   const named = n.childForFieldName('name');
@@ -128,7 +128,7 @@ function collect(root: Node, lang: CodeLang): { decls: Decl[]; module: { tokens:
           tokens(c, lang, raw, [], true);
           const toks = dropOptional(t, lang);
           const nameTok = name;
-          decls.push({ name: full, simple: name, kind, node: c, index: decls.length, tokens: toks, raw, bodyTokens: toks.map((x) => (x === nameTok ? '\u0000name' : x)), comments: cm });
+          decls.push({ name: full, key: full, simple: name, kind, node: c, index: decls.length, tokens: toks, raw, bodyTokens: toks.map((x) => (x === nameTok ? '\u0000name' : x)), comments: cm });
           const body = c.childForFieldName('body');
           if (body) walk(body, full, false);
           continue;
@@ -143,6 +143,27 @@ function collect(root: Node, lang: CodeLang): { decls: Decl[]; module: { tokens:
 }
 
 const eq = (a: string[], b: string[]) => a.length === b.length && a.every((x, i) => x === b[i]);
+/**
+ * Matching keys (CD-02). A name that appears once on each side keys by itself. Same-named declarations
+ * (Java/TS overloads, a Python redefinition) pair first with an identical twin on the other side, then
+ * in order of appearance, so an unchanged file never reports an overload as changed.
+ */
+function assignKeys(a: Decl[], b: Decl[]): void {
+  const groups = (ds: Decl[]) => { const m = new Map<string, Decl[]>(); for (const d of ds) (m.get(d.name) ?? m.set(d.name, []).get(d.name)!).push(d); return m; };
+  const ga = groups(a), gb = groups(b);
+  for (const d of [...a, ...b]) d.key = d.name;
+  for (const [name, as] of ga) {
+    const bs = gb.get(name) ?? [];
+    if (as.length < 2 && bs.length < 2) continue;
+    as.forEach((d, i) => { d.key = `${name}#${i}`; });
+    const free = new Set(bs);
+    for (const d of as) { const twin = bs.find((x) => free.has(x) && eq(x.tokens, d.tokens)); if (twin) { twin.key = d.key; free.delete(twin); } }
+    const unpaired = as.filter((d) => !bs.some((x) => x.key === d.key && !free.has(x)));
+    for (const x of bs) if (free.has(x)) { const d = unpaired.shift(); x.key = d ? d.key : `${name}#b${bs.indexOf(x)}`; free.delete(x); }
+  }
+  for (const [name, bs] of gb) if (!ga.has(name) && bs.length > 1) bs.forEach((d, i) => { d.key = `${name}#b${i}`; });
+}
+
 const lines = (n: Node): [number, number] => [n.startPosition.row + 1, n.endPosition.row + 1];
 
 export function diffCode(before: string, after: string, lang: CodeLang, language: Language): CodeOutcome {
@@ -157,22 +178,23 @@ export function diffCode(before: string, after: string, lang: CodeLang, language
     }
   }
   const A = collect(ta.rootNode, lang), B = collect(tb.rootNode, lang);
+  assignKeys(A.decls, B.decls);
   const items: CodeItem[] = [];
-  const byName = new Map(B.decls.map((d) => [d.name, d]));
+  const byName = new Map(B.decls.map((d) => [d.key, d]));
   const matched = new Set<string>();
   const removed: Decl[] = [];
   // Order of shared names, to tell moves from shifts.
-  const shared = A.decls.filter((d) => byName.has(d.name)).map((d) => d.name);
-  const sharedAfter = B.decls.filter((d) => A.decls.some((x) => x.name === d.name)).map((d) => d.name);
+  const shared = A.decls.filter((d) => byName.has(d.key)).map((d) => d.key);
+  const sharedAfter = B.decls.filter((d) => A.decls.some((x) => x.key === d.key)).map((d) => d.key);
   const stayed = lcs(shared, sharedAfter);
 
   // Declaration renames first (a removed declaration whose body equals an added one's), so a
   // parent's tokens can discount them: renaming method `g` → `gee` is one rename, not also a
   // "local rename" on the class that contains it (CD-03).
-  const unmatchedB = B.decls.filter((d) => !A.decls.some((x) => x.name === d.name));
+  const unmatchedB = B.decls.filter((d) => !A.decls.some((x) => x.key === d.key));
   const twins = new Map<Decl, Decl>();
   for (const r of A.decls) {
-    if (byName.has(r.name)) continue;
+    if (byName.has(r.key)) continue;
     const twin = unmatchedB.find((x) => x.kind === r.kind && eq(x.bodyTokens, r.bodyTokens));
     if (twin) { unmatchedB.splice(unmatchedB.indexOf(twin), 1); twins.set(r, twin); }
   }
@@ -183,9 +205,9 @@ export function diffCode(before: string, after: string, lang: CodeLang, language
   const declNames = new Set([...A.decls, ...B.decls].map((d) => d.simple));
 
   for (const a of A.decls) {
-    const b = byName.get(a.name);
+    const b = byName.get(a.key);
     if (!b) { removed.push(a); continue; }
-    matched.add(b.name);
+    matched.add(b.key);
     // Apply the declaration renames where the other side has the new name, then compare.
     const subst = (toks: string[], other: string[]) => (sub.size ? toks.map((x, i) => (sub.get(x) === other[i] ? other[i]! : x)) : toks);
     const aTokens = subst(a.tokens, b.tokens);
@@ -198,12 +220,12 @@ export function diffCode(before: string, after: string, lang: CodeLang, language
     else if (commentsDiffer) status = 'comments';
     else if (!eq(subst(a.raw, b.raw), b.raw)) { status = 'formatting'; hidden = hiddenEdits(subst(a.raw, b.raw), b.raw, lang); }
     else if (renameText(a.node.text, sub) !== b.node.text) { status = 'formatting'; hidden = ['whitespace']; }
-    else status = stayed.has(a.name) ? 'same' : 'moved';
-    if (status === 'same' || status === 'formatting' || status === 'comments') if (!stayed.has(a.name)) status = status === 'same' ? 'moved' : status;
+    else status = stayed.has(a.key) ? 'same' : 'moved';
+    if (status === 'same' || status === 'formatting' || status === 'comments') if (!stayed.has(a.key)) status = status === 'same' ? 'moved' : status;
     const summary = status === 'changed' ? describeChange(a.node.text, b.node.text) : undefined;
     items.push({ name: a.name, kind: a.kind, status, ...(summary ? { summary } : {}), ...(renames ? { renames } : {}), ...(renames && commentsDiffer ? { commentsChanged: true as const } : {}), ...(hidden ? { hiddenEdits: hidden } : {}), lines: { before: lines(a.node), after: lines(b.node) }, beforeText: a.node.text, afterText: b.node.text });
   }
-  const added = B.decls.filter((d) => !matched.has(d.name));
+  const added = B.decls.filter((d) => !matched.has(d.key));
   for (const r of removed) {
     const twin = twins.get(r);
     if (twin) {
