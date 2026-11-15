@@ -1,0 +1,16 @@
+{
+  "name": "specdiff-cli",
+  "version": "0.0.0",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "specdiff": "./dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup src/cli.ts --format esm --clean",
+    "typecheck": "tsc -p ."
+  }
+}
