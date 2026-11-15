@@ -64,4 +64,6 @@ Claude Code adds rows here when it takes a default without the owner.
 | B-24 | TX-12: the A03-Patch view renders inside Compare (Back returns), not as its own route | P5 gap fix | Minimal routing |
 | B-25 | D-1: `pnpm model:coverage` downloads the oasdiff model to a git-ignored cache; 61 of 76 rules carry modelRefs; model coverage 42% (docs/model-coverage.md). The model file itself is not in the repo | P5 gap fix | Licence: ask before copying |
 | B-26 | The diff driver is used by `git diff` by default; `git log -p` needs `--ext-diff` (verified in a scratch repo) | P4 | git behaviour |
+| B-27 | SET-06: two diff colour themes. The default (cobalt/ember) *is* the colour-blind-safe palette (PDF p. 06/08); "High contrast" is the second. There is no separate third palette in the tokens | Audit | tokens.css defines exactly these two |
+| B-28 | M-04 phone Viewer endpoint: read-only, no Try it, although the frame shows the button | Audit | docs/02 X-07 ("read-only") wins over a prototype on behaviour (CLAUDE.md rule 2) |
 
