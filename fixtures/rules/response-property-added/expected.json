@@ -8,5 +8,10 @@
       "kind": "added"
     }
   ],
-  "modelRefs": []
+  "modelRefs": [
+    "response-optional-property-added",
+    "response-optional-write-only-property-added",
+    "response-required-property-added",
+    "response-required-write-only-property-added"
+  ]
 }

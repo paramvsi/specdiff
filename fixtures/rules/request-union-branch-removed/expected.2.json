@@ -8,5 +8,10 @@
       "kind": "removed"
     }
   ],
-  "modelRefs": []
+  "modelRefs": [
+    "request-body-any-of-removed",
+    "request-body-one-of-removed",
+    "request-property-any-of-removed",
+    "request-property-one-of-removed"
+  ]
 }

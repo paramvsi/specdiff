@@ -8,5 +8,7 @@
       "kind": "changed"
     }
   ],
-  "modelRefs": []
+  "modelRefs": [
+    "request-parameter-became-optional"
+  ]
 }

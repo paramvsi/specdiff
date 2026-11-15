@@ -8,5 +8,8 @@
       "kind": "added"
     }
   ],
-  "modelRefs": []
+  "modelRefs": [
+    "request-body-all-of-added",
+    "request-property-all-of-added"
+  ]
 }

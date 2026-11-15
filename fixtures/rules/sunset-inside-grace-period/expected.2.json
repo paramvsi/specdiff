@@ -9,5 +9,14 @@
       "kind": "changed"
     }
   ],
-  "modelRefs": []
+  "modelRefs": [
+    "api-sunset-date-changed-too-small",
+    "api-sunset-date-too-small",
+    "request-parameter-sunset-date-changed-too-small",
+    "request-parameter-sunset-date-too-small",
+    "request-property-sunset-date-changed-too-small",
+    "request-property-sunset-date-too-small",
+    "response-property-sunset-date-changed-too-small",
+    "response-property-sunset-date-too-small"
+  ]
 }

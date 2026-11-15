@@ -1,4 +1,6 @@
 {
   "changes": [],
-  "modelRefs": []
+  "modelRefs": [
+    "response-success-status-removed"
+  ]
 }

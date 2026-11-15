@@ -8,5 +8,8 @@
       "kind": "typeChanged"
     }
   ],
-  "modelRefs": []
+  "modelRefs": [
+    "response-header-type-changed",
+    "response-header-type-generalized"
+  ]
 }

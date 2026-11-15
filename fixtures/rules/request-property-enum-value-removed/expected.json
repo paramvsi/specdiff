@@ -9,6 +9,11 @@
     }
   ],
   "modelRefs": [
-    "request-property-enum-value-removed"
+    "request-body-const-changed",
+    "request-body-enum-value-removed",
+    "request-parameter-property-enum-value-removed",
+    "request-property-const-changed",
+    "request-property-enum-value-removed",
+    "request-read-only-property-enum-value-removed"
   ]
 }

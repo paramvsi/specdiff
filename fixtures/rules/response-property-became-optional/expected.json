@@ -9,6 +9,7 @@
     }
   ],
   "modelRefs": [
-    "response-property-became-optional"
+    "response-property-became-optional",
+    "response-write-only-property-became-optional"
   ]
 }

@@ -8,5 +8,10 @@
       "kind": "changed"
     }
   ],
-  "modelRefs": []
+  "modelRefs": [
+    "request-body-schema-became-false",
+    "request-parameter-property-schema-became-false",
+    "request-parameter-schema-became-false",
+    "request-property-schema-became-false"
+  ]
 }

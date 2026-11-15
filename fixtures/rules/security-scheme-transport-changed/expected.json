@@ -8,5 +8,11 @@
       "kind": "changed"
     }
   ],
-  "modelRefs": []
+  "modelRefs": [
+    "api-security-component-api-key-in-changed",
+    "api-security-component-api-key-name-changed",
+    "api-security-component-http-scheme-changed",
+    "api-security-component-openid-connect-url-changed",
+    "api-security-component-type-changed"
+  ]
 }

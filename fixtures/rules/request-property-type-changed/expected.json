@@ -9,6 +9,12 @@
     }
   ],
   "modelRefs": [
+    "request-body-list-of-types-narrowed",
+    "request-body-type-changed",
+    "request-parameter-property-list-of-types-narrowed",
+    "request-parameter-property-type-changed",
+    "request-parameter-property-type-specialized",
+    "request-property-list-of-types-narrowed",
     "request-property-type-changed"
   ]
 }

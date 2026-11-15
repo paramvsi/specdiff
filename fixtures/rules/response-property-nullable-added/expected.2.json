@@ -8,5 +8,8 @@
       "kind": "changed"
     }
   ],
-  "modelRefs": []
+  "modelRefs": [
+    "response-body-became-nullable",
+    "response-property-became-nullable"
+  ]
 }

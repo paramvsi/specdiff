@@ -1,4 +1,7 @@
 {
   "changes": [],
-  "modelRefs": []
+  "modelRefs": [
+    "api-global-security-removed",
+    "api-security-removed"
+  ]
 }

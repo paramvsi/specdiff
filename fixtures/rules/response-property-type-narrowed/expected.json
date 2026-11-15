@@ -8,5 +8,12 @@
       "kind": "typeChanged"
     }
   ],
-  "modelRefs": []
+  "modelRefs": [
+    "response-body-became-not-nullable",
+    "response-body-list-of-types-narrowed",
+    "response-body-type-specialized",
+    "response-property-became-not-nullable",
+    "response-property-list-of-types-narrowed",
+    "response-property-type-specialized"
+  ]
 }

@@ -9,6 +9,10 @@
     }
   ],
   "modelRefs": [
-    "response-property-enum-value-added"
+    "response-body-const-changed",
+    "response-mediatype-enum-value-added",
+    "response-property-const-changed",
+    "response-property-enum-value-added",
+    "response-write-only-property-enum-value-added"
   ]
 }

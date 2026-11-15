@@ -8,5 +8,9 @@
       "kind": "changed"
     }
   ],
-  "modelRefs": []
+  "modelRefs": [
+    "api-security-component-oauth-refresh-url-changed",
+    "api-security-component-oauth-token-url-changed",
+    "api-security-component-oauth-url-changed"
+  ]
 }

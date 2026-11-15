@@ -8,5 +8,7 @@
       "kind": "changed"
     }
   ],
-  "modelRefs": []
+  "modelRefs": [
+    "response-required-property-became-write-only"
+  ]
 }

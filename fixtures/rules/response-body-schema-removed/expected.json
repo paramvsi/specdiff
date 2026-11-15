@@ -8,5 +8,9 @@
       "kind": "removed"
     }
   ],
-  "modelRefs": []
+  "modelRefs": [
+    "response-body-media-type-item-schema-removed",
+    "response-body-media-type-item-schema-removed-untyped",
+    "response-body-media-type-schema-removed"
+  ]
 }

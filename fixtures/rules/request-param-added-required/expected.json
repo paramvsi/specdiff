@@ -8,5 +8,8 @@
       "kind": "added"
     }
   ],
-  "modelRefs": []
+  "modelRefs": [
+    "new-required-request-default-parameter-to-existing-path",
+    "new-required-request-parameter"
+  ]
 }

@@ -9,5 +9,10 @@
       "kind": "removed"
     }
   ],
-  "modelRefs": []
+  "modelRefs": [
+    "request-parameter-sunset-deleted",
+    "request-property-sunset-deleted",
+    "response-property-sunset-deleted",
+    "sunset-deleted"
+  ]
 }

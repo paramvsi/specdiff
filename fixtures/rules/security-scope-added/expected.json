@@ -8,5 +8,8 @@
       "kind": "added"
     }
   ],
-  "modelRefs": []
+  "modelRefs": [
+    "api-global-security-scope-added",
+    "api-security-scope-added"
+  ]
 }

@@ -8,5 +8,8 @@
       "kind": "changed"
     }
   ],
-  "modelRefs": []
+  "modelRefs": [
+    "request-optional-property-became-read-only",
+    "request-required-property-became-read-only"
+  ]
 }

@@ -8,5 +8,10 @@
       "kind": "changed"
     }
   ],
-  "modelRefs": []
+  "modelRefs": [
+    "response-body-prefix-items-added",
+    "response-body-prefix-items-removed",
+    "response-property-prefix-items-added",
+    "response-property-prefix-items-removed"
+  ]
 }

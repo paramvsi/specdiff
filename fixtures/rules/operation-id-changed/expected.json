@@ -8,5 +8,7 @@
       "kind": "renamed"
     }
   ],
-  "modelRefs": []
+  "modelRefs": [
+    "api-operation-id-removed"
+  ]
 }

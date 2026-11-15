@@ -9,5 +9,8 @@
       "kind": "removed"
     }
   ],
-  "modelRefs": []
+  "modelRefs": [
+    "api-path-removed-before-sunset",
+    "api-removed-before-sunset"
+  ]
 }

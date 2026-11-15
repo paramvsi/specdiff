@@ -9,6 +9,8 @@
     }
   ],
   "modelRefs": [
-    "request-property-became-required"
+    "request-header-property-became-required",
+    "request-property-became-required",
+    "request-property-became-required-with-default"
   ]
 }

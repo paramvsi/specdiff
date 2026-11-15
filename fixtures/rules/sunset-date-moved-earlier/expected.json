@@ -9,5 +9,10 @@
       "kind": "changed"
     }
   ],
-  "modelRefs": []
+  "modelRefs": [
+    "api-sunset-date-changed-earlier",
+    "request-parameter-sunset-date-changed-earlier",
+    "request-property-sunset-date-changed-earlier",
+    "response-property-sunset-date-changed-earlier"
+  ]
 }

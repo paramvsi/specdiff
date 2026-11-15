@@ -8,5 +8,7 @@
       "kind": "added"
     }
   ],
-  "modelRefs": []
+  "modelRefs": [
+    "api-security-anonymous-access-removed"
+  ]
 }

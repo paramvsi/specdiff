@@ -8,5 +8,8 @@
       "kind": "typeChanged"
     }
   ],
-  "modelRefs": []
+  "modelRefs": [
+    "request-parameter-list-of-types-narrowed",
+    "request-parameter-type-changed"
+  ]
 }

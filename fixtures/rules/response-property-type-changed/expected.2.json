@@ -8,5 +8,12 @@
       "kind": "typeChanged"
     }
   ],
-  "modelRefs": []
+  "modelRefs": [
+    "response-body-list-of-types-widened",
+    "response-body-type-changed",
+    "response-body-type-generalized",
+    "response-property-list-of-types-widened",
+    "response-property-type-changed",
+    "response-property-type-generalized"
+  ]
 }

@@ -8,5 +8,9 @@
       "kind": "changed"
     }
   ],
-  "modelRefs": []
+  "modelRefs": [
+    "request-body-became-not-nullable",
+    "request-parameter-property-became-not-nullable",
+    "request-property-became-not-nullable"
+  ]
 }

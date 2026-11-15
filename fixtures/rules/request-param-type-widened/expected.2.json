@@ -8,5 +8,9 @@
       "kind": "typeChanged"
     }
   ],
-  "modelRefs": []
+  "modelRefs": [
+    "request-parameter-became-nullable",
+    "request-parameter-list-of-types-widened",
+    "request-parameter-type-generalized"
+  ]
 }

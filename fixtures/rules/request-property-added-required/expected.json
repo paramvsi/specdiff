@@ -8,5 +8,9 @@
       "kind": "added"
     }
   ],
-  "modelRefs": []
+  "modelRefs": [
+    "new-required-request-header-property",
+    "new-required-request-property",
+    "new-required-request-property-with-default"
+  ]
 }

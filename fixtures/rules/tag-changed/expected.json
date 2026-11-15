@@ -8,5 +8,8 @@
       "kind": "changed"
     }
   ],
-  "modelRefs": []
+  "modelRefs": [
+    "api-tag-added",
+    "api-tag-removed"
+  ]
 }

@@ -8,5 +8,8 @@
       "kind": "added"
     }
   ],
-  "modelRefs": []
+  "modelRefs": [
+    "response-non-success-status-added",
+    "response-success-status-added"
+  ]
 }

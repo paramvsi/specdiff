@@ -1,4 +1,7 @@
 {
   "changes": [],
-  "modelRefs": []
+  "modelRefs": [
+    "optional-response-header-removed",
+    "required-response-header-removed"
+  ]
 }

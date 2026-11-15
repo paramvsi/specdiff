@@ -8,5 +8,9 @@
       "kind": "removed"
     }
   ],
-  "modelRefs": []
+  "modelRefs": [
+    "response-required-property-removed",
+    "response-required-property-removed-before-sunset",
+    "response-required-write-only-property-removed"
+  ]
 }

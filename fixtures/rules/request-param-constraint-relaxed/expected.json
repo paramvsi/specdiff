@@ -8,5 +8,33 @@
       "kind": "changed"
     }
   ],
-  "modelRefs": []
+  "modelRefs": [
+    "request-parameter-became-not-enum",
+    "request-parameter-exclusive-max-increased",
+    "request-parameter-exclusive-max-unset",
+    "request-parameter-exclusive-min-decreased",
+    "request-parameter-exclusive-min-unset",
+    "request-parameter-max-contains-increased",
+    "request-parameter-max-contains-unset",
+    "request-parameter-max-increased",
+    "request-parameter-max-items-increased",
+    "request-parameter-max-items-unset",
+    "request-parameter-max-length-increased",
+    "request-parameter-max-length-unset",
+    "request-parameter-max-properties-increased",
+    "request-parameter-max-properties-unset",
+    "request-parameter-max-unset",
+    "request-parameter-min-contains-decreased",
+    "request-parameter-min-contains-unset",
+    "request-parameter-min-decreased",
+    "request-parameter-min-items-decreased",
+    "request-parameter-min-items-unset",
+    "request-parameter-min-length-decreased",
+    "request-parameter-min-length-unset",
+    "request-parameter-min-properties-decreased",
+    "request-parameter-min-properties-unset",
+    "request-parameter-min-unset",
+    "request-parameter-multiple-of-unset",
+    "request-parameter-pattern-removed"
+  ]
 }

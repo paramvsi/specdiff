@@ -9,6 +9,7 @@
     }
   ],
   "modelRefs": [
-    "request-property-removed"
+    "request-property-removed",
+    "request-property-removed-before-sunset"
   ]
 }

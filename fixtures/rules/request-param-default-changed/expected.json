@@ -8,5 +8,9 @@
       "kind": "changed"
     }
   ],
-  "modelRefs": []
+  "modelRefs": [
+    "request-parameter-default-value-added",
+    "request-parameter-default-value-changed",
+    "request-parameter-default-value-removed"
+  ]
 }

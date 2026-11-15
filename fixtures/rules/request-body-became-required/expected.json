@@ -9,6 +9,7 @@
     }
   ],
   "modelRefs": [
+    "request-body-added-required",
     "request-body-became-required"
   ]
 }

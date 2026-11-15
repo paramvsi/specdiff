@@ -8,5 +8,7 @@
       "kind": "added"
     }
   ],
-  "modelRefs": []
+  "modelRefs": [
+    "request-parameter-enum-value-added"
+  ]
 }
