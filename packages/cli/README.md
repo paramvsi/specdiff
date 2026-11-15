@@ -86,12 +86,12 @@ repos:
     hooks:
       - id: specdiff
         name: specdiff
-        entry: npx specdiff-cli --ci --fail-on breaking
+        entry: npx specdiff-cli pre-commit --fail-on breaking
         language: system
         files: openapi\.yaml$
 ```
 
-Given one file, the CLI compares `HEAD:<file>` with your working copy. A new file passes.
+pre-commit passes every matching staged file in one call; `specdiff pre-commit` compares each `HEAD:<file>` with its working copy and fails on unaccepted breaking changes. New files pass. This repository is also a hook repo (`.pre-commit-hooks.yaml`, id `specdiff`).
 
 This repository is also a pre-commit hook repo (`.pre-commit-hooks.yaml`, hook id `specdiff`, `language: node`). Once `specdiff-cli` is published:
 

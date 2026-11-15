@@ -3,6 +3,6 @@ repos:
     hooks:
       - id: specdiff
         name: specdiff
-        entry: npx specdiff-cli --ci --fail-on breaking
+        entry: npx specdiff-cli pre-commit --fail-on breaking
         language: system
         files: openapi\.yaml$

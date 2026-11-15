@@ -14,7 +14,7 @@ const field = (k: string) => new RegExp(`^\\s*-?\\s*${k}:\\s*(.+)$`, 'm').exec(m
 
 test('the manifest declares the specdiff hook', () => {
   expect(field('id')).toBe('specdiff');
-  expect(field('entry')).toBe('specdiff --ci --fail-on breaking');
+  expect(field('entry')).toBe('specdiff pre-commit --fail-on breaking');
   expect(field('language')).toBe('node');
   expect(field('additional_dependencies')).toBe('[specdiff-cli]');
   expect(field('files')).toBe("'(openapi|swagger).*\\.(ya?ml|json)$'");
@@ -71,4 +71,16 @@ test('a new spec file passes', () => {
   expect(r.staged).toEqual(['swagger.json']);
   expect(r.r!.status, r.r!.stderr).toBe(0);
   expect(r.r!.stderr).toContain('is new');
+});
+
+test('two staged spec files are each compared with HEAD, not with each other', () => {
+  const { dir, git } = repo();
+  copyFileSync(fx('payments-v2.yaml'), join(dir, 'openapi.yaml'));
+  writeFileSync(join(dir, 'openapi-admin.yaml'), readFileSync(fx('payments-v1.yaml'), 'utf8'));
+  git('add', '.');
+  const r = hook(dir, git);
+  expect(r.staged).toEqual(['openapi-admin.yaml', 'openapi.yaml']);
+  expect(r.r!.status, r.r!.stderr).toBe(1);
+  expect(r.r!.stderr).toContain('openapi-admin.yaml is new');
+  expect(r.r!.stderr).toMatch(/✖ 4 breaking/);
 });

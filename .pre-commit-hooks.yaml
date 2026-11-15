@@ -1,10 +1,10 @@
 # PK-10: use this repository as a pre-commit hook repo (https://pre-commit.com), once specdiff-cli is published.
-# pre-commit passes each staged spec file as one argument; given one file, specdiff compares HEAD:<file>
-# with the working copy and exits 1 on unaccepted breaking changes. A new file passes.
+# pre-commit passes all matching staged files in one call; `specdiff pre-commit` compares each
+# HEAD:<file> with its working copy and exits 1 on unaccepted breaking changes. New files pass.
 - id: specdiff
   name: specdiff (breaking API changes)
   description: Fails the commit when an OpenAPI spec gains breaking changes that are not accepted in .specdiff/decisions.json.
-  entry: specdiff --ci --fail-on breaking
+  entry: specdiff pre-commit --fail-on breaking
   language: node
   additional_dependencies: [specdiff-cli]
   files: '(openapi|swagger).*\.(ya?ml|json)$'

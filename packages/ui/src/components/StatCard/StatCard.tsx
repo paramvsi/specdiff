@@ -23,7 +23,7 @@ export function StatCard({ severity, count, className }: StatCardProps) {
 
 export interface SuggestedVersionCardProps {
   version: string;
-  bump: 'major' | 'minor' | 'patch';
+  bump: 'major' | 'minor' | 'patch' | 'none';
   className?: string | undefined;
 }
 
@@ -34,7 +34,7 @@ export function SuggestedVersionCard({ version, bump, className }: SuggestedVers
       <span className={css.eyebrow}>Suggested version</span>
       <span className={css.row}>
         <span className={css.value}>{version}</span>
-        <span className={css.bump}>{bump}</span>
+        <span className={css.bump}>{bump === 'none' ? 'no change' : bump}</span>
       </span>
     </div>
   );

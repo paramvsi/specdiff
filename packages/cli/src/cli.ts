@@ -81,6 +81,27 @@ program
   .action((_o: unknown, cmd: Command) => { process.exitCode = gitDiffDriver(cmd.args, io); });
 
 program
+  .command('pre-commit <files...>')
+  .description('for each spec file, compare HEAD:<file> with the working copy (what pre-commit passes); new files pass')
+  .addOption(new Option('--fail-on <level>', 'when to exit 1').choices(['breaking', 'possibly', 'missing-version-bump', 'none']))
+  .option('--config <file>', 'path to .specdiff.yaml')
+  .action(async (files: string[], o: { failOn?: 'breaking'; config?: string }) => {
+    let code = 0;
+    for (const file of files) {
+      try {
+        const r = await runCi(`HEAD:${file}`, file, { format: 'md', ...(o.failOn ? { failOn: o.failOn } : {}), ...(o.config ? { config: o.config } : {}), allowExternalRefs: false, quiet: true }, io);
+        code = Math.max(code, r);
+      } catch (e) {
+        const msg = (e as Error).message ?? String(e);
+        if (/does not exist in 'HEAD'|exists on disk, but not in 'HEAD'|bad revision|unknown revision/.test(msg)) { io.err(`${file} is new: nothing to compare with.`); continue; }
+        io.err(pc.red(`${file}: ${msg}`));
+        code = 2;
+      }
+    }
+    process.exitCode = code;
+  });
+
+program
   .command('schema')
   .description('print the JSON Schema of the --format json report')
   .action(() => { io.out(JSON.stringify(reportJsonSchema(), null, 2) + '\n'); });
