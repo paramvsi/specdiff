@@ -22,13 +22,15 @@ type Core = typeof import('@specdiff/core');
 let corePromise: Promise<Core> | undefined;
 const loadCore = () => (corePromise ??= import('@specdiff/core'));
 
-export function parseWith(core: Pick<Core, 'parseDocument'>, text: string, name: string): object {
+export function parseWith(core: Pick<Core, 'parseDocument'> & Partial<Pick<Core, 'upgradeSpec'>>, text: string, name: string): object {
   const doc = core.parseDocument(text, name);
   if (doc.errors.length || !doc.value || typeof doc.value !== 'object') {
     const e = doc.errors[0];
     throw new Error(e ? `${name}:${e.line}:${e.column} ${e.message}` : `${name} does not contain an object.`);
   }
-  return doc.value as object;
+  const value = doc.value as { swagger?: unknown };
+  // The Viewer renders OpenAPI 3; Swagger 2.0 is upgraded with core's converter.
+  return typeof value.swagger === 'string' && value.swagger.startsWith('2') && core.upgradeSpec ? core.upgradeSpec(value) : value;
 }
 
 const fileName = (url: string) => {
@@ -38,7 +40,7 @@ const hostOf = (url: string) => {
   try { return new URL(url, typeof location !== 'undefined' ? location.href : 'http://x/').host; } catch { return url; }
 };
 
-export async function fetchVersion(url: string, core: Pick<Core, 'parseDocument'>, fetchImpl: typeof fetch = fetch): Promise<ViewerVersion> {
+export async function fetchVersion(url: string, core: Pick<Core, 'parseDocument'> & Partial<Pick<Core, 'upgradeSpec'>>, fetchImpl: typeof fetch = fetch): Promise<ViewerVersion> {
   const source = fileName(url);
   let res: Response;
   try {

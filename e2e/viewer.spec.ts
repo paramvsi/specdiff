@@ -138,11 +138,14 @@ test('V-01 a version that failed to load (VW-13)', async ({ page }) => {
   await expectAxeClean(page);
 });
 
-test('Petstore 3.0 renders; Swagger 2.0 shows a clear state', async ({ page }) => {
+test('Petstore 3.0 and an upgraded Swagger 2.0 render; a raw Swagger 2.0 shows a clear state', async ({ page }) => {
   await ready(page, `${H}?spec=petstore`);
   await expect(page.getByRole('heading', { level: 1, name: 'Swagger Petstore' })).toBeVisible();
   await expectAxeClean(page);
-  await page.goto(`${H}?spec=swagger2`);
+  await ready(page, `${H}?spec=swagger2`);
+  await expect(page.getByRole('heading', { level: 1, name: /Swagger Petstore/ })).toBeVisible();
+  await expectAxeClean(page);
+  await page.goto(`${H}?spec=swagger2-raw`);
   await expect(page.getByRole('heading', { name: 'Swagger 2.0 isn’t supported in the Viewer yet' })).toBeVisible();
   await expectAxeClean(page);
 });

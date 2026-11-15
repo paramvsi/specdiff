@@ -10,3 +10,4 @@ export { reportToMarkdown, reportToHtml } from './report/export';
 export { suggestVersion } from './report/version';
 export { changelogFeed, type FeedOptions } from './report/feed';
 export { reportJsonSchema } from './report/schema';
+export { upgradeSpec } from './openapi/upgrade';

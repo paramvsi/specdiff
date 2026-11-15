@@ -8,6 +8,7 @@ import { createRoot } from 'react-dom/client';
 import paymentsV1 from '../../../fixtures/samples/payments-v1.yaml?raw';
 import paymentsV2 from '../../../fixtures/samples/payments-v2.yaml?raw';
 import petstore from '../../../fixtures/specs/petstore-3.0.yaml?raw';
+import { upgradeSpec } from '@specdiff/core';
 import swagger2 from '../../../fixtures/specs/petstore-swagger2.json?raw';
 import { Viewer } from '../src/Viewer';
 import type { VersionSet } from '../src/types';
@@ -27,7 +28,9 @@ const sets: Record<string, VersionSet> = {
     compareWith: '1.5.0',
   },
   petstore: { versions: [{ label: '1.0.0', source: 'petstore-3.0.yaml', spec: parse(petstore, 'petstore-3.0.yaml') }], current: '1.0.0' },
-  swagger2: { versions: [{ label: '1.0.0', source: 'petstore-swagger2.json', spec: JSON.parse(swagger2) as object }], current: '1.0.0' },
+  'swagger2-raw': { versions: [{ label: '1.0.0', source: 'petstore-swagger2.json', spec: JSON.parse(swagger2) as object }], current: '1.0.0' },
+  // What the embed, React wrapper and app do: upgrade Swagger 2.0 with core before rendering.
+  swagger2: { versions: [{ label: '1.0.0', source: 'petstore-swagger2.json', spec: upgradeSpec(JSON.parse(swagger2) as object) }], current: '1.0.0' },
   'load-error': {
     versions: [
       { label: '1.5.0', source: 'openapi-1.5.0.yaml', error: { kind: 'cors', message: 'Blocked', host: 'specs.acme.dev' } },

@@ -27,16 +27,20 @@ export interface Mounted {
   unmount(): void;
 }
 
-type CompareGlobal = { SpecdiffCompare?: { compareOpenApi: CompareFn } };
+type CompareModule = { compareOpenApi: CompareFn; upgradeSpec: (doc: object) => Record<string, unknown> };
+type CompareGlobal = { SpecdiffCompare?: CompareModule };
 
 // Where this script was loaded from, so the comparison chunk can be found next to it.
 const scriptSrc = typeof document !== 'undefined' ? (document.currentScript as HTMLScriptElement | null)?.src : undefined;
 
-let comparePromise: Promise<CompareFn | undefined> | undefined;
+let comparePromise: Promise<CompareModule | undefined> | undefined;
+export async function loadCompare(): Promise<CompareFn | undefined> {
+  return (await loadCompareModule())?.compareOpenApi;
+}
 /** Load `specdiff-compare.js` from the same folder as this script, once. */
-export function loadCompare(): Promise<CompareFn | undefined> {
+export function loadCompareModule(): Promise<CompareModule | undefined> {
   const g = globalThis as CompareGlobal;
-  if (g.SpecdiffCompare) return Promise.resolve(g.SpecdiffCompare.compareOpenApi);
+  if (g.SpecdiffCompare) return Promise.resolve(g.SpecdiffCompare);
   if (comparePromise) return comparePromise;
   comparePromise = new Promise((resolve) => {
     const src = scriptSrc ? new URL('specdiff-compare.js', scriptSrc).toString() : undefined;
@@ -44,7 +48,7 @@ export function loadCompare(): Promise<CompareFn | undefined> {
     const s = document.createElement('script');
     s.src = src;
     s.async = true;
-    s.onload = () => resolve((globalThis as CompareGlobal).SpecdiffCompare?.compareOpenApi);
+    s.onload = () => resolve((globalThis as CompareGlobal).SpecdiffCompare);
     s.onerror = () => resolve(undefined);
     document.head.appendChild(s);
   });
@@ -89,6 +93,12 @@ export function mount(el: HTMLElement, options: MountOptions): Mounted {
 
   const load = async (url: string, slot: 0 | 1) => {
     let v = await loadVersion(url);
+    // Swagger 2.0: the Viewer renders OpenAPI 3; upgrade with core's converter from the lazy chunk.
+    const raw = v.spec as { swagger?: unknown } | undefined;
+    if (raw && typeof raw.swagger === 'string' && raw.swagger.startsWith('2')) {
+      const mod = await loadCompareModule();
+      if (mod) v = { ...v, spec: mod.upgradeSpec(raw) };
+    }
     const other = versions[slot === 0 ? 1 : 0];
     if (other && other.label === v.label) v = { ...v, label: `${v.label} (${slot === 0 ? 'current' : 'compared'})` };
     versions[slot] = v;
