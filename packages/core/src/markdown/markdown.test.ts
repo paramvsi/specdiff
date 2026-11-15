@@ -108,3 +108,25 @@ describe('rendered HTML stays inert (MD-06)', () => {
     }
   });
 });
+
+describe('front matter and footnotes (MD-01)', () => {
+  it('compares YAML front matter as YAML, not as a heading', () => {
+    const d = diffMarkdown('---\ntitle: A\ndraft: true\n---\n\n# Doc\n', '---\ntitle: A\ndraft: false\n---\n\n# Doc\n');
+    const edited = d.blocks.filter((b) => b.status !== 'same');
+    expect(edited).toHaveLength(1);
+    expect(edited[0]!.type).toBe('code');
+    expect(edited[0]!.html).not.toMatch(/<h\d/);
+    expect(edited[0]!.lines).toEqual({ before: [1, 4], after: [1, 4] });
+  });
+  it('leaves a document that opens with a thematic break alone', () => {
+    const d = diffMarkdown('---\nJust a paragraph between rules\n---\n', '---\nJust a paragraph between rules\n---\n');
+    expect(d.blocks.some((b) => b.type === 'code')).toBe(false);
+  });
+  it('shows an edited footnote with its label and text', () => {
+    const d = diffMarkdown('See[^1].\n\n[^1]: Old note.\n', 'See[^1].\n\n[^1]: New note.\n');
+    const edited = d.blocks.find((b) => b.status === 'edited')!;
+    expect(edited.html).toContain('[^1]:');
+    expect(edited.html).toMatch(/<del>Old<\/del>|Old/);
+    expect(edited.html).toContain('note.');
+  });
+});

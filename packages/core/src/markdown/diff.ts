@@ -105,8 +105,17 @@ const toHtml = unified()
   .use(() => labelTaskBoxes)
   .use(rehypeStringify);
 
+/** A footnote definition rendered on its own (remark-rehype only renders them in a document-end section). */
+function footnoteAsBlock(n: RootContent): RootContent {
+  if (n.type !== 'footnoteDefinition') return n;
+  const label: Text = { type: 'text', value: `[^${n.label ?? n.identifier}]: ` };
+  const [first, ...rest] = n.children;
+  if (first?.type === 'paragraph' && rest.length === 0) return { type: 'paragraph', children: [label, ...first.children] };
+  return { type: 'blockquote', children: [{ type: 'paragraph', children: [label] }, ...n.children], data: { hName: 'div' } };
+}
+
 function render(nodes: RootContent[]): string {
-  const root: Root = { type: 'root', children: nodes.map(withCallouts) };
+  const root: Root = { type: 'root', children: nodes.map((n) => withCallouts(footnoteAsBlock(n))) };
   const hast = toHtml.runSync(root) as HastRoot;
   return String(toHtml.stringify(hast));
 }
@@ -279,9 +288,18 @@ function similar(a: RootContent, b: RootContent): boolean {
   return same >= Math.max(la, lb) * 0.4 || (Math.min(la, lb) >= 12 && same >= Math.min(la, lb) * 0.9);
 }
 
+/**
+ * Leading YAML front matter (Jekyll, Hugo, Astro, Docusaurus) as a fenced YAML block on the same
+ * lines, so it is compared as YAML instead of being read as a setext heading. No new dependency.
+ */
+const FRONT_MATTER = /^---[ \t]*(\r?\n)([\s\S]*?)\r?\n---[ \t]*(?=\r?\n|$)/;
+const frontMatterAsCode = (s: string): string =>
+  // Only when it reads as YAML (a `key:` line): a document may also open with a thematic break.
+  s.replace(FRONT_MATTER, (m: string, nl: string, body: string) => (/^[\w"'-][^\n]*:(\s|$)/m.test(body) ? `~~~~yaml${nl}${body}${nl}~~~~` : m));
+
 export function diffMarkdown(before: string, after: string): MdDiff {
-  const a = parser.parse(before).children;
-  const b = parser.parse(after).children;
+  const a = parser.parse(frontMatterAsCode(before)).children;
+  const b = parser.parse(frontMatterAsCode(after)).children;
   const parts = diffArrays(a.map(signature), b.map(signature));
   const blocks: MdBlock[] = [];
   const stats = { added: 0, removed: 0, edited: 0 };
