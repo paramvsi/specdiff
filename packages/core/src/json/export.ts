@@ -113,7 +113,8 @@ export function mergePatch(a: unknown, b: unknown): { patch: unknown; lossy: boo
   let lossy = false;
   const go = (x: unknown, y: unknown): unknown => {
     if (!isObj(x) || !isObj(y)) { if (containsNull(y)) lossy = true; return y; }
-    const out: Record<string, unknown> = {};
+    // No prototype: a "__proto__" key in the input is an ordinary key here, not a prototype change.
+    const out = Object.create(null) as Record<string, unknown>;
     for (const k of Object.keys(x).sort()) if (!Object.hasOwn(y, k)) out[k] = null;
     for (const k of Object.keys(y).sort()) {
       if (!Object.hasOwn(x, k)) { if (containsNull(y[k])) lossy = true; out[k] = y[k]; }

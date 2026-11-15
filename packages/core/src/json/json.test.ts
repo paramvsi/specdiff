@@ -88,6 +88,14 @@ describe('parse', () => {
 });
 
 describe('exports', () => {
+  it('keeps a "__proto__" key in a merge patch as an ordinary key (JS-08)', () => {
+    const a = JSON.parse('{"__proto__": {"x": 1}, "y": 1}') as unknown;
+    const b = JSON.parse('{"__proto__": {"x": 2}, "y": 1}') as unknown;
+    const { patch, lossy } = mergePatch(a, b);
+    expect(JSON.stringify(patch)).toBe('{"__proto__":{"x":2}}');
+    expect(lossy).toBe(false);
+    expect(JSON.stringify(applyMergePatch(a, patch))).toBe(JSON.stringify(b));
+  });
   const arb = fc.jsonValue({ maxDepth: 4 });
   it('JSON Patch round-trips (verified with fast-json-patch)', () => {
     fc.assert(fc.property(arb, arb, (a, b) => {
