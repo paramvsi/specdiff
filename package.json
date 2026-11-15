@@ -12,7 +12,7 @@
     "typecheck": "turbo run typecheck",
     "test": "vitest run",
     "build": "turbo run build",
-    "size": "size-limit",
+    "size": "size-limit && node scripts/startup-size.mjs",
     "e2e": "playwright test",
     "assemble": "node scripts/assemble-site.mjs",
     "verify": "pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm size && pnpm test:java && pnpm e2e",
