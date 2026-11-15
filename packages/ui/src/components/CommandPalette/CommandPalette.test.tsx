@@ -75,4 +75,14 @@ describe('CommandPalette', () => {
     expect(second).toHaveBeenCalledTimes(1);
     expect(first).not.toHaveBeenCalled();
   });
+
+  it('closes after an item is selected (X-04)', async () => {
+    const user = userEvent.setup();
+    const onOpenChange = vi.fn();
+    const onSelect = vi.fn();
+    render(<CommandPalette open onOpenChange={onOpenChange} groups={[{ heading: 'Actions', items: [{ label: 'History', kind: 'action', onSelect }] }]} />);
+    await user.keyboard('{Enter}');
+    expect(onSelect).toHaveBeenCalledTimes(1);
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
 });

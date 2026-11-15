@@ -65,6 +65,8 @@
   opacity: 0.8;
 }
 .tableWrap {
+  /* Contains the visually hidden header text, which otherwise widens the page at 390 px. */
+  position: relative;
   background: var(--sd-surface);
   border: 1px solid var(--sd-line);
   border-radius: var(--sd-radius-xl);

@@ -82,9 +82,23 @@ async function selectedStateContrast(page: Page) {
   });
 }
 
+/** A heading each sample's result shows once it is rendered (desktop and phone). */
+const RESULT_HEADING: Record<(typeof SAMPLES)[number], RegExp> = {
+  openapi: /^Breaking changes$/,
+  json: /\d+ differences?/,
+  markdown: /^Outline$/,
+  code: /logic change/,
+  text: /lines differ/,
+};
+
 async function openSample(page: Page, sample: (typeof SAMPLES)[number]) {
   await page.goto(`/app/?sample=${sample}`);
-  await expect(page.getByRole('button', { name: 'Export' })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Export', exact: true })).toBeEnabled();
+  // X-09: measure the result, not the moment Export enables while `main` is still blank.
+  const main = page.getByRole('main');
+  await expect(main.getByRole('heading', { name: RESULT_HEADING[sample] }).first()).toBeVisible();
+  await expect(main).not.toBeEmpty();
+  await page.waitForLoadState('networkidle');
   // OpenAPI opens on Summary; the review chips live on Workspace.
   if (sample === 'openapi' && (page.viewportSize()?.width ?? 0) >= 640) {
     await page.getByRole('tab', { name: 'Workspace' }).click();
@@ -135,7 +149,7 @@ for (const sample of SAMPLES) {
         expect(box.x + box.width, name).toBeLessThanOrEqual(390);
         expect(Math.min(box.width, box.height), name).toBeGreaterThanOrEqual(44);
       }
-      // Shell and shared controls must be ≥ 44 px. Screen-owned controls are listed as an annotation.
+      // Every target must be ≥ 44 px (X-05); shell/shared and screen-owned ones are reported apart.
       const SHARED = 'header *, a[href="#main"], [role="switch"], [role="checkbox"], [role="radio"], [role="menuitem"]';
       const small = await page.evaluate((shared) =>
         [...document.querySelectorAll('button, a[href], [role="button"], [role="tab"], [role="radio"], [role="switch"], [role="checkbox"], input, select, summary')]
@@ -153,9 +167,7 @@ for (const sample of SAMPLES) {
           })),
       SHARED);
       expect(small.filter((s) => s.shared).map((s) => s.what), 'shell/shared targets under 44 px').toEqual([]);
-      const screenOwned = small.filter((s) => !s.shared).map((s) => s.what);
-      if (screenOwned.length)
-        test.info().annotations.push({ type: 'screen targets under 44 px', description: screenOwned.join('; ') });
+      expect(small.filter((s) => !s.shared).map((s) => s.what), 'screen targets under 44 px').toEqual([]);
       if (scheme === 'dark') expect((await selectedStateContrast(page)).bad).toEqual([]);
       await expectAxeClean(page);
       await menusAxeClean(page);

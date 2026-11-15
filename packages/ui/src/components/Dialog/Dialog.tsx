@@ -11,7 +11,7 @@ export interface DialogProps {
   description?: ReactNode | undefined;
   /** Body content. */
   children?: ReactNode;
-  /** Action buttons, bottom right (brand + ghost). */
+  /** Footer band: action buttons on the right; a note may lead on the left. */
   actions?: ReactNode | undefined;
   /** Element that opens the dialog; focus returns to it on close. */
   trigger?: ReactElement | undefined;
@@ -47,15 +47,18 @@ export function Dialog({
           className={cx(css.content, className)}
           {...(description ? {} : { 'aria-describedby': undefined })}
         >
+          {/* Header (title, description, close) over a divider; actions sit in a grey footer band. */}
           <div className={css.head}>
-            <RadixDialog.Title className={css.title}>{title}</RadixDialog.Title>
+            <div className={css.heading}>
+              <RadixDialog.Title className={css.title}>{title}</RadixDialog.Title>
+              {description ? (
+                <RadixDialog.Description className={css.description}>{description}</RadixDialog.Description>
+              ) : null}
+            </div>
             <RadixDialog.Close asChild>
-              <Button variant="ghost" iconOnly icon={<X />} aria-label="Close" />
+              <Button variant="secondary" iconOnly icon={<X />} aria-label="Close" />
             </RadixDialog.Close>
           </div>
-          {description ? (
-            <RadixDialog.Description className={css.description}>{description}</RadixDialog.Description>
-          ) : null}
           {children ? <div className={css.body}>{children}</div> : null}
           {actions ? <div className={css.actions}>{actions}</div> : null}
         </RadixDialog.Content>

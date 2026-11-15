@@ -22,15 +22,17 @@ export interface ParseErrorStateProps {
 
 /** Parse error pinned to the line: red banner, failing lines with a pointer, hint. */
 export function ParseErrorState({ title, lines, errorLine, column, hint, className }: ParseErrorStateProps) {
+  // Blank context lines at either end (an excerpt past the end of the file) would show as a bare number.
+  const shown = trimBlank(lines, errorLine);
   return (
     <div className={cx(css.root, className)}>
       <p className={css.banner}>{title}</p>
       <div className={css.code}>
-        {lines.map((l) => {
+        {shown.map((l) => {
           const failing = l.number === errorLine;
           return (
             <div key={l.number}>
-              <div className={cx(css.line, failing && css.failing)}>
+              <div className={cx(css.line, failing && css.failing)} data-parse-line={l.number}>
                 <span className={css.number}>{l.number}</span>
                 <span className={css.marker} aria-hidden="true">
                   {failing ? '−' : ' '}
@@ -54,4 +56,14 @@ export function ParseErrorState({ title, lines, errorLine, column, hint, classNa
       <p className={css.hint}>{hint}</p>
     </div>
   );
+}
+
+/** Drop blank lines before and after the excerpt; the failing line always stays. */
+export function trimBlank(lines: ReadonlyArray<SourceLine>, errorLine: number): SourceLine[] {
+  const keep = (l: SourceLine) => l.number === errorLine || l.text.trim() !== '';
+  let a = 0;
+  let b = lines.length;
+  while (a < b && !keep(lines[a]!)) a++;
+  while (b > a && !keep(lines[b - 1]!)) b--;
+  return lines.slice(a, b);
 }

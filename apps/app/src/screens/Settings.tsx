@@ -14,13 +14,11 @@ const SEV: Array<[Severity, string]> = [['breaking', 'Breaking'], ['possibly', '
 const reported = rules.filter((r) => r.reportedAs === 'change' && r.severity);
 
 export default function Settings() {
-  const { settings, updateConfig, setSettings, setScreen, result, compare } = useApp();
+  const { settings, updateConfig, setSettings } = useApp();
   const [section, setSection] = useState<Section>('rules');
   const config = Config.parse(settings.config);
-  const back = () => { if (result) { void compare(); } else setScreen('compare'); };
   return (
     <div className={css.page}>
-      <div className={css.top}><Button variant="secondary" icon={<icons.ChevronLeft size={15} />} onClick={back}>{result ? 'Back to comparison' : 'Back'}</Button></div>
       <div className={css.layout}>
         <nav aria-label="Settings sections" className={css.nav}>
           {SECTIONS.map(([s, label]) => <button key={s} type="button" className={css.navItem} aria-current={section === s ? 'page' : undefined} onClick={() => setSection(s)}>{label}</button>)}

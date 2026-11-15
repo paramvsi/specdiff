@@ -14,7 +14,8 @@
 .treeTools { display: flex; flex-direction: column; gap: var(--sd-space-2); }
 .group { display: flex; align-items: center; justify-content: space-between; font-size: 12.5px; color: var(--sd-muted); }
 .group select { height: 30px; border: 1px solid var(--sd-line); border-radius: var(--sd-radius-sm); background: var(--sd-surface); }
-.groupName { margin: var(--sd-space-2) 0 var(--sd-space-1); font-family: var(--sd-font-mono); font-size: 12px; color: var(--sd-muted); }
+/* Padding, not margin: virtual rows are measured by their border box. */
+.groupName { margin: 0; padding: var(--sd-space-3) 0 var(--sd-space-1); font-family: var(--sd-font-mono); font-size: 12px; color: var(--sd-muted); overflow-wrap: anywhere; }
 .list { list-style: none; margin: 0; padding: 0; }
 .item { width: 100%; display: flex; align-items: center; gap: var(--sd-space-2); min-height: 40px; padding: 6px var(--sd-space-2); border: 0; border-radius: var(--sd-radius-md); background: none; text-align: left; font: inherit; font-size: 13.5px; cursor: pointer; }
 .item:hover { background: var(--sd-raised); }
@@ -79,3 +80,18 @@
 .fileActions { display: flex; flex-wrap: wrap; gap: var(--sd-space-2); }
 .clLine strong { font-weight: 700; }
 .clLine code, .body code { font-family: var(--sd-font-mono); font-size: .92em; }
+
+/* B-30 AWorkspace: the stat strip above the panes. */
+.workspace { display: flex; flex-direction: column; gap: var(--sd-space-4); }
+.stats { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--sd-space-4); }
+.stat, .version { border: 1px solid var(--sd-line); border-radius: var(--sd-radius-xl); padding: var(--sd-space-4) var(--sd-space-5); display: flex; flex-direction: column; align-items: flex-start; gap: var(--sd-space-3); }
+.stat { background: var(--sd-surface); }
+.statN, .versionValue { margin: 0; font-size: 34px; line-height: 1; font-weight: 700; letter-spacing: -1.2px; }
+.version { background: var(--sd-inverse); border-color: var(--sd-inverse); color: var(--sd-on-inverse); }
+.versionLabel { margin: 0; font-family: var(--sd-font-mono); font-size: 12px; color: var(--sd-on-inverse-muted); }
+.versionValue { display: flex; align-items: center; gap: var(--sd-space-2); }
+.bump { font-family: var(--sd-font-mono); font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: var(--sd-radius-xs); background: var(--sd-brand); color: var(--sd-on-brand); letter-spacing: 0; }
+@media (max-width: 1279px) { .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+/* X-02: the virtual tree scrolls inside the panel. */
+.scroller { margin: 0 calc(-1 * var(--sd-space-1)); padding: 0 var(--sd-space-1); }
+.scroller:focus-visible { outline: none; box-shadow: var(--sd-shadow-focus); border-radius: var(--sd-radius-md); }

@@ -26,6 +26,8 @@ test('A-05 review a whole comparison with the keyboard only', async ({ page }) =
   await expect(page.getByRole('tab', { name: 'Summary' })).toBeVisible();
   await page.keyboard.press('2');
   await expect(page.getByRole('tab', { name: 'Workspace', selected: true })).toBeVisible();
+  // B-30: the Workspace opens on All (AWorkspace); "To review" is the review view (A05-Review).
+  await page.getByRole('button', { name: /^To review/ }).press('Enter');
   await expect(page.getByText('0 of 5 decided')).toBeVisible();
   for (let i = 0; i < 5; i++) {
     await page.keyboard.press('a');
@@ -107,6 +109,52 @@ for (const scheme of ['light', 'dark'] as const) {
   });
 }
 
+test('@phone M-02 change list: shared-schema changes grouped first, docs-only collapsed, one bar with search', async ({ page }) => {
+  test.skip(test.info().project.name !== 'phone');
+  await page.goto('/app/?sample=openapi');
+  await page.getByRole('button', { name: 'See all 28 changes' }).click();
+  await expect(page.getByRole('heading', { name: '28 changes' })).toBeVisible();
+  // One bar: back + "28 changes" + search. The app's logo/icon bar is not shown above it.
+  await expect(page.getByRole('banner')).toBeHidden();
+  await expect(page.getByRole('button', { name: 'Search changes' })).toBeVisible();
+  const groups = page.locator('main section[aria-label]');
+  await expect(groups.first()).toHaveAttribute('aria-label', 'components.schemas.Card');
+  // card.last4 is one row naming its 3 endpoints.
+  await expect(page.getByRole('button', { name: /card\.last4 removed · 3 endpoints/ })).toHaveCount(1);
+  // The 9 docs-only changes collapse into one row.
+  await expect(page.getByRole('button', { name: /9 operations · Descriptions updated/ })).toHaveCount(1);
+  await expect(page.getByRole('button', { name: /description of/i })).toHaveCount(0);
+  await expect(groups.last()).toHaveAttribute('aria-label', '9 operations');
+  // 4 breaking + 1 possibly + 14 safe rows, plus the docs row.
+  await expect(page.locator('main section[aria-label] li')).toHaveCount(20);
+  await expectAxeClean(page);
+  // The docs row opens the docs-only list.
+  await page.getByRole('button', { name: /9 operations · Descriptions updated/ }).click();
+  await expect(page.getByRole('button', { name: 'Docs 9' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('main section[aria-label] li')).toHaveCount(9);
+});
+
+test('OUT-10 the Atom export asks for the feed URL and title instead of example.com', async ({ page }) => {
+  await page.goto('/app/?sample=openapi');
+  await expect(page.getByText('28 changes').first()).toBeVisible();
+  const asked: string[] = [];
+  page.on('dialog', (d) => {
+    asked.push(d.message());
+    void (/feed url/i.test(d.message()) ? d.accept('https://docs.acme.dev/changelog.xml') : d.accept('Payments API'));
+  });
+  const dl = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Export' }).first().click();
+  await page.getByRole('menuitem', { name: 'Changelog feed (.xml)' }).click();
+  const file = await dl;
+  expect(file.suggestedFilename()).toBe('changelog.xml');
+  const xml = await (await import('node:fs/promises')).readFile(await file.path(), 'utf8');
+  expect(asked).toHaveLength(2);
+  expect(asked[0]).toMatch(/feed URL/);
+  expect(xml).toContain('<link rel="self" href="https://docs.acme.dev/changelog.xml"/>');
+  expect(xml).toContain('<title>Payments API</title>');
+  expect(xml).not.toContain('example.com');
+});
+
 test('the app opens the comparison in the Viewer with change badges', async ({ page }) => {
   await page.goto('/app/?sample=openapi');
   await expect(page.getByRole('tab', { name: 'Summary' })).toBeVisible();
@@ -135,6 +183,7 @@ test('A-04 titles match the design copy for the 5 breaking and possibly-breaking
 test('OA-21 decisions.json downloads and imports back', async ({ page }) => {
   await page.goto('/app/?sample=openapi');
   await page.getByRole('tab', { name: 'Workspace' }).click();
+  await page.getByRole('button', { name: /^To review/ }).click(); // B-30
   await expect(page.getByText('0 of 5 decided')).toBeVisible();
   await page.keyboard.press('a');
   await expect(page.getByText('1 of 5 decided')).toBeVisible();
@@ -149,6 +198,7 @@ test('OA-21 decisions.json downloads and imports back', async ({ page }) => {
 
   await page.goto('/app/?sample=openapi');
   await page.getByRole('tab', { name: 'Workspace' }).click();
+  await page.getByRole('button', { name: /^To review/ }).click(); // B-30
   await expect(page.getByText('0 of 5 decided')).toBeVisible();
   const chooser = page.waitForEvent('filechooser');
   await page.getByRole('button', { name: 'Import decisions.json' }).click();
@@ -207,6 +257,8 @@ for (const scheme of ['light', 'dark'] as const) {
     await expectAxeClean(page);
     await page.getByRole('tab', { name: 'Workspace' }).click();
     await expect(page.getByRole('heading', { level: 2 }).first()).toBeVisible();
+    await expectAxeClean(page);
+    await page.getByRole('button', { name: /^To review/ }).click(); // B-30: Inline is in the review view
     await expectAxeClean(page);
     await page.getByRole('radio', { name: 'Inline' }).click();
     await expectAxeClean(page);

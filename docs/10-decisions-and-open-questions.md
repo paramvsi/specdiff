@@ -71,4 +71,7 @@ Claude Code adds rows here when it takes a default without the owner.
 | B-31 | JSON has two approved frames: AJson (counts card, changes by path, export card) is the default overview; A07-JsonTree is the "Tree" view inside it | Audit round 2 | Both frames approved; this keeps both |
 | B-32 | JSON Patch export is built from the keyed diff (move/remove/replace/add) and includes keys the diff ignores (e.g. `updatedAt`), so applying it gives the after file exactly: 8 ops on the sample vs 7 in A07-JsonExport | Round 3 | A patch must reproduce the file |
 | B-33 | Minified JSON (a line over 2,000 characters) is pretty-printed before the raw line diff | Round 3 | 273 KB minified pair: 30 s → 2 s |
+| B-34 | Utility screens (History, Settings, Saved sources, Parsing, Patch) keep a "More" menu in their own top bar, which the designs don't show: it is the only way between screens | Round 3 | Navigation |
+| B-35 | Inline links inside sentences are exempt from the 44 px phone target check (WCAG 2.5.8 inline exception); the Text overview ruler (mouse-only ticks) is hidden on phones | Round 3 | WCAG 2.5.8 |
+| B-36 | The Atom feed export asks for the feed URL and title in a dialog and remembers them in this browser | Round 3 | OUT-10 needs a real feed URL |
 

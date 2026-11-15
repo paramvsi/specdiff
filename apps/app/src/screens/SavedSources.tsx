@@ -8,6 +8,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { loadUrl } from '../lib/input';
 import { checkSource as check, explainFetch as explain, lastTwo, openedChecks, type SavedRow } from '../lib/saved';
 import { deleteSaved, getSnapshot, listSaved, pushSnapshot, putSaved, sha256 } from '../state/persist';
+import { useCommand } from '../shell/commands';
 import { useApp } from '../state/store';
 import css from './SavedSources.module.css';
 
@@ -36,6 +37,8 @@ export default function SavedSources() {
   const { setSource, setMode, compare, setScreen } = useApp();
   const [rows, setRows] = useState<Row[] | null>(null);
   const [adding, setAdding] = useState(false);
+  // A-13: Add source lives in the top bar.
+  useCommand('add-source', useCallback(() => setAdding(true), []));
   const started = useRef(false);
 
   const checkOne = useCallback(async (s: SavedSource) => {
@@ -95,9 +98,6 @@ export default function SavedSources() {
             saved in this browser. Nothing runs in the background or on a server.
           </p>
         </div>
-        <Button variant="brand" icon={<icons.Plus size={15} />} onClick={() => setAdding(true)}>
-          Add source
-        </Button>
       </header>
 
       {changed.length > 0 && (

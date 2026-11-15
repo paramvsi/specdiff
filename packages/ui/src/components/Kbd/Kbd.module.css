@@ -1,6 +1,9 @@
 .kbd {
   display: inline-block;
-  padding: 2px 6px;
+  min-width: 20px;
+  padding: 1px 5px;
+  border: 1px solid var(--sd-line);
+  text-align: center;
   border-radius: var(--sd-radius-xs);
   background: var(--sd-raised);
   color: var(--sd-muted);

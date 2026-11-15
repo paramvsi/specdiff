@@ -1,14 +1,14 @@
 // O-02 / X-04 command palette: Files, Changes (every mode), Paths, Actions, Settings.
+// Loaded on first open (App.tsx), so cmdk and the result indexes stay out of start-up.
 import type { HistoryEntry, Mode } from '@specdiff/core';
 import { CommandPalette, type CommandGroup, type CommandItem } from '@specdiff/ui';
 import { useEffect, useMemo, useState } from 'react';
 import { listHistory, loadPayload, updateEntry } from '../state/persist';
 import { useApp } from '../state/store';
 import type { CompareResult } from '../worker/protocol';
+import { changeTitleText } from '../screens/openapi/titles';
 import { run, useOverlays } from './commands';
 import { focusChange, useNav } from './nav';
-
-export const openPalette = () => useOverlays.getState().set({ palette: true });
 
 /** cmdk renders every item; past this the palette stays fast and the screens' own lists take over. */
 const MAX_CHANGES = 1000;
@@ -26,18 +26,26 @@ function goTo(id: string, domId: string = id) {
 const SYMBOL = { added: '+', removed: '−', edited: '~', changed: '~', moved: '↕' } as Record<string, string>;
 const clip = (s: string, n = 60) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
 
+const toResult = () => {
+  const s = useApp.getState();
+  if (s.screen !== 'result') s.setScreen('result');
+};
+
 /** The current result's changes, whatever the mode. */
 export function changeItems(result: Exclude<CompareResult, { kind: 'parse' }>): CommandItem[] {
   if ('report' in result)
     return result.report.changes.map((c) => ({
       id: c.id,
-      label: c.path,
-      kind: c.ruleId ?? c.kind,
+      label: changeTitleText(c),
+      // AComponents: the right-hand meta names the kind of result, not the rule id.
+      kind: 'change',
       ...(c.severity ? { severity: c.severity } : {}),
       keywords: [
+        c.path,
         c.operation ? `${c.operation.method} ${c.operation.path}` : '',
         c.jsonPath ?? '',
         c.sharedSchema?.name ?? '',
+        c.ruleId ?? '',
       ],
       onSelect: () => focusChange(c.id),
     }));
@@ -90,7 +98,7 @@ export function changeItems(result: Exclude<CompareResult, { kind: 'parse' }>): 
 export function Palette() {
   const open = useOverlays((s) => s.palette);
   const set = useOverlays((s) => s.set);
-  const { result, before, after, setScreen, setSettings, settings, setSource, setMode, compare } =
+  const { result, before, after, setScreen, setSettings, settings, setSource, setMode, compare, updateConfig } =
     useApp();
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   useEffect(() => {
@@ -124,21 +132,28 @@ export function Palette() {
     if (files.length) g.push({ heading: 'Files', items: files });
 
     if (result && !('kind' in result)) {
-      const changes = changeItems(result);
+      // A change opens in the result, from whichever screen the palette was opened on.
+      const changes = changeItems(result).map((it) => ({ ...it, onSelect: () => { toResult(); it.onSelect?.(); } }));
       if (changes.length) g.push({ heading: 'Changes', items: changes.slice(0, MAX_CHANGES) });
     }
     if (result && 'report' in result) {
-      const paths = [
-        ...new Set(result.report.changes.map((c) => c.operation?.path).filter(Boolean) as string[]),
-      ].sort();
+      // Endpoint paths and shared schemas ($.components.schemas.X); each opens its first change.
+      const first = new Map<string, string>();
+      for (const c of result.report.changes) {
+        if (c.operation?.path && !first.has(c.operation.path)) first.set(c.operation.path, c.id);
+        const schema = c.sharedSchema?.name ?? /^\$\.components\.schemas\.([^.[]+)/.exec(c.jsonPath ?? '')?.[1];
+        if (schema && !first.has(`$.components.schemas.${schema}`)) first.set(`$.components.schemas.${schema}`, c.id);
+      }
       g.push({
         heading: 'Paths',
-        items: paths.map((p) => ({
+        items: [...first.keys()].sort().map((p) => ({
           id: p,
           label: p,
           kind: 'path',
-          onSelect: () =>
-            focusChange(result.report.changes.find((c) => c.operation?.path === p)!.id),
+          onSelect: () => {
+            toResult();
+            focusChange(first.get(p)!);
+          },
         })),
       });
     }
@@ -150,13 +165,44 @@ export function Palette() {
         { label: 'Share', kind: 'action', onSelect: () => run('share') },
         { label: 'History', kind: 'action', onSelect: () => setScreen('history') },
         { label: 'Saved sources', kind: 'action', onSelect: () => setScreen('saved') },
+        {
+          label: 'Toggle ignore whitespace',
+          kind: 'action',
+          keywords: ['spaces', 'indentation', 'formatting'],
+          onSelect: () => {
+            updateConfig((c) => ({ ...c, text: { ...c.text, ignoreWhitespace: !(c.text?.ignoreWhitespace ?? false) } }));
+            if (useApp.getState().screen === 'result') void compare();
+          },
+        },
+        {
+          label: 'Toggle hide docs-only changes',
+          kind: 'action',
+          keywords: ['ignore', 'descriptions', 'documentation'],
+          onSelect: () => {
+            updateConfig((c) => ({ ...c, openapi: { ...c.openapi, hideDocsOnly: !(c.openapi?.hideDocsOnly ?? false) } }));
+            if (useApp.getState().screen === 'result') void compare();
+          },
+        },
+        { label: 'Split / unified', kind: 'action', keywords: ['inline', 'side by side', 'layout'], onSelect: () => run('toggle-unified') },
+        { label: 'Word wrap', kind: 'action', keywords: ['lines'], onSelect: () => run('toggle-wrap') },
+        { label: 'Show unchanged lines', kind: 'action', keywords: ['context', 'expand'], onSelect: () => run('show-unchanged') },
+        { label: 'Go to line', kind: 'action', onSelect: () => run('go-to-line') },
+        { label: 'Explain this change', kind: 'action', onSelect: () => run('explain') },
+        { label: 'Copy link to change', kind: 'action', onSelect: () => run('copy-link') },
+        { label: 'Open file', kind: 'action', onSelect: () => (run('open-file') ? undefined : setScreen('compare')) },
+        { label: 'Load from URL', kind: 'action', onSelect: () => (run('load-url') ? undefined : setScreen('compare')) },
         { label: 'Keyboard shortcuts', kind: 'action', onSelect: () => set({ shortcuts: true }) },
       ],
     });
     g.push({
       heading: 'Settings',
       items: [
-        { label: 'Rules and settings', kind: 'setting', onSelect: () => setScreen('settings') },
+        {
+          label: 'Rules and settings',
+          kind: 'setting',
+          keywords: ['severity', 'strictness', 'ignore paths', 'ignore keys', 'diff options', '.specdiff.yaml'],
+          onSelect: () => setScreen('settings'),
+        },
         {
           label: `Theme: ${settings.theme === 'dark' ? 'light' : 'dark'}`,
           kind: 'setting',
@@ -173,7 +219,7 @@ export function Palette() {
       ],
     });
     return g;
-  }, [result, before, after, history, setScreen, setSettings, settings, set, setSource, setMode, compare]);
+  }, [result, before, after, history, setScreen, setSettings, settings, set, setSource, setMode, compare, updateConfig]);
   return (
     <CommandPalette
       open={open}

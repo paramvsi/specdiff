@@ -28,6 +28,7 @@ import {
 import { isComparisonName, readComparisonFile } from '../lib/comparison';
 import { samples } from '../lib/samples';
 import { openPayload, openSample } from '../shell/boot';
+import { usePatch } from '../shell/chrome';
 import { useCommand } from '../shell/commands';
 import { listHistory, loadPayload } from '../state/persist';
 import { useApp, type Side } from '../state/store';
@@ -75,8 +76,9 @@ export function Compare() {
   const [urlFor, setUrlFor] = useState<Side | null>(null);
   const [tooLarge, setTooLarge] = useState<Source | null>(null);
   const [tooLargeSide, setTooLargeSide] = useState<Side>('after');
-  // TX-12: the patch being opened (null: show the two editors).
-  const [patch, setPatch] = useState<string | null>(null);
+  // TX-12: the patch being opened (null: show the two editors). Shared with the top bar, which shows Back for it.
+  const { patch, setPatch } = usePatch();
+  useEffect(() => () => usePatch.getState().setPatch(null), []);
   const fileInput = useRef<HTMLInputElement>(null);
   const fileSide = useRef<Side>('before');
 

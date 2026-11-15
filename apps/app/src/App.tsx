@@ -1,10 +1,10 @@
-import { lazy, Suspense, useEffect } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { Toaster } from '@specdiff/ui';
 import { useApp } from './state/store';
 import { AppTopBar } from './shell/AppTopBar';
 import { useBoot } from './shell/boot';
 import { useGlobalKeys } from './shell/keys';
-import { Palette } from './shell/palette';
+import { useOverlays } from './shell/commands';
 import { Shortcuts } from './shell/Shortcuts';
 import { Compare } from './screens/Compare';
 import { Parsing } from './screens/Parsing';
@@ -18,6 +18,19 @@ const Settings = lazy(() => import('./screens/Settings'));
 const Unlock = lazy(() => import('./screens/Unlock'));
 const SavedSources = lazy(() => import('./screens/SavedSources'));
 const ViewerScreen = lazy(() => import('./screens/ViewerScreen'));
+const Palette = lazy(() => import('./shell/palette').then((m) => ({ default: m.Palette })));
+
+/** X-04: the palette (cmdk, change indexes) loads on first open and stays mounted after. */
+function PaletteSlot() {
+  const open = useOverlays((s) => s.palette);
+  const [mounted, setMounted] = useState(false);
+  if (open && !mounted) setMounted(true);
+  return mounted ? (
+    <Suspense fallback={null}>
+      <Palette />
+    </Suspense>
+  ) : null;
+}
 
 function useTheme() {
   const { theme, diffTheme } = useApp((s) => s.settings);
@@ -63,10 +76,10 @@ function Main() {
             {screen === 'settings' && <Settings />}
             {screen === 'unlock' && <Unlock />}
             {screen === 'saved' && <SavedSources />}
-          {screen === 'viewer' && <ViewerScreen />}
+            {screen === 'viewer' && <ViewerScreen />}
           </Suspense>
         </main>
-        <Palette />
+        <PaletteSlot />
         <Shortcuts />
       </div>
     </Toaster>

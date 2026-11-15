@@ -25,7 +25,8 @@ export type CommandName =
   | 'open-file'
   | 'load-url'
   | 'share'
-  | 'shortcuts';
+  | 'shortcuts'
+  | 'add-source';
 
 type Handler = () => void;
 const handlers = new Map<CommandName, Handler[]>();
@@ -62,6 +63,7 @@ export const useOverlays = create<Overlays>((set) => ({
   shortcuts: false,
   set: (p) => set(p),
 }));
+export const openPalette = () => useOverlays.getState().set({ palette: true });
 
 /** Key → command, exactly as the O-03 sheet. Mod = ⌘ on Mac, Ctrl elsewhere. */
 export function commandFor(

@@ -33,6 +33,8 @@ export interface CommandMenuProps {
   /** Accessible name for the search input. */
   label?: string | undefined;
   className?: string | undefined;
+  /** Called after any item is selected (the palette closes itself with this). */
+  onItemSelected?: (() => void) | undefined;
 }
 
 /**
@@ -59,6 +61,7 @@ export function CommandMenu({
   placeholder = 'Search changes, paths and actions',
   label = 'Search commands',
   className,
+  onItemSelected,
 }: CommandMenuProps) {
   return (
     <Command label={label} loop filter={filterCommand} className={cx(css.panel, className)}>
@@ -80,7 +83,10 @@ export function CommandMenu({
                 key={item.id ?? i}
                 value={`${g.heading}:${item.id ?? i}`}
                 keywords={[item.label, item.kind ?? '', ...(item.keywords ?? [])]}
-                {...(item.onSelect ? { onSelect: item.onSelect } : {})}
+                onSelect={() => {
+                  onItemSelected?.();
+                  item.onSelect?.();
+                }}
                 className={css.item}
               >
                 {item.severity ? (
@@ -104,7 +110,7 @@ export interface CommandPaletteProps extends CommandMenuProps {
   onOpenChange: (open: boolean) => void;
 }
 
-/** Command palette dialog: 560px, 12vh from the top. Arrow keys, Enter, Esc. */
+/** Command palette dialog: 560px, 12vh from the top. Arrow keys, Enter, Esc. Selecting an item closes it. */
 export function CommandPalette({ open, onOpenChange, ...menu }: CommandPaletteProps) {
   const container = usePortalContainer();
   return (
@@ -113,7 +119,7 @@ export function CommandPalette({ open, onOpenChange, ...menu }: CommandPalettePr
         <RadixDialog.Overlay className={css.overlay} />
         <RadixDialog.Content className={css.dialog} aria-describedby={undefined}>
           <RadixDialog.Title className={css.srTitle}>Command palette</RadixDialog.Title>
-          <CommandMenu {...menu} />
+          <CommandMenu {...menu} onItemSelected={() => onOpenChange(false)} />
         </RadixDialog.Content>
       </RadixDialog.Portal>
     </RadixDialog.Root>

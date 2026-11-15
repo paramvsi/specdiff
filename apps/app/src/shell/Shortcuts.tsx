@@ -56,10 +56,14 @@ export function Shortcuts() {
       title="Keyboard shortcuts"
       description="Single keys work when focus isn’t in a text field."
       onOpenChange={(o) => set({ shortcuts: o })}
+      className={css.dialog}
       actions={
-        <Button variant="secondary" onClick={() => set({ shortcuts: false })}>
-          Close
-        </Button>
+        <div className={css.foot}>
+          <p className={css.note}>On Windows and Linux, use Ctrl instead of ⌘.</p>
+          <Button variant="secondary" onClick={() => set({ shortcuts: false })}>
+            Close
+          </Button>
+        </div>
       }
     >
       <div className={css.grid}>
@@ -83,7 +87,6 @@ export function Shortcuts() {
           </section>
         ))}
       </div>
-      <p className={css.note}>On Windows and Linux, use Ctrl instead of ⌘.</p>
     </Dialog>
   );
 }

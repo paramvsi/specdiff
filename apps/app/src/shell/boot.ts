@@ -49,22 +49,9 @@ export function useBoot() {
       afterFirstPaint(checkSavedSources);
       consumeLaunchedFiles();
 
-      const hash = location.hash;
-      if (hash.startsWith('#v=')) {
-        if (isLocked(hash)) {
-          usePending.hash = hash;
-          useApp.getState().setScreen('unlock');
-          return;
-        }
-        try {
-          await openPayload(await decodeShare(hash));
-        } catch {
-          useApp.setState({
-            error: 'This share link is damaged or incomplete. Ask for a new link.',
-          });
-        }
-        return;
-      }
+      // A second share link opened in this tab only changes the hash: no reload, so follow hashchange.
+      window.addEventListener('hashchange', () => void openShareHash(location.hash));
+      if (await openShareHash(location.hash)) return;
       const q = new URLSearchParams(location.search);
       const sample = q.get('sample');
       if (sample) {
@@ -88,6 +75,25 @@ export function useBoot() {
       }
     })();
   }, []);
+}
+
+/** Open a share link's hash (#v=…): locked links go to Unlock. False when the hash isn't a share link. */
+export async function openShareHash(hash: string): Promise<boolean> {
+  if (!hash.startsWith('#v=')) return false;
+  if (isLocked(hash)) {
+    usePending.hash = hash;
+    useApp.getState().setScreen('unlock');
+    return true;
+  }
+  try {
+    await openPayload(await decodeShare(hash));
+  } catch {
+    useApp.setState({
+      error: 'This share link is damaged or incomplete. Ask for a new link.',
+      screen: 'compare',
+    });
+  }
+  return true;
 }
 
 export async function openSample(id: string) {
