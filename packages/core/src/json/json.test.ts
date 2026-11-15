@@ -81,6 +81,17 @@ describe('parse', () => {
     const r = parseWithPositions(bomb);
     expect('error' in r && r.error.message).toMatch(/alias/i);
   });
+  it('says a file is nested too deeply instead of blaming its syntax', () => {
+    const deep = '['.repeat(5000) + '1' + ']'.repeat(5000);
+    const r = parseWithPositions(deep);
+    expect('error' in r && r.error.message).toMatch(/nested too deeply/i);
+    expect('error' in r && r.error.hint).not.toMatch(/syntax/i);
+  });
+  it('diffJson reports deep nesting as a plain error, not a RangeError', () => {
+    let deep: unknown = 1; let deep2: unknown = 2;
+    for (let i = 0; i < 20000; i++) { deep = [deep]; deep2 = [deep2]; }
+    expect(() => diffJson(deep, deep2, Config.parse({}).json)).toThrow(/nested too deeply/i);
+  });
   it('explains a file with several YAML documents', () => {
     const r = parseWithPositions('a: 1\n---\nb: 2\n');
     expect('error' in r && r.error.hint).toMatch(/one document/i);

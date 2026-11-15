@@ -19,6 +19,7 @@ function hintFor(code: string, message: string): string {
   if (code === 'MISSING_CHAR' || /end with a|flow (map|sequence|collection)|missing/i.test(message)) return 'A bracket, brace or quote is not closed. Look for a missing ] } or " near here.';
   if (code === 'BAD_INDENT' || /indent/i.test(message)) return 'Check the indentation on this line: it must line up with its siblings, using spaces, not tabs.';
   if (code === 'TAB_AS_INDENT') return 'YAML does not allow tabs for indentation. Replace them with spaces.';
+  if (/call stack/i.test(message)) return 'The file is valid as far as it goes, but it nests more levels than Specdiff can follow in a browser.';
   if (/multiple documents/i.test(message)) return 'This file holds more than one YAML document (separated by ---). Compare one document at a time.';
   if (code === 'DUPLICATE_KEY') return 'The same key appears twice in one object.';
   if (/JSON|unexpected/i.test(message)) return 'This is not valid JSON or YAML here. Look for a stray comma or a missing colon.';
@@ -31,7 +32,8 @@ export function parseWithPositions(content: string): Parsed | { error: ParseErro
   const err = doc.errors[0];
   if (err) {
     const p = lc.linePos(err.pos[0]);
-    return { error: { line: p.line, column: p.col, message: err.message.split('\n')[0]!, hint: hintFor(err.code, err.message) } };
+    const first = err.message.split('\n')[0]!;
+    return { error: { line: p.line, column: p.col, message: /call stack/i.test(first) ? 'The file is nested too deeply to compare.' : first, hint: hintFor(err.code, err.message) } };
   }
   const positions = new Map<string, Pos>();
   const duplicates: Parsed['duplicates'] = [];

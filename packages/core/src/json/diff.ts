@@ -47,7 +47,15 @@ export function detectMatchKey(a: unknown[], b: unknown[], preferred: string): s
   }));
 }
 
+const TOO_DEEP = 'These files are nested too deeply to compare (more levels than the browser allows).';
+
+/** Compare two parsed JSON/YAML values. Nesting deep enough to overflow the stack throws a plain Error. */
 export function diffJson(a: unknown, b: unknown, o: JsonOptions): JsonDiff {
+  try { return diffJsonUnchecked(a, b, o); }
+  catch (e) { if (e instanceof RangeError) throw new Error(TOO_DEEP); throw e; }
+}
+
+function diffJsonUnchecked(a: unknown, b: unknown, o: JsonOptions): JsonDiff {
   const changes: JsonChange[] = [];
   const nullMissing = new Set<JsonChange>();
   const push = (c: JsonChange, isNullMissing: boolean) => { changes.push(c); if (isNullMissing) nullMissing.add(c); };
