@@ -68,7 +68,7 @@ Spike both against A-03 in P1 and keep one. Syntax highlighting elsewhere (Viewe
 
 | Package | Purpose |
 |---|---|
-| `astro`, `@astrojs/mdx`, `@astrojs/react`, `@astrojs/sitemap` | Static site, docs in MDX, React islands for the live demo and slider |
+| `astro`, `@astrojs/mdx`, `@astrojs/react`, `@astrojs/sitemap` | Static site, docs in MDX. React renders the demo, slider and tabs at build time; plain TypeScript makes them interactive (B-13), so no React reaches the browser |
 | `shiki` | Code blocks in docs |
 | `design/motion.css` | All website motion. No animation library |
 

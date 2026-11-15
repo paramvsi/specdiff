@@ -77,3 +77,34 @@ Claude Code adds rows here when it takes a default without the owner.
 
 | B-37 | After the first load, the service worker precaches the lazy chunks in the background so the app works offline (PK-08). Page loads still fetch them on demand, so X-03's start-up budget is unaffected | Coverage pass | Offline vs lazy loading |
 | B-38 | No CLI `--today` option: the six date-pinned sunset fixtures run in Vitest, and the CLI's sunset rules are covered end to end with relative dates (OA-17) | Coverage pass | Keeps test-only flags out of the CLI |
+| B-39 | Viewer: an operation with several tags is listed once, under its first tag (no duplicate one-row groups) | Round 4 | Main frame shows each endpoint once |
+| B-40 | V-04: safe and docs-only changes fold into one expandable row each when there are 2 or more | Round 4 | Frame shows ~5 rows; data has more safe changes |
+| B-41 | curl samples leave out `-X` when curl implies the method and quote the URL only when the shell needs it | Round 4 | One short line per sample, as designed |
+| B-42 | M-05 phone Viewer overview keeps the header version select (M-04's frame has it; M-05's doesn't) | Round 4 | One header across phone Viewer pages |
+| B-43 | The website keeps a theme toggle on every page, which the frames don't show: dark mode is a requirement, and removing it would change every layout | Round 4 | Rule 10 |
+| B-44 | The `request-property-became-required` fixture uses the payments example (`required: [amount]` → `[amount, currency]`) so the generated rule page matches W04 | Round 4 | Rule pages are generated from fixtures |
+| B-45 | Website dark nav keeps solid tokens instead of the frame's frosted bar, whose muted links fail contrast | Round 4 | WCAG 2.2 AA |
+| B-46 | The result top bar keeps More (the only way to History, Saved sources and Settings; extends B-34) and Copy for LLM (decision 6), which the Main frame doesn't show | Round 4 | Navigation; decision 6 |
+| B-47 | Workspace keeps the Affects me / Endpoints–SDK row, To review chip, search and Group by: they are OA-20/OA-22 features (docs/02 wins on behaviour) | Round 4 | Rule 2 |
+| B-48 | The review card keeps Download / Import decisions.json and the Side by side / Inline switch: a browser can't write `.specdiff/`, so the file is how decisions travel (OA-21) | Round 4 | OA-21 |
+| B-49 | M-02 collapses safe changes into one row, like docs-only, under All (same rule as B-40) | Round 4 | Frame shows 8 rows |
+| B-50 | Rules and settings lists all 76 rules; the 4 with no default severity say why ("No severity"), so the app and the website agree | Round 4 | App 72 vs website 76 |
+| B-51 | History has a "Save new comparisons to history" setting (`settings.saveHistory`, default on), as the empty-History frame shows | Round 4 | A11-HistoryEmpty |
+| B-52 | Ignore whitespace is on by default in text mode, as in ACompare and the docs/07 example config | Round 4 | Approved frame |
+| B-53 | **Open.** App Lighthouse mobile performance is 87, below the 95 target (desktop 100). It needs hydrated prerendering or a smaller start-up bundle; see `docs/audit/lighthouse.md` | Round 4 | Needs a design decision on SSR |
+| B-54 | A Markdown heading that ends a hunk on both sides, at the same depth, is a rename (one edited heading, not remove + add) | Round 4 | AMarkdown |
+| B-55 | JSON tree rows are one line; JSONPath is on each row's copy button and in "Changes by path" (JS-05) | Round 4 | AJson row height |
+| B-56 | The JSON Markdown export is a table, as its card says | Round 4 | JS-08 |
+| B-57 | A patch hunk whose header claims more lines than its body is recounted rather than rejected | Round 4 | A03-Patch's own example |
+| B-58 | The Code badge reads "<Language> · Beta" (docs/02: Beta features are labelled in the UI) and the fallback reads "Text" | Round 4 | A09 frames vs docs/02 |
+| B-59 | A03-MovedBlock keeps the A03-TextDiff toolbar and Split view (same screen, same controls) | Round 4 | Two frames of one screen disagree |
+| B-60 | Markdown keeps per-block Viewed buttons (X-11 applies to every mode) | Round 4 | docs/02 wins on behaviour |
+
+## Owner rulings (2026-11-15: "go with the recommendation")
+
+| # | Ruling |
+|---|---|
+| B-13 | Rewrite the website's React islands in plain TypeScript so Home meets the 60 KB budget in docs/04. Done: React renders the islands at build time only; Home fetches 2.8 KB gzip (was 76.0 KB), guarded by `e2e/round4-website.spec.ts` |
+| B-14 | Keep the three severities as docs/06 lists them (rule 10: default severities don't change) |
+| B-21 | Lighthouse is run ad hoc with `npx lighthouse` (not a repo dependency) against the production preview; the scores are recorded in `docs/audit/lighthouse.md`. Visual baselines are locked after the round-4 design fixes, and the round-4 screen audit counts as the review by eye (B-3) |
+| B-27 – B-38 | Accepted as recorded above |
