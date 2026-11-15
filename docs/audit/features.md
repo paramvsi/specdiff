@@ -197,3 +197,73 @@ Verdicts: **Done** means implemented and seen working, either by a passing test 
     - Hidden edits are mislabelled "reformatted".
 
 Open owner rulings that affect verdicts: B-13 (website hydrated JS 75.8 KB vs 60 KB), B-14 (three severities), B-21 (Lighthouse and visual baselines not measured), B-4 (nothing published, so every `npx specdiff-cli` command in the docs fails today).
+
+---
+
+# Round 2 (independent re-audit, 2026-11-15)
+
+Scope: the 26 round-1 Partial IDs, 15 round-1 Done IDs re-checked for regressions, and the cross-cutting checks. No product code, tests or config were changed. Scripts and outputs are in `/tmp/sd-audit2/` (`a/`, `b/`, `c/`, `cc/`). The build was current (`pnpm build`: 9/9 cached), and the served `/app/index.html` md5 matches `apps/app/dist/index.html`. A test was accepted as evidence only after reading what it asserts.
+
+**Totals for the 26:** Done 17 · Partial 9 · Missing 0. Still Partial: CD-03, CD-06, OUT-10, X-02, X-04, X-05, X-07, X-08, X-09.
+**15 random Done IDs:** 15 still Done, 0 regressions.
+
+## Round-1 Partial IDs
+
+| ID | Verdict | Evidence | Remaining gap |
+|---|---|---|---|
+| IN-04 | Done | `core/openapi/load.ts:189-221` maps the entry name to the file-key prefix. Unresolved refs become `report.warnings` (`build.ts:165-169`), shown in `Summary.tsx:42-45`. `multifile.test.ts:22` uses the real `fixtures/specs/multi` under 4 naming schemes. Own run (`a/in.mjs`): picking before.zip and after.zip gives 1 breaking "Response field name removed" (round 1: 0). A nested top folder resolves with 0 warnings. | Folder drop can't be driven by Playwright. It uses the same naming [inferred] |
+| IN-08 | Done | Real stage callbacks (`build.ts:100-106`, `worker/openapi.ts:21-43`). The test asserts the stage order. On a 10.4 MB pair (`a/progress2.mjs`), Resolve and Compare each show "running" separately. Cancel returns in 31 ms. | Most of the work runs under "Resolve $refs" (lazy resolver). The After bar moves 100→90→100 |
+| IN-11 | Done | `boot.ts:114-116` calls `recheckOnOpen` (`lib/saved.ts:54`). `a/saved.mjs`: reopening `/app/` makes 1 fetch and shows a "changed since" notice. `screens-fixes.spec.ts:88` asserts `fetches === 1` | — |
+| TX-07 | Done | `TextResult.tsx:574-590` expands the fold that contains the line. Going to lines 200, 37 and 399 in a folded 400-line diff lands in the viewport each time (`a/tx.mjs`). `screens-fixes.spec.ts:131` | Still no toolbar control (keyboard and palette only) |
+| TX-10 | Done | `compare({background:true})` (`TextResult.tsx:596-600`, `store.ts:102-122`). Three typing bursts gave 3→4→5 lines differ, with the editor and focus kept | — |
+| OA-02 | Done | `cli/inputs.ts:24-40` and the shared resolver. Parent-dir, sibling-dir, absolute-path and git rev:path runs all give the correct change. A missing ref prints "⚠ After: could not resolve $ref …" | — |
+| OA-09 | Done | Real `operation.tags` (`util.ts:18-21`) and a JSONPath matcher that handles `*` and `..` (`util.ts:60-115`). Own spec: Group by Tag gives accounts/billing. `$..maximum`, `$.paths.*.get.responses` and `$.paths['/orders']` each give 1 hit | No docs-only filter chip |
+| OA-10 | Done | Side by side / Inline control (`Workspace.tsx:187-249`). The addition window now lines up the same block on both sides | — |
+| OA-21 | Done | `openapi/decisions.ts`, `DecisionsActions.tsx`. `decisions.test.ts` uses a real report. Own loop: accept 5 in the app → download → `.specdiff/decisions.json` → CLI `--ci` goes from exit 1 to exit 0 | Decisions are still lost on reload ("0 of 5 decided"). docs/02 does not ask for this |
+| OA-22 | Done | `consumer-logic.ts:93-120` `overBound` accepts `{maximum:50}`. The new test uses a real `compareOpenApi` report. With the round-1 HAR: "1 calls with limit above 50" plus the currency-required row | The old fabricated `after: 50` test is still present (harmless) |
+| JS-01 | Done | `json/diff.ts:98-104`, `keyorder.test.ts:12,17`. In the UI, with the switch off: "2 differences … ↕ a moved" | A pair that differs only in key order hits the identical state, and its button does nothing (see X-08) |
+| MD-07 | Done | `markdown/diff.ts:26-64`, `markdown.test.ts:56-67`. `div.markdown-alert-note` renders, and the literal `[!NOTE]` is gone | — |
+| CD-03 | **Partial** | A rename alone gives only "A.g → A.gee" (fixed) | The false rename has moved to the **caller**. Java `h(){return g();}` also reports "g → gee, 1 use in A.h". TS `f→ff` called from `h` does the same. Python `self.g()` gives **"P.h changed" (Logic)**, a false logic change. `rename.test.ts:28` never asserts `A.h` |
+| CD-06 | **Partial** | A comment next to a rename is now listed (`diff.ts:189-198`, `rename.test.ts:36`). Renames are shown inline | Hidden comment-only changes are still folded as "N lines reformatted, no logic change" (`CodeResult.tsx:118`) |
+| OUT-05 | Done | The receiver opens on the Workspace with the shared change (`#change=c-0010`). `openapi.spec.ts:159` | Opening a second share link in the same tab (only the hash changes) keeps showing the first comparison (`b/p14.mjs`). This is a new defect, logged and not fixed |
+| OUT-06 | Done | Own round trip: downloaded `comparison.specdiff.json` → Open file → "218 lines differ" | The e2e (`screens-fixes.spec.ts:212`) uses a hand-made payload, not an exported file |
+| OUT-10 | **Partial** | New CLI command `specdiff changelog --format atom --feed-url` (`cli.ts:62-74`, `changelog.test.ts`) | The app export still hard-codes `feedUrl: 'https://example.com/changelog.xml'` (`apps/app/src/screens/openapi/exports.ts:33`). There is still one entry per run with no append, although the `feed.ts:1` comment says "append entries over releases". The CLI command is not in the website docs |
+| SET-06 | Done (per B-27) | `Settings.tsx:174-175` "Default (blue and orange) · Colour-blind safe" and "High contrast" | B-27 is a builder ruling ("Audit"), not an owner ruling |
+| PK-10 | Done | New `.pre-commit-hooks.yaml` and `specdiff pre-commit` (`cli.ts:84`). `e2e/precommit.spec.ts`: 4 passed. Scratch repo: breaking → exit 1 | The pre-commit framework is not installed here, and the package is unpublished (Not verifiable here) |
+| X-02 | **Partial** | `lib/VirtualList.tsx` now virtualises JSON (20k changes → 31 rows) and Markdown (3,000 blocks → 38). The 20k-line text diff takes 1.8 s (round 1: 32.5 s) | The OpenAPI Workspace tree is not virtualised (2,000 endpoints → 2,000 `li`, 20,258 nodes), and neither is Code mode. A minified 277 KB JSON pair took **88 s**: the eager raw `diffText` in `worker/structured.ts:21-26` takes 111 s in Node, while the JSON diff itself takes 14 ms |
+| X-04 | **Partial** | `shell/palette.tsx` has a Files group and changes for every mode | **The palette does not close after a selection** (`b/p7,p8,p17.mjs`). `palette.tsx:180` only closes through `onOpenChange`, and no item's `onSelect` sets `palette:false` |
+| X-05 | **Partial** | Axe (wcag22aa) is clean on 26 states × light/dark, including the Export, More and Copy for LLM menus. The `aria-hidden-focus` and dark-contrast failures are fixed (B-29). Phone axe is clean | Phone targets under 44 px: JSON 23 (round 1: 20), Markdown 26 (round 1: 8), Code 7, Compare 7. Text is fixed (0) |
+| X-06 | Done | Markdown block gutter `~ + −` and hidden "inserted:/deleted:" text (`MarkdownResult.tsx:30-37`, `screens-fixes.spec.ts:193`) | — |
+| X-07 | **Partial** | OpenAPI at 390 px is 390 wide with "Read-only on phones" (B-29). JSON, Text and Markdown links fit. The Viewer has no Try it (B-28) | **Code mode is still 619 px wide at 390** (sample and shared link) |
+| X-08 | **Partial** | Identical OpenAPI now shows "No differences" (`Result.tsx:18`) | "Show formatting changes" is dead in the OpenAPI, JSON, Markdown and Code identical states: no handler at `Result.tsx:52`, `JsonResult.tsx:167`, `MarkdownResult.tsx:138` or `CodeResult.tsx:45`. "0 formatting-only lines were ignored" is hard-coded |
+| X-09 | **Partial** | 76 fixtures, `fixtures.test.ts` 115/115. Axe is added for too-large, the A-09 fallback and the Copy for LLM menu | No axe on the parse-error state (`app.spec.ts:46`). The shortcuts axe runs after Escape has closed the sheet (`app.spec.ts:32-35`). `a11y-theme.spec.ts` checks the json, markdown, code and text samples while `main` is still empty (see below) |
+
+IN-03's round-1 defect ("Load into" ignored) is fixed. `Compare.tsx:376-377,538,547` reads the radio, my own run loaded the file into After, and `screens-fixes.spec.ts:260` asserts this.
+
+## 15 round-1 Done IDs re-checked
+
+The sample was drawn with `python random.seed(20261115); random.sample(<106 non-Later Done IDs>, 15)`. It gave CD-01, JS-02, MD-04, OA-14, PK-08, PK-09, SET-07, TX-03, TX-05, VW-03, VW-07, VW-12, VW-14, WEB-04 and X-10.
+
+All 15 are still Done (scripts in `/tmp/sd-audit2/c/`). Targeted vitest: 17 files, 145 passed. Playwright viewer/pwa/cli/text-extras/website: 69 passed. The round-1 minor gaps are unchanged: VW-03 still lists the removed `colour` twice, the VW-12 logo and VW-14 have no tests, and the WEB-04 area filter has no test. One copy nit is new: VW-07 says "1 changes".
+
+## Cross-cutting checks
+
+| Check | Result | Evidence |
+|---|---|---|
+| App start-up JS | **Passes the new gate; fails on what actually loads** | `node scripts/startup-size.mjs` → "179.1 kB gzip in 20 files", exit 0. But a Playwright load of `/app/` (`cc/initial-js.mjs`, service workers blocked) fetches **27 JS files, 231,321 B gzip**, up from 205,848 in round 1. The 7 extra chunks (ExportMenu 13.5 KB, `browser-*` 29.8 KB, version, Switch, summary, copy, registerSW: 52 KB together) are `lazy()` imports, but `AppTopBar.tsx:70` renders `<ExportMenu>` on every screen, including the empty Compare screen. They load at every start, so the fix moved code out of the measured set without deferring it |
+| Viewer embed ≤ 250 KB | Pass (B-17) | `specdiff-embed.js` 168,830 B gzip; `specdiff-compare.js` 167,296 B (lazy) |
+| No eval in our source | Pass | The grep over `packages/*/src apps/*/src packages/viewer/harness scripts` finds nothing. Third-party web-tree-sitter `eval` is still in `apps/app/dist/assets/diff-D6yFu1WV.js`, and the CSP has no `'unsafe-eval'` |
+| No inline scripts in built HTML | Pass | 104 HTML files: 0 inline scripts, 0 `on*=` handlers |
+| No content leaving the browser | Pass | `cc/net.mjs` covers 5 samples, share and receive, history, settings and Viewer: 508 requests, 0 non-origin, 0 non-GET. The network call sites are the same set as in round 1 |
+| No `.github` | Pass | `ls -a .github` → No such file. No workflows or `action.yml` found |
+| Deterministic CLI JSON | Pass | Each format run twice, identical: json `1a5521bcc60b`, md `7dffb0f5c337`, html `d53a70fb21f1`. Run from another cwd, only the path strings `inputs.*.name` and `location.file` differ (58 lines, nothing else) |
+| Raw hex | Pass | 72 `.module.css`: 0 hex and 0 raw rgb/hsl. `site.css` `--w-*` now use `var(--sd-*)`/`color-mix`. The only hex left is `Base.astro:28-29` theme-color metas (acceptable) |
+| `npx specdiff` without `-cli` | Pass | The repo-wide grep (without node_modules or handover) hits only the B-11 row, the guard test and `site.ts:6` comments. docs/01 and docs/02 are fixed |
+
+## Misrepresented or weak evidence
+
+- **Start-up budget:** `startup-size.mjs` is green, but 231 KB actually loads at start (see above).
+- **`e2e/a11y-theme.spec.ts`** (phone "no scroll, 44px targets, axe clean" and the dark 1440 checks): for the json, markdown, code and text samples, `openSample` waits only for Export to be enabled, while `main` is still blank. Code is 390 wide at that moment and 619 three seconds later, so the test passes on an overflowing screen. Screen-owned targets under 44 px are only an annotation and never fail the test.
+- **`rename.test.ts:28`** is titled as covering the caller, but it never asserts `A.h`, which is in fact falsely reported.
+- **OUT-10** is "fixed" for the CLI only. The app still exports an example.com feed.
+- **OUT-06** e2e uses a hand-made payload, not an exported file. The behaviour is correct by my own run.

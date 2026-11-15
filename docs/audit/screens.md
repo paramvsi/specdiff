@@ -127,3 +127,130 @@ No frame is wholly missing, but several **designed states inside frames cannot b
 14. **Code fallback badge reads "Code: · Beta"** and its notice says "AFTER is on the list" for pasted input; the code sample can't show rename/move/format.
 15. **Website**: phone rules table breaks IDs mid-word; docs severity symbols invisible on their discs; the hero `npx` command is truncated.
 16. Layout drift on otherwise-correct screens: Compare drag-over is an overlay rather than the two-zone layout (A01); the parsing card has 3 of 5 steps and puts a focus box on its heading (A02); the changelog editor clips and has no severity colours, and its share card lacks link options (A-10); history mode chips are all one colour.
+
+---
+
+# Round 2 (re-audit after the builders' Major fixes)
+
+Independent re-audit, 2026-11-15. No product code, tests or config were changed.
+
+**Method.** `pnpm build` (turbo: 9/9 tasks, all cached, `FULL TURBO`). The round-1 servers predated the 14:56 build, so fresh servers were started: app `vite preview` on :4183, app dev (`/_ds`) on :5209, Viewer harness on :5184. The website was served by the running `astro preview` on :4321 after checking that it serves the current `dist` (md5 of `/` and `/rules/` equals `apps/website/dist`). The round-1 Playwright scripts were ported and extended in `/tmp/sd-screens2/{app,viewer,website}/*.mjs` (Chromium, reduced motion, light/dark, 1440 or 390). Screens are in `/tmp/sd-screens2/*.png`. Each was compared by eye with its `design/screens/**.jpg` (B-3). Samples come from `apps/app/src/lib/samples.ts`. These are now richer: flags JSON, README with a renamed heading, table and moved section, Java `PaymentService` and the log file. Extra states were reached as follows: A-02 in progress (two 1.3 MB generated specs), A01 with Before loaded, A05 on Card.last4, palette queries, dark switch off, and a 390 px overflow sweep (`sw.mjs`).
+
+**Rulings applied** (as in round 1): B-2, B-11, B-15, B-16, B-19, B-20, B-23, B-24, B-27, B-28 (M-04 has no Try it), B-29 (phone top bar: icon-only Search/More/Share/Export), D-13, and decision 5 (Home v1 → N/A).
+
+**Verdicts.** Matches 0 · Minor differences 64 · Major differences 11 · Missing 0 · N/A 3 (app 0/32/7/0/0, Viewer+phone 0/22/2/0/0, website 0/10/2/0/3).
+
+**Round-1 Major → now Minor (26 of 36).** App: Main, A04-Summary-Dark, A05-Review, A05-Review-Dark, AChangelog, A02-Parsing, A11-History, A12-Settings, A12-Settings-Dark, A03-TextDiff-Dark, O05-LoadUrl, O08-TooLarge, O04-Explain, O11-CopyLLM, O13-Toasts, A07-JsonTree, A08-MdSideBySide, A09-Fallback, A05-ConsumerFilter, A01-DragOver. Viewer: V01-Overview-Error, V05-Search, M01-SharedLink, M03-Change, M04-ViewerEndpoint. Website: W03-Rules-390.
+**Still Major (10):** AWorkspace, ADark, AJson, AMarkdown, AComponents, A09-Code, V04-Timeline, M02-Summary, W04-RuleDetail, W04-RuleDetail-390. **New Major (regression with the richer sample):** A07-JsonExport.
+
+**Fixed across screens (verified):** human change titles; dark selected chips, segments, switch tracks and Filters badge are readable; switch labels no longer leak; dialogs gained header and footer structure (O-05, O-08); action toasts fire (Change accepted/rejected + Undo seen; Link is long, Saved source changed and Couldn't read are wired: `ShareDialog.tsx:158`, `shell/boot.ts:120`, `Compare.tsx:314`); phone share link no longer overflows (390); docs severity glyphs readable (`rgb(248,222,229)` on `rgb(161,29,59)`); rule pages have no `‹placeholder›` left (0 of 76); hero `npx` command no longer truncated; Viewer background fills the viewport; Viewer counts say 4 breaking.
+
+**Still open across screens:** the app top bar still adds More + Copy for LLM and keeps comparison chrome on utility screens (History, Settings, Saved sources, Patch, Parsing); dialogs O-03, O-09 and V-04 lack the grey footer band; the Viewer keeps segmented Docs/History tabs and clipped code samples; "`PaymentStatus` in `PaymentStatus`" persists (V-02, M-04, changelog-style sentences).
+
+**390 px sideways scroll** (`sw.mjs`, `documentElement.scrollWidth` at a 390 viewport): 390 on Compare, the openapi, json, markdown and text samples, Saved sources, the Viewer (overview, endpoint, changes, schema, history) and the website (/, docs, rules, rule detail, changelog, 404, getting-started). **It overflows on `?sample=code` (619), History (808) and Rules and settings (674).** These screens have no phone frame, but the pages scroll sideways.
+
+## Round 2 · Web app (39)
+
+| Frame | Verdict | Differences now (✓ = fixed since round 1) |
+|---|---|---|
+| app/Main | Minor | ✓ titles, ✓ shared-schema overflow, ✓ inline review progress. Left: top bar adds More + Copy for LLM; Where-changes sorted by count with no Security row; Shared-schema lists 4 schemas (adds Payment, Refund) vs 3; Strictness control not full width; cards ~170 vs 140 px tall; explanation code spans rendered as chips (design plain). Counts per B-2. |
+| app/ACompare | Minor | Unchanged: logo inset 64 vs 40; More button; Ignore whitespace unchecked by default; swap icon. |
+| app/AWorkspace | **Major** | ✓ tree titles wrap, ✓ diff wraps. Left: the frame's 5-card summary strip is absent (tabs and toolbar instead); default filter "To review 5" vs "All 28"; the diff shows the whole operation (lines 16–56, 6 hunks, side-by-side/inline switch) instead of the focused 11-line hunk; the page is 1520 px tall vs 1204. |
+| app/ADark | **Major** | ✓ "To review" chip and Endpoints segment readable in dark. All AWorkspace layout differences remain. |
+| app/AJson | **Major** | The build follows A07-JsonTree (Diff/Export tabs, chips, Options card). This frame's 3-column layout is missing: Compare options + counts card on the left, a whole-document tree with unchanged keys, "Changes by path" + Export card on the right, "Only show changes". **Needs owner ruling** on whether A07-JsonTree supersedes AJson. |
+| app/AMarkdown | **Major** | ✓ word-level inline edits ("cents → the smallest currency unit"), ✓ removed/added outline markers, ✓ "Sections" wording. Left: the Summary counts are wrong for the sample (Sections added 4 / removed 4 / edited 5; the sample has 2 added, 2 removed); a removed section and an added section are **interleaved** block by block (Rate limits heading, Migrating heading, Rate-limits paragraph, Migrating paragraph); the table row diff merges cells ("Idempotency-~~KeyOptional~~Key" in one cell); the first edited paragraph still renders as whole removed + added blocks; changed sections have no purple outline dot; per-block Viewed checkboxes; link change shown as a chip, not the tooltip. |
+| app/AChangelog | Minor | ✓ "v2.0.0, 15 Nov 2026", ✓ Worth checking/Added, ✓ coloured headings, ✓ share card with link and options. Left: a blank line between each heading and its items; Added lists 13 items (all safe changes) vs 2; adds a "Lock with a passphrase…" link and a Review decisions card; no close × on the share card. |
+| app/AComponents | **Major** | /_ds is still dev-only. Palette ✓ "currency now required" is the top hit for "curr", but the right column still shows rule IDs, not kind labels, and there are **no path or action results** ("ignore" → "No results"; "schemas.Card" returns only changes). Identical files still says "0 formatting-only lines were ignored" and offers "Show formatting changes". The parse-error card still has an orphan "5" row. |
+| app/A05-Review | Minor | ✓ Card.last4 diff aligned (259–272 ↔ 311–323), ✓ "Endpoints that return Card", ✓ Endpoint-removed diff clean, ✓ review progress only in the tree. Left: no per-endpoint location column (card / data[].card / data[]); Accept/Reject are not half-width; extra Download/Import decisions.json buttons and a Side by side/Inline switch; decided rows not dimmed. |
+| app/A02-Parsing | Minor | ✓ 5 steps with details ("OpenAPI 3.1 · YAML") and per-file bars, reached with 1.3 MB specs; ✓ no focus box. Left: top bar keeps Search/More/Share (enabled)/Export, has no mode badge, and lacks the single Cancel. |
+| app/A03-TextDiff | Minor | Unchanged: toolbar wraps to 2 rows; Smart vs Word default; empty area under a fixed-height diff card; filter rows taller. |
+| app/A06-RawDiff | Minor | ✓ short list labels. Left: lists all 28 changes, including docs-only; marker on the + row; whole page scrolls (6,669 px), so the top bar and tabs scroll away. |
+| app/A11-History | Minor | ✓ mode chip colours, ✓ "7 changes" / "13 blocks changed" / "9 lines differ", ✓ outlined Clear history. Left: top bar shows the last comparison's chips/badge + Share/Export, not Search + New comparison; Markdown says "blocks changed" vs "sections edited". |
+| app/A12-Settings | Minor | ✓ bare toggles, ✓ "72 on" agrees with Summary "72 of 72". Left: full app top bar, with Back moved into the page (+60 px); off rows are not dimmed. |
+| app/O05-LoadUrl | Minor | ✓ segmented Before/After, ✓ amber ⚠ callout, ✓ footer with shield, Cancel, Load file icon, mono URL. Left: no header divider, footer not on a grey band, subtitle sits in the body. |
+| app/O09-ShareLock | Minor | ✓ no "Lock" label leak. Left: no header divider or grey footer; "Strength: Good" under the bar vs "Strong" right-aligned; "Open on the current change" and "Include review decisions" are hidden from Summary. |
+| app/O08-TooLarge | Minor | ✓ ⚠ tile, file listing, two option cards, footer `npx specdiff-cli a.yaml b.yaml` (B-11), "YAML" wording. Left: the title sits in a header row above the icon (design: icon, then title). |
+| app/O03-Shortcuts | Minor | Unchanged: 520 vs 760 px (a label wraps); no header divider or grey footer; keycaps not boxed. |
+| app/O04-Explain | Minor | ✓ 480 px drawer, ✓ title once, ✓ 3 who-it-breaks bullets, ✓ two YAML options, ✓ pinned footer. Left: "What they'll see" lacks the error body; extra one-line fix above "Pick one"; no highlights inside the options; the title is in the drawer header above the method row. |
+| app/A07-JsonTree | Minor | ✓ "7 differences in 226 values", ✓ Null vs missing / Unchanged 219 chips, ✓ keyed move "index 3 → 11", ✓ single group header, ✓ `$ { 6 keys }`. Left: Diff/Export row (+90 px); rows ~65 px with Viewed + JSONPath (design 33 px) and every row tinted; the owners/updatedAt context rows are missing; Match-by shows "auto", not "key" + Auto-detected pill; no "Changed only"; tolerance 0 vs 0.01. |
+| app/A07-JsonExport | **Major** (regression) | With the richer sample the patch has **170 operations** (index-based `replace` on every shifted flag) against the diff's 7 differences and the design's 7 ops, which include `move` and `remove`. Still pretty-printed one key per line; Diff/Export is a segmented control. |
+| app/A08-MdSideBySide | Minor | ✓ Outline and Summary dropped in side-by-side (wide panes). Left: the table row is merged across cells on the left ("Idempotency-~~KeyOptional~~", empty value cell); "Go to the link" missing; the links list shows full URLs; "Rendered view" vs "Source view"; a gap row opposite the edited first paragraph. |
+| app/A09-Code | **Major** | ✓ "Code: Java · Beta", ✓ heading "1 logic change, 1 move, 1 rename", ✓ Renamed/Moved/Format items, ✓ fold rows (B-15 is now exceeded). Left: the moved `validateCurrency` renders as a plain + block (13–18) and − block (33–37), not as `~ moved from` rows; the renamed method shows as + rows 28–32 with the old lines hidden although "Hide renames" is checked; the whole file is listed; Logic item says "PaymentService.create changed" vs "currency no longer defaults to USD"; the What-changed checkboxes overflow the card's right edge (x≈1430). |
+| app/A09-Fallback | Minor | ✓ white notice card with ⚠, ✓ "Code: Go · Beta". Left: badge vs design "Text"; full text toolbar (2 rows), Split default, per-pane Reload buttons vs the single unified card. |
+| app/A03-MovedBlock | Minor | Unchanged: Split + full toolbar vs compact Unified; "2 words changed inside" for one insertion; ↕ per B-23. |
+| app/A03-Patch | Minor | Unchanged: top bar keeps Search/More/disabled Share/Export; B-24. |
+| app/A05-SdkImpact | Minor | ✓ grouped Breaking → Possibly → Safe, ✓ terse descriptions. Left: `refunds.cancel()` vs `(id)`; right column x jitters with badge width; the SDK-preset footnote is pushed below the fold. |
+| app/A05-ConsumerFilter | Minor | ✓ filter correct (only the listed endpoints), ✓ sorted, ✓ docs-only excluded, ✓ terse titles, ✓ bordered Clear filter. Left: Method column wider (path at x=330 vs 147); HAR call counts and the footer insight were not reproduced (text list). |
+| app/A13-SavedSources | Minor | ✓ "See what changed", ✓ "when you open the app". Left: "Changed since your last visit" vs "Changed · 2 breaking" (JSON source); Add source in the page, not the top bar. |
+| app/A01-DragOver | Minor | ✓ two-zone layout, ✓ loaded side becomes a file card ("payments-v1.yaml · Before · OpenAPI 3.1 · 6.9 KB"), ✓ "Drop to use as After" copy. Left: Compare chrome (samples, Open file/From URL, options bar) stays; zones 340 vs 510 px tall; heading "files" vs "versions"; top bar not History + Compare. |
+| app/A11-HistoryEmpty | Minor | Unchanged: no clock icon, no + on the button, no "Save new comparisons" checkbox, shorter card, top bar. |
+| app/O10-Unlock | Minor | Unchanged: card on the page (no backdrop), higher; "!" prefix; small dots. |
+| app/O11-CopyLLM | Minor | ✓ icons, titles + detail lines, ✓ amber privacy note. Extra "Open in Claude" (decision 6); a separate top-bar trigger. |
+| app/O13-Toasts | Minor | ✓ "Change accepted · Saved to .specdiff/decisions.json · Undo" fires on A/R; other action toasts are wired in code. Left: success icon is a filled disc vs a plain check; "Couldn't read that file" vs "Couldn't read payments-v2.yaml". |
+| app/AComponents2 | Minor | Unchanged: SDK call chips (incl. struck-through removed call) not used in the SDK view. |
+| app/A04-Summary-Dark | Minor | ✓ Wire segment is an inverse pill; ✓ progress track visible. Otherwise as Main. |
+| app/A05-Review-Dark | Minor | ✓ chips readable. As A05-Review. |
+| app/A03-TextDiff-Dark | Minor | ✓ Filters badge "2" visible, ✓ inverse segments, ✓ filled checkboxes. As A03-TextDiff. |
+| app/A12-Settings-Dark | Minor | ✓ on/off tracks distinguishable. As A12-Settings. |
+
+## Round 2 · Viewer and phone (24)
+
+| Frame | Verdict | Differences now |
+|---|---|---|
+| viewer/Main | Minor | ✓ Breaking 4. Left: summary line is machine sentences joined with " · "; first select ~170 px; nav labels truncate; tags lowercase + duplicate "cards" group; 3 info cards. |
+| viewer/V01-Overview-Dark | Minor | As Main; dark tokens match. |
+| viewer/V01-Overview-Error | Minor | ✓ skeleton cards, ✓ "v1.5.0" kept, ✓ soft border. Left: "What changed" count is gone from the nav; skeletons lighter; first select ~220 px. |
+| viewer/V05-Search | Minor | ✓ no extra title row, ✓ divider + raised footer, ✓ "Searches v2.0.0". Left: 3 results, schema-first; "Payment Payment" repeats the name; keycaps unboxed. |
+| viewer/V05-VersionPicker | Minor | B-16 native select. Helper copy "Versions come from…" still nowhere in `packages/` (grep empty); no per-version counts or sources. |
+| viewer/V02-Endpoint | Minor | ✓ background fills the viewport (root 1311 = vh). Left: segmented Docs/History; curl `--data` line clipped; "`PaymentStatus` in `PaymentStatus`"; title 2 lines at a larger size; placeholder example. |
+| viewer/V02-Endpoint-Dark | Minor | ✓ no white band. As V02-Endpoint. |
+| viewer/V02-CodeSamples | Minor | Unchanged: Java stays 4th; no syntax colour; lines clipped. |
+| viewer/V02-Deprecated | Minor | ✓ banner no longer says "Deprecated. Deprecated.". Left: the right card repeats "Deprecated. Use…"; no Migration panel or sunset (fixture). |
+| viewer/V02-History | Minor | Unchanged: entries unsorted (Docs only before Breaking); segmented tabs. |
+| viewer/V02-TryIt | Minor | Unchanged (placeholder values, no Idempotency-Key). |
+| viewer/V02-TryIt-Response | Minor | Re-shot; unchanged from round 1 (tabs on a 2nd row, "0.0 KB"). |
+| viewer/V02-TryIt-Cors | Minor | Unchanged: inline proxy field; red vs orange icon. |
+| viewer/V02-TryIt-Warning | Minor | Unchanged: fix buttons stacked; extra Beta; error repeated. |
+| viewer/V02-Auth | Minor | Unchanged: centred, no grey footer, regular-weight "Remember" label. |
+| viewer/V03-Schema | Minor | Unchanged: producer advice in the removed-field note; no "→ card" paths in Used in; header badge Breaking vs Changed. |
+| viewer/V04-Timeline | **Major** | ✓ sorted Breaking → Docs. With 5 picked endpoints the panel says "**3 required fixes**" while the list shows **4 Breaking** rows (unfiltered it says 4); 22 rows vs the design's 5; the checklist dumps 14 machine sentences (design: 3 short fixes); unused endpoints not dimmed in the nav; titles are full sentences ("PaymentStatus in PaymentStatus responses…"). |
+| viewer/V04-MyEndpoints | Minor | ✓ "1 call". Left: no header divider or grey footer. |
+| viewer/V06-Embedded | Minor | Re-shot; as V02-Endpoint; no "Served by" strip (may be browser chrome). |
+| viewer/M01-SharedLink | Minor | ✓ no overflow (scrollWidth 390); B-29 icon bar. Left: the title is 14 px mono inside the card (design ~24 px heading + OpenAPI 3.1 chip); severities share one card, not 4 tiles; chartreuse notice vs neutral; no red dots; titles long. |
+| viewer/M02-Summary | **Major** | Still lists all 28 one by one (2,605 px tall). Docs-only changes are not collapsed ("9 operations · Descriptions updated"), shared-schema changes are not grouped first, and the groups start with `info`. There is an extra logo + 4-icon bar above the back / "28 changes" bar, with no search icon in it. |
+| viewer/M03-Change | Minor | ✓ title + diff + Why/How cards close to the design. Left: B-29 bar above the 2 of 28 bar; title inside the diff card; "How to avoid it" copy differs. |
+| viewer/M04-ViewerEndpoint | Minor | No Try it per **B-28**. Left: a full Changed-since card vs the one-line callout; curl clipped; "`PaymentStatus` in `PaymentStatus`". |
+| viewer/M05-ViewerOverview | Minor | ✓ "4 breaking". Left: version select in the header; path `/cards` breaks mid-word; duplicate cards group. |
+
+## Round 2 · Website (15)
+
+| Frame | Verdict | Differences now |
+|---|---|---|
+| website/Main | N/A | Superseded (decision 5). |
+| website/W01-Home-Dark | N/A | Superseded. |
+| website/W01-Home-390 | N/A | Superseded. |
+| website/W02-Docs-390 | Minor | ✓ severity glyphs readable. 16 px gutter; full-width sidebar; theme toggle. |
+| website/W03-Rules-390 | Minor | ✓ rule IDs wrap at hyphens, ✓ "What changed" scrolls off right. Left: area chips are 5 rows (taxonomy); all 76 rows; theme toggle. Counts per B-2. |
+| website/W04-RuleDetail-390 | **Major** | ✓ example filled ("`POST /a` now requires `name`"). Still the generic headline "Request property became required" and intro "Optional → required."; one-line Who-it-breaks / How-to-avoid (design: a paragraph + 3-step list); before/after are the whole 20-line `/a` fixture with no removed-line highlight, not the focused payments excerpt; related rules differ. |
+| website/W08-404-390 | Minor | Unchanged (gutter, footer spacing, theme toggle). |
+| website/W02-Docs | Minor | ✓ glyphs, ✓ full-width pills, ✓ decisions.json header + copy. Left: body measure ~730 vs 615 px; extra paragraphs (generated docs). |
+| website/W03-Rules | Minor | Unchanged (taxonomy, Rule column width, 76 rows). |
+| website/W04-RuleDetail | **Major** | As the phone frame. The ".specdiff.yaml" snippet is still clipped (`request-property-became-req`). |
+| website/W06-Changelog | Minor | Re-shot (h 1118, sw 1440); unchanged. |
+| website/W08-404 | Minor | Re-shot; unchanged. |
+| website/W01v2-Home | Minor | ✓ `npx specdiff-cli old.yaml new.yaml` shown in full (scrollWidth = clientWidth 380). Other round-1 notes stand (theme toggle, marquee wrap under reduced motion, CTA inset). |
+| website/W01v2-Home-Dark | Minor | As Home; the "stays in the tab" tile is still not brand-tinted. |
+| website/W01v2-Home-390 | Minor | ✓ command wraps instead of truncating; scrollWidth 390. |
+
+## Round 2 · Top remaining fixes
+
+1. **A09-Code:** render the moved method as `~ moved` rows and hide the renamed lines when "Hide renames" is on (the old lines are currently missing). Keep the What-changed checkboxes inside the card.
+2. **A07-JsonExport:** generate the patch from the keyed diff (7 ops, including `move` and `remove`), not index-by-index (170 ops).
+3. **AMarkdown / A08:** group removed and added sections instead of interleaving them; diff GFM tables per cell; fix the Summary section counts (4/4/5 → 2/2/…).
+4. **V04-Timeline:** make "required fixes" match the Breaking rows shown, make the checklist short and filtered, dim unused endpoints, use short titles.
+5. **M02-Summary:** group shared-schema changes and collapse docs-only rows as designed; drop the extra bar above "28 changes" and add the search icon.
+6. **Rule pages (W04 ×2):** write per-rule headline, intro, who-it-breaks and a 3-step how-to-avoid, and show a focused fixture excerpt with the removed line highlighted. Unclip the `.specdiff.yaml` snippet.
+7. **Command palette (AComponents):** add path and action results with kind labels; fix the identical-files copy ("0 lines ignored" + button).
+8. **AWorkspace/ADark:** decide with the owner whether A05-Review supersedes this frame's card strip; at least focus the diff on the change's hunk and default the tree to All. Ask the same for AJson vs A07-JsonTree.
+9. **390 px overflow:** `?sample=code` (619 px), History (808 px), Rules and settings (674 px).
+10. **Utility screens' top bar and dialog chrome:** use the frame's own top bar on History, Settings, Saved sources, Patch and Parsing (New comparison / Back / Cancel), and add the grey footer band to O-03, O-09, V-04 and the Auth dialogs.
