@@ -91,7 +91,7 @@ Claude Code adds rows here when it takes a default without the owner.
 | B-50 | Rules and settings lists all 76 rules; the 4 with no default severity say why ("No severity"), so the app and the website agree | Round 4 | App 72 vs website 76 |
 | B-51 | History has a "Save new comparisons to history" setting (`settings.saveHistory`, default on), as the empty-History frame shows | Round 4 | A11-HistoryEmpty |
 | B-52 | Ignore whitespace is on by default in text mode, as in ACompare and the docs/07 example config | Round 4 | Approved frame |
-| B-53 | **Open.** App Lighthouse mobile performance is 87, below the 95 target (desktop 100). It needs hydrated prerendering or a smaller start-up bundle; see `docs/audit/lighthouse.md` | Round 4 | Needs a design decision on SSR |
+| B-53 | App first paint: the Compare screen is server-rendered at build time and hydrated in place; the JS loads at low priority. Lighthouse mobile is 100 with real throttling and 92 simulated (was 87); desktop is 100. See `docs/audit/lighthouse.md` | Round 4 | Owner ruling: SSR hydration |
 | B-54 | A Markdown heading that ends a hunk on both sides, at the same depth, is a rename (one edited heading, not remove + add) | Round 4 | AMarkdown |
 | B-55 | JSON tree rows are one line; JSONPath is on each row's copy button and in "Changes by path" (JS-05) | Round 4 | AJson row height |
 | B-56 | The JSON Markdown export is a table, as its card says | Round 4 | JS-08 |

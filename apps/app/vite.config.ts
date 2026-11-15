@@ -1,6 +1,7 @@
-import { readdirSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
+import { pathToFileURL } from 'node:url';
 import { join } from 'node:path';
-import { defineConfig } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
@@ -11,12 +12,40 @@ const pkg = readdirSync(store).find((d) => d.startsWith('decode-named-character-
 if (!pkg) throw new Error('decode-named-character-reference not found in the pnpm store');
 const decodeEntities = join(store, pkg, 'node_modules/decode-named-character-reference/index.js');
 
-export default defineConfig({
+const ssrOut = join(import.meta.dirname, 'node_modules/.cache/prerender');
+
+/** B-53: puts the Compare screen, server-rendered by `vite build --ssr src/prerender.tsx`, into #root for main.tsx to hydrate. */
+const prerender = (): Plugin => ({
+  name: 'specdiff-prerender',
+  apply: 'build',
+  async transformIndexHtml(html) {
+    const entry = join(ssrOut, 'prerender.js');
+    if (!existsSync(entry)) throw new Error('Run the SSR build first: pnpm --filter @specdiff/app build');
+    const { render } = (await import(`${pathToFileURL(entry).href}?t=${Date.now()}`)) as { render: () => string };
+    return html.replace('<div id="root"></div>', `<div id="root">${render()}</div>`);
+  },
+});
+
+/**
+ * B-53: the prerendered HTML and CSS paint the page on their own, so the JS (which only makes it
+ * interactive) is fetched at low priority and doesn't compete with them on slow connections.
+ */
+const lowPriorityJs = (): Plugin => ({
+  name: 'specdiff-low-priority-js',
+  apply: 'build',
+  transformIndexHtml: {
+    order: 'post',
+    handler: (html) => html.replace(/<(script type="module"|link rel="modulepreload")/g, '<$1 fetchpriority="low"'),
+  },
+});
+
+export default defineConfig(({ isSsrBuild }) => ({
   base: '/app/',
   plugins: [
     react(),
+    ...(isSsrBuild ? [] : [prerender(), lowPriorityJs()]),
     // PK-08: installable and offline. Registration is an external script (no inline script, CSP).
-    VitePWA({
+    ...(isSsrBuild ? [] : [VitePWA({
       registerType: 'autoUpdate',
       injectRegister: 'script-defer',
       includeAssets: ['favicon.svg'],
@@ -46,7 +75,7 @@ export default defineConfig({
           { urlPattern: /\/assets\/lang-[^/]+\.js$/, handler: 'CacheFirst', options: { cacheName: 'specdiff-grammars', expiration: { maxEntries: 80 } } },
         ],
       },
-    }),
+    })]),
   ],
   resolve: { alias: [{ find: /^decode-named-character-reference$/, replacement: decodeEntities }] },
   worker: { format: 'es' },
@@ -61,4 +90,4 @@ export default defineConfig({
       },
     },
   },
-});
+}));

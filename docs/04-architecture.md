@@ -17,7 +17,7 @@ specdiff/
 │  ├─ express/     @specdiff/express  Express middleware (+ fastify export)
 │  └─ spring-boot-starter/            Java + Maven: serves the built Viewer at /specdiff
 ├─ apps/
-│  ├─ app/         the web app (Vite + React SPA, PWA)
+│  ├─ app/         the web app (Vite + React SPA, PWA; the empty Compare screen is prerendered at build time and hydrated, B-53)
 │  └─ website/     marketing site, docs, rules reference, changelog (Astro, static)
 ├─ fixtures/
 │  ├─ rules/<rule-id>/{before.yaml, after.yaml, expected.json}
