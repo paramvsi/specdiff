@@ -129,7 +129,7 @@ Shared-schema dedup (OA-14) applies to every rule above: when the change sits in
 
 | ID | Change | Sev | Preset |
 |---|---|---|---|
-| server-url-changed | Base URL changed or removed | P | W |
+| server-url-changed | Base URL changed or removed (server variables read with their defaults) | P | W |
 | webhook-removed | Webhook removed | P | W |
 | webhook-payload-property-removed | Payload property removed | B | W |
 | callback-changed | Callback request/response changed (rules apply with direction reversed) | — | W |

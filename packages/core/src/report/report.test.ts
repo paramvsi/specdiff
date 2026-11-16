@@ -81,6 +81,12 @@ describe('OA-08 version check (B-8)', () => {
     expect(slack).toContain('`a &amp; b`');
     expect(slack).toContain('a&lt;b&gt;.yaml');
   });
+  it('OA-05 a server variable default that changes the base URL is a server-url-changed', () => {
+    const d = (def: string) => stringify({ openapi: '3.1.0', info: { title: 'T', version: '1.0.0' }, servers: [{ url: 'https://{region}.x.com/v1', variables: { region: { default: def, enum: ['eu', 'us'] } } }], paths: { '/a': { get: { responses: { '200': { description: 'OK' } } } } } });
+    const r = compareOpenApi({ name: 'a.yaml', content: d('eu') }, { name: 'b.yaml', content: d('us') });
+    expect(r.changes.map((c) => [c.ruleId, c.before, c.after])).toEqual([['server-url-changed', 'https://eu.x.com/v1', 'https://us.x.com/v1']]);
+    expect(compareOpenApi({ name: 'a.yaml', content: d('eu') }, { name: 'b.yaml', content: d('eu') }).changes).toEqual([]);
+  });
   it('a 1-day sunset grace period reads "1 day", not "1 days"', () => {
     const dir = 'fixtures/rules/sunset-inside-grace-period';
     const read = (f: string) => readFileSync(join(__dirname, '../../../..', dir, f), 'utf8');

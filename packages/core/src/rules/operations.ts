@@ -495,7 +495,12 @@ function compareSecuritySchemes(e: Engine): void {
 // ---------------------------------------------------------------- servers, tags, renames, webhooks, callbacks
 
 function compareServers(e: Engine): void {
-  const list = (spec: LoadedSpec) => (Array.isArray(spec.root.servers) ? spec.root.servers : []).map((s, i) => ({ url: String(asObj(s).url ?? ''), i }));
+  // A server's effective URL: {variables} filled with their defaults, so a changed default is a changed base URL.
+  const resolved = (s: unknown) => {
+    const vars = asObj(asObj(s).variables);
+    return String(asObj(s).url ?? '').replace(/\{([^}]+)\}/g, (m, k: string) => { const d = asObj(vars[k]).default; return typeof d === 'string' ? d : m; });
+  };
+  const list = (spec: LoadedSpec) => (Array.isArray(spec.root.servers) ? spec.root.servers : []).map((s, i) => ({ url: resolved(s), i }));
   const bs = list(e.b);
   const as = list(e.a);
   const aSet = new Set(as.map((s) => normUrl(s.url)));
