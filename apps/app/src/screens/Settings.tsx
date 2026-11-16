@@ -12,7 +12,7 @@ type Section = 'rules' | 'ignore' | 'diff' | 'appearance' | 'file';
 const SECTIONS: Array<[Section, string]> = [['rules', 'Rules'], ['ignore', 'Ignore paths'], ['diff', 'Diff options'], ['appearance', 'Appearance'], ['file', 'Rule-set file']];
 const SEV: Array<[Severity, string]> = [['breaking', 'Breaking'], ['possibly', 'Possibly breaking'], ['safe', 'Safe'], ['docs', 'Docs only']];
 const reported = rules.filter((r) => r.reportedAs === 'change' && r.severity);
-// The rules reference lists every rule (76); these few aren't changes of their own, so they have no severity to set.
+// The rules reference lists every rule (92); these few aren't changes of their own, so they have no severity to set.
 const notSet = rules.filter((r) => !(r.reportedAs === 'change' && r.severity));
 const WHY: Record<string, string> = {
   contained: 'Reported as the changes inside it',

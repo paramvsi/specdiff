@@ -254,6 +254,24 @@ function paramSchema(r: Resolved): SNode | undefined {
   return s === undefined ? undefined : { v: s, loc: child(child(child(r.loc, 'content'), mt), 'schema') };
 }
 
+/**
+ * M-7: how a parameter or header is written on the wire, with the defaults filled in (OpenAPI 3.1
+ * §4.8.12.4: query and cookie default to form, path and header to simple; explode defaults to true
+ * only for form). Undefined for `content` parameters, which have no style. `explode` only changes
+ * arrays and objects on the wire, so it counts only for a schema that is one (type, items or properties).
+ */
+function serialization(o: Record<string, unknown>, schema: SNode | undefined): string | undefined {
+  if (o.content !== undefined) return undefined;
+  const where = typeof o.in === 'string' ? o.in : 'header';
+  const style = typeof o.style === 'string' ? o.style : where === 'query' || where === 'cookie' ? 'form' : 'simple';
+  const explode = typeof o.explode === 'boolean' ? o.explode : style === 'form';
+  const s = asObj(schema?.v);
+  const types = Array.isArray(s.type) ? s.type : [s.type];
+  const composite = types.includes('array') || types.includes('object') || s.items !== undefined || s.properties !== undefined;
+  const reserved = where === 'query' && o.allowReserved === true;
+  return `${style}${composite ? (explode ? ', exploded' : ', not exploded') : ''}${reserved ? ', reserved characters allowed' : ''}`;
+}
+
 function compareParam(e: Engine, ctx: Ctx, br: Resolved, ar: Resolved): void {
   const pctx = paramCtx(ctx, ar.refId !== undefined ? ar : br.refId !== undefined ? { ...ar, refId: br.refId, ...(br.refName ? { refName: br.refName } : {}) } : ar);
   const bo = asObj(br.value);
@@ -264,6 +282,10 @@ function compareParam(e: Engine, ctx: Ctx, br: Resolved, ar: Resolved): void {
   if (bo.required === true && ao.required !== true && ao.in !== 'path') {
     e.emit(pctx, 'request-param-became-optional', { bLoc: child(br.loc, 'required'), aLoc: child(ar.loc, 'required'), before: 'required', after: 'optional' });
   }
+  if (bo.deprecated !== true && ao.deprecated === true) e.emit(pctx, 'request-param-deprecated', { bLoc: br.loc, aLoc: child(ar.loc, 'deprecated'), after: { deprecated: true } });
+  const bSer = serialization(bo, paramSchema(br));
+  const aSer = serialization(ao, paramSchema(ar));
+  if (bSer && aSer && bSer !== aSer) e.emit(pctx, 'request-param-serialization-changed', { bLoc: br.loc, aLoc: ar.loc, before: bSer, after: aSer });
   const b: SNode = { v: br.value, loc: br.loc };
   const a: SNode = { v: ar.value, loc: ar.loc };
   compareSunset(e, pctx, b, a);
@@ -385,6 +407,10 @@ function compareHeaders(e: Engine, ctx: Ctx, b: SNode, a: SNode): void {
     const ha = e.a.deref(ah[ak], child(child(a.loc, 'headers'), ak));
     const c = enterRef(hctx, ha);
     compareDocs(e, c, { v: hb.value, loc: hb.loc }, { v: ha.value, loc: ha.loc });
+    const hs = (r: Resolved) => (asObj(r.value).schema !== undefined ? { v: asObj(r.value).schema, loc: child(r.loc, 'schema') } : undefined);
+    const bSer = serialization(asObj(hb.value), hs(hb));
+    const aSer = serialization(asObj(ha.value), hs(ha));
+    if (bSer && aSer && bSer !== aSer) e.emit(c, 'response-header-serialization-changed', { bLoc: hb.loc, aLoc: ha.loc, before: bSer, after: aSer });
     const bs = asObj(hb.value).schema;
     const as = asObj(ha.value).schema;
     if (bs !== undefined && as !== undefined) compareSchema(e, { ...c, header: true }, bs, child(hb.loc, 'schema'), as, child(ha.loc, 'schema'));
@@ -415,7 +441,11 @@ function compareSecurity(e: Engine, ctx: Ctx, b: SNode, a: SNode): void {
     if (!open(as.reqs)) e.emit(sctx, 'security-added-to-open-operation', { bLoc: bs.loc, aLoc: as.loc, after: as.reqs.map(reqLabel).join(' or ') });
     return;
   }
-  if (open(as.reqs)) return; // anonymous access added: nothing breaks
+  if (open(as.reqs)) {
+    // M-9: nothing breaks, but a reviewer must see it: safe, in the Security area, never folded away.
+    e.emit(sctx, 'security-removed-from-operation', { bLoc: bs.loc, aLoc: as.loc, before: bs.reqs.map(reqLabel).join(' or ') });
+    return;
+  }
   bs.reqs.forEach((R, i) => {
     const keys = Object.keys(R).sort();
     const bLoc = child(bs.loc, String(i));
@@ -546,14 +576,15 @@ function compareSchemaRenames(e: Engine): void {
 }
 
 /** Webhooks and callbacks: what the API sends is judged like a response, what it receives like a request. */
-function compareReversedOp(e: Engine, ctx: Ctx, b: SNode, a: SNode, webhook: boolean): void {
+function compareReversedOp(e: Engine, ctx: Ctx, b: SNode, a: SNode, kind: 'webhook' | 'callback'): void {
   compareDocs(e, ctx, b, a, { summary: true });
   const bo = asObj(b.v);
   const ao = asObj(a.v);
   if (bo.requestBody !== undefined && ao.requestBody !== undefined) {
     const bR = e.b.deref(bo.requestBody, child(b.loc, 'requestBody'));
     const aR = e.a.deref(ao.requestBody, child(a.loc, 'requestBody'));
-    const rctx = enterRef({ ...ctx, dir: 'response', webhook, hp: push(ctx.hp, 'payload'), what: 'payload', field: undefined }, aR);
+    // M-10: a webhook's and a callback's payload are both sent by the API, judged alike.
+    const rctx = enterRef({ ...ctx, dir: 'response', webhook: true, callback: kind === 'callback', hp: push(ctx.hp, 'payload'), what: 'payload', field: undefined }, aR);
     const bn: SNode = { v: bR.value, loc: bR.loc };
     const an: SNode = { v: aR.value, loc: aR.loc };
     compareDocs(e, rctx, bn, an);
@@ -588,7 +619,7 @@ function compareWebhooks(e: Engine): void {
       const other = aOps.find((x) => x.method === op.method);
       if (!other) continue;
       const octx = bOps.length > 1 ? { ...ctx, hp: push(ctx.hp, op.method) } : ctx;
-      compareReversedOp(e, octx, op.node, other.node, true);
+      compareReversedOp(e, octx, op.node, other.node, 'webhook');
     }
   }
 }
@@ -611,7 +642,7 @@ function compareCallbacks(e: Engine, ctx: Ctx, b: SNode, a: SNode): void {
         const other = aOps.find((x) => x.method === op.method);
         if (!other) continue;
         const cctx: Ctx = { ...ctx, hp: push(push(ctx.hp, `callback ${name}`), `${op.method} ${expr}`), what: name };
-        compareReversedOp(e, cctx, op.node, other.node, false);
+        compareReversedOp(e, cctx, op.node, other.node, 'callback');
       }
     }
   }

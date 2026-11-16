@@ -254,13 +254,13 @@ test('A-11 history: unticking "Save new comparisons" stops new rows', async ({ p
   await expect(page.getByRole('heading', { name: 'No comparisons yet' })).toBeVisible();
 });
 
-test('A-12 settings: all 76 rules listed, the 4 without a severity say why', async ({ page }) => {
+test('A-12 settings: all 92 rules listed, the 4 without a severity say why', async ({ page }) => {
   desktopOnly();
   await page.goto('/app/');
   await openMore(page, 'Rules and settings');
   await expect(page.getByRole('heading', { name: 'Rules', exact: true })).toBeVisible();
-  await expect(page.getByPlaceholder('Search 76 rules')).toBeVisible();
-  await expect(page.locator('table tbody tr')).toHaveCount(76);
+  await expect(page.getByPlaceholder('Search 92 rules')).toBeVisible();
+  await expect(page.locator('table tbody tr')).toHaveCount(92);
   await expect(page.locator('table tbody tr[data-fixed]')).toHaveCount(4);
   await expect(page.getByRole('rowheader', { name: 'version-bump-missing' })).toBeVisible();
   await expectAxeClean(page);

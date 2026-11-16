@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "response-dependency-removed",
+      "severity": "possibly",
+      "direction": "response",
+      "path": "GET /a › response 200 › card",
+      "kind": "removed"
+    }
+  ],
+  "modelRefs": []
+}

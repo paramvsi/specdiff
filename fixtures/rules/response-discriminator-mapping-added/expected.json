@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "response-discriminator-mapping-added",
+      "severity": "possibly",
+      "direction": "response",
+      "path": "GET /a › response 200 › discriminator › credit",
+      "kind": "added"
+    }
+  ],
+  "modelRefs": []
+}

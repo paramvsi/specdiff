@@ -31,7 +31,7 @@ describe('change titles', () => {
   const all = fixtureChanges();
 
   it('has a title function for every rule id in the catalogue', () => {
-    expect(rules.length).toBe(76);
+    expect(rules.length).toBe(92);
     expect(rules.map((r) => r.id).filter((id) => !TITLES[id])).toEqual([]);
   });
 

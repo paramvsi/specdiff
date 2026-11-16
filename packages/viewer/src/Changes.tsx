@@ -8,6 +8,9 @@ import { bySeverity, changeAdvice, checklist, displayKeyOf, fieldNames, filterBy
 import { useViewer } from './context';
 import { useReports } from './hooks';
 import { CodePanel, InlineText, Method, cx } from './parts';
+
+// ponytail: same as core's neverFolded (M-9), copied: the Viewer takes no runtime code from core (embed budget).
+const neverFolded = (c: { ruleId?: string | undefined }) => c.ruleId === 'security-removed-from-operation';
 import css from './Viewer.module.css';
 
 /** Field names as clients see them (Card → card), from the current spec. */
@@ -127,10 +130,10 @@ export function Changes() {
             <h2 id="sd-change-list" className={css.h3}>{v.prev.label} → {v.cur.label} · {v.myEndpoints ? 'affects you' : 'all changes'}</h2>
             {shown.length ? (
               <ul className={css.changeRows}>
-                {shown.filter((c) => c.severity === 'breaking' || c.severity === 'possibly').map(row)}
+                {shown.filter((c) => c.severity === 'breaking' || c.severity === 'possibly' || neverFolded(c)).map(row)}
                 {/* V-04: safe and docs-only changes fold into one row each; a single one shows as is. */}
                 {(['safe', 'docs'] as const).map((sev) => {
-                  const group = shown.filter((c) => (c.severity ?? 'docs') === sev);
+                  const group = shown.filter((c) => (c.severity ?? 'docs') === sev && !neverFolded(c));
                   if (group.length < 2) return group.map(row);
                   const titles = [...new Set(group.map((c) => shortTitle(c, names)))].map((t, i) => (i && /^(Description|Summary|Example|Tags|Endpoint) /.test(t) ? t[0]!.toLowerCase() + t.slice(1) : t));
                   return (

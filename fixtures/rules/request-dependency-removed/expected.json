@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "request-dependency-removed",
+      "severity": "safe",
+      "direction": "request",
+      "path": "POST /a › requestBody › card",
+      "kind": "removed"
+    }
+  ],
+  "modelRefs": []
+}

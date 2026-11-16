@@ -1,10 +1,10 @@
 {
   "changes": [
     {
-      "ruleId": "response-property-removed",
+      "ruleId": "callback-payload-property-removed",
       "severity": "breaking",
       "direction": "response",
-      "path": "POST /subscribe › callback onEvent › POST {$request.body#/url} › payload › at",
+      "path": "POST /subscribe \u203a callback onEvent \u203a POST {$request.body#/url} \u203a payload \u203a at",
       "kind": "removed"
     }
   ],

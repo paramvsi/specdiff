@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "discriminator-property-changed",
+      "severity": "breaking",
+      "direction": "both",
+      "path": "GET /a › response 200 › discriminator",
+      "kind": "changed"
+    }
+  ],
+  "modelRefs": []
+}

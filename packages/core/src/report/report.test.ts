@@ -44,9 +44,9 @@ describe('OA-09 unquoted info.version', () => {
 });
 
 describe('rules catalogue', () => {
-  it('has every row of docs/06 (74 rows, 76 rule ids) with templates', () => {
-    expect(rules).toHaveLength(76);
-    expect(new Set(rules.map((r) => r.id)).size).toBe(76);
+  it('has every row of docs/06 (90 rows, 92 rule ids) with templates', () => {
+    expect(rules).toHaveLength(92);
+    expect(new Set(rules.map((r) => r.id)).size).toBe(92);
     expect(rules.some((r) => r.id === 'request-param-max-decreased')).toBe(false); // B-2
     for (const r of rules) {
       expect(r.title && r.explanation.who && r.explanation.see && r.explanation.avoid && r.changelog, r.id).toBeTruthy();
@@ -237,5 +237,20 @@ describe('M-13 one escaper for spec text in Markdown, PR-comment and Slack expor
     expect(mdText('a_b *c* [d] 1 < 2 & 3').replace(/‍/g, '')).toBe('a\\_b \\*c\\* \\[d\\] 1 &lt; 2 &amp; 3');
     expect(mdText('ask @team about #4 at https://x.example').replace(/‍/g, '')).toBe('ask @team about #4 at https://x.example');
     expect(slackText('<!here> & @everyone').replace(/‍/g, '')).toBe('&lt;!here&gt; &amp; @everyone');
+  });
+});
+
+describe('M-6 keywords written next to a $ref are reported where they were written', () => {
+  const op = (prop: Record<string, unknown>) => ({ get: { responses: { '200': { description: 'OK', content: { 'application/json': { schema: { type: 'object', properties: { card: prop } } } } } } } });
+  const spec = (desc: string, cardMax = 16) => ({ name: 'a.yaml', content: stringify({ openapi: '3.1.0', info: { title: 'T', version: '1.0.0' },
+    paths: { '/a': op({ $ref: '#/components/schemas/Card', description: desc }), '/b': op({ $ref: '#/components/schemas/Card' }) },
+    components: { schemas: { Card: { type: 'string', description: 'A card', maxLength: cardMax } } } }) });
+  it('a sibling description change is reported at that property, once, not against the shared component', () => {
+    const r = compareOpenApi(spec('Main card'), spec('Main card used first'));
+    expect(r.changes.map((c) => [c.ruleId, c.path, c.sharedSchema?.name])).toEqual([['description-changed', 'GET /a › response 200 › card', undefined]]);
+  });
+  it('a change inside the component is still reported once at the component, with both usages', () => {
+    const r = compareOpenApi(spec('Main card', 32), spec('Main card', 64));
+    expect(r.changes.map((c) => [c.ruleId, c.path, c.sharedSchema?.usageCount])).toEqual([['response-constraint-removed', 'components.schemas.Card › maxLength', 2]]);
   });
 });

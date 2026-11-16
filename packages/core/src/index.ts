@@ -4,7 +4,7 @@ export { parseDocument, type ParsedDocument, type ParseError } from './openapi/p
 export { readSpec } from './openapi/read';
 export { detectOpenApi } from './openapi/detect';
 export { OpenApiParseError, type Input } from './openapi/load';
-export { rules, type RuleMeta, type RuleArea } from './rules/catalogue';
+export { neverFolded, rules, type RuleMeta, type RuleArea } from './rules/catalogue';
 export { applyDecisions, type DecisionsResult } from './report/decisions';
 export { buildChangelog, type ChangelogTemplate, type ChangelogOptions } from './report/changelog';
 export { reportToMarkdown, reportToHtml } from './report/export';

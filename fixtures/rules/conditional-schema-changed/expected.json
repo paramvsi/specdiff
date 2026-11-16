@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "conditional-schema-changed",
+      "severity": "possibly",
+      "direction": "both",
+      "path": "POST /a › requestBody › if/then/else",
+      "kind": "changed"
+    }
+  ],
+  "modelRefs": []
+}

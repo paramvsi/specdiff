@@ -34,8 +34,10 @@ export interface Ctx {
   docsOnly: boolean;
   /** Inside one branch of an un-flattened allOf: breaking is capped at possibly. */
   inAllOf: boolean;
-  /** Inside a webhook payload. */
+  /** Inside a webhook or callback payload (what the API sends to the consumer). */
   webhook: boolean;
+  /** The payload is a callback's (M-10). */
+  callback?: boolean;
   /** Top-level schema of a parameter: request-param-* rules apply. */
   param: boolean;
   /** Schema of a response header: only type changes are judged. */
@@ -158,7 +160,7 @@ export class Engine {
    * still being compared (a cycle) stops there.
    */
   viaRef(ctx: Ctx, b: Resolved, a: Resolved, run: (ctx: Ctx) => void): void {
-    const flags = `${ctx.dir}|${+ctx.docsOnly}|${+ctx.inAllOf}|${+ctx.webhook}|${+ctx.param}|${+ctx.header}`;
+    const flags = `${ctx.dir}|${+ctx.docsOnly}|${+ctx.inAllOf}|${+ctx.webhook}|${+!!ctx.callback}|${+ctx.param}|${+ctx.header}`;
     const key = `${locKey(b.loc)}|${locKey(a.loc)}|${flags}`;
     if (this.active.has(key)) return;
     const cached = this.memo.get(key);

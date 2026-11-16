@@ -51,6 +51,8 @@ oasdiff publishes the **OpenAPI Changes Model** (Apache-2.0): 681 named changes 
 | request-param-pattern-changed | Pattern changed (cannot prove which is stricter) | P | W |
 | request-param-default-changed | Default changed (server-side fallback) | D | W |
 | request-param-nullable-removed | No longer accepts null (any of the three nullability forms) | B | W |
+| request-param-serialization-changed | `style`, `explode` or `allowReserved` changed, defaults filled in per `in` (writing out a default is not a change; `explode` counts only for array/object schemas). M-7 | B | W |
+| request-param-deprecated | `deprecated: true` added to a parameter. M-18 | S | W |
 
 ## Request bodies
 
@@ -70,6 +72,8 @@ oasdiff publishes the **OpenAPI Changes Model** (Apache-2.0): 681 named changes 
 | request-union-branch-removed | `oneOf`/`anyOf` branch removed | B | W |
 | request-allof-branch-added | `allOf` branch added (narrows what may be sent) | B | W |
 | request-schema-became-false | Schema became `false` (nothing validates) | B | W |
+| request-dependency-added | `dependentRequired` names or a `dependentSchemas` entry added (sending X now needs Y). M-8 | B | W |
+| request-dependency-removed | A dependency removed. M-8 | S | W |
 
 ## Responses
 
@@ -87,10 +91,13 @@ oasdiff publishes the **OpenAPI Changes Model** (Apache-2.0): 681 named changes 
 | response-property-enum-value-added | New value clients may not handle | P | W |
 | response-union-branch-added | New `oneOf`/`anyOf` branch | B | W |
 | response-property-added | New property | S | W |
+| response-dependency-removed | A `dependentRequired`/`dependentSchemas` dependency removed (X may now arrive without Y). M-8 | P | W |
+| response-dependency-added | A dependency added. M-8 | S | W |
 | response-constraint-removed | e.g. `maximum` removed: values clients never saw | B | W |
 | response-content-type-removed | Media type removed | B | W |
 | response-header-removed | Header removed | P | W |
 | response-header-schema-changed | Header type/format widened (e.g. date-time string → integer) | B | W |
+| response-header-serialization-changed | Header `explode` (or style) changed. M-7 | P | W |
 | response-required-became-write-only | Required response property became `writeOnly` | B | W |
 | response-tuple-changed | `prefixItems` reordered, or tuple closed with `items: false` | B | W |
 | response-item-schema-changed | OpenAPI 3.2 `itemSchema` (streamed items) changed by the same rules as a body | — | W |
@@ -102,8 +109,15 @@ oasdiff publishes the **OpenAPI Changes Model** (Apache-2.0): 681 named changes 
 | schema-renamed | Component schema renamed (same shape) | D | K → B |
 | enum-name-changed | `x-enum-varnames` or enum type name changed | D | K → B |
 | inline-ref-equivalent | Inline subschema moved to `$ref` with the same shape | not reported | W |
+| conditional-schema-changed | `if`/`then`/`else` or a `dependentSchemas` entry changed (cannot prove looser or stricter). M-8 | P | W |
+| discriminator-property-changed | `discriminator.propertyName` changed. M-17 | B | W |
+| discriminator-mapping-changed | A mapping value removed or pointed at another schema. M-17 | B | W |
+| request-discriminator-mapping-added | Mapping value added in a request. M-17 | S | W |
+| response-discriminator-mapping-added | Mapping value added in a response. M-17 | P | W |
+| discriminator-presence-changed | Discriminator added or removed while the `oneOf`/`anyOf` is unchanged. M-17 | P | W |
+| property-deprecated | `deprecated: true` added to a property (changelog: Deprecated). M-18 | S | W |
 
-Shared-schema dedup (OA-14) applies to every rule above: when the change sits in a component used in several places, report it once at the component and list the first three usages plus a count.
+Shared-schema dedup (OA-14) applies to every rule above: when the change sits in a component used in several places, report it once at the component and list the first three usages plus a count. Keywords written next to a `$ref` (e.g. a `description`) are reported where they were written, not at the component; dedup applies only when the component itself changed (M-6).
 
 ## Security
 
@@ -115,6 +129,7 @@ Shared-schema dedup (OA-14) applies to every rule above: when the change sits in
 | security-requirement-removed | Auth option removed | B | W |
 | security-scheme-transport-changed | Type, API key name/location, HTTP scheme or OpenID URL changed | B | W |
 | security-flow-url-changed | Token/authorization/refresh URL host changed (compared by meaning) | P | W |
+| security-removed-from-operation | Operation that required auth now requires none. Safe, but tagged security: always in the Summary's Security area and the changelog, never folded into "N safe changes". M-9 | S | W |
 
 ## Deprecation, sunset and versioning
 
@@ -131,7 +146,8 @@ Shared-schema dedup (OA-14) applies to every rule above: when the change sits in
 |---|---|---|---|
 | server-url-changed | Base URL changed or removed (server variables read with their defaults) | P | W |
 | webhook-removed | Webhook removed | P | W |
-| webhook-payload-property-removed | Payload property removed | B | W |
+| webhook-payload-property-removed | Payload property removed, required or optional | B | W |
+| callback-payload-property-removed | Callback request (payload) property removed, required or optional. M-10 | B | W |
 | callback-changed | Callback request/response changed (rules apply with direction reversed) | — | W |
 | extension-changed | `x-*` changed (off by default) | D | W |
 | description-changed / summary-changed / example-changed | Docs only | D | W |
@@ -139,6 +155,8 @@ Shared-schema dedup (OA-14) applies to every rule above: when the change sits in
 ## Behaviour notes
 
 - `allOf` is merged before comparison when "Flatten allOf" is on; otherwise a change inside one branch is reported as P with a note that another branch may still guarantee it.
+- Webhooks and callbacks are both calls from the API to the consumer: their request bodies (payloads) are judged by response rules, their responses by request rules (M-10).
+- Removing a deprecated parameter or property follows rule 6 (`x-sunset`), like endpoints (M-18).
 - `oneOf`/`anyOf` are compared by matching subschemas (by `$ref` name, then by shape); unmatched → P.
 - Circular references are compared by reference identity; a change inside a cycle is reported once per entry into the cycle.
 - HTTP header names are case-insensitive (RFC 9110) unless the option is off.

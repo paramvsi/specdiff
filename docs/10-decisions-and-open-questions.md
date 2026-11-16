@@ -99,6 +99,11 @@ Claude Code adds rows here when it takes a default without the owner.
 | B-58 | The Code badge reads "<Language> · Beta" (docs/02: Beta features are labelled in the UI) and the fallback reads "Text" | Round 4 | A09 frames vs docs/02 |
 | B-59 | A03-MovedBlock keeps the A03-TextDiff toolbar and Split view (same screen, same controls) | Round 4 | Two frames of one screen disagree |
 | B-60 | Markdown keeps per-block Viewed buttons (X-11 applies to every mode) | Round 4 | docs/02 wins on behaviour |
+| B-61 | M-7: `explode` counts only when the parameter's schema is an array or object (type, `items` or `properties`); for a primitive it changes nothing on the wire, so a nullable type change (`[string, null]` → `string`) is not a serialization change | Morning step 3 | The ruling's reason: "the client serialises differently" |
+| B-62 | M-8, M-17 rules are named per side where the severity differs by side (`request-dependency-added` B / `response-dependency-added` S; `request-discriminator-mapping-added` S / `response-…` P); a changed `dependentSchemas` entry is `conditional-schema-changed` (P) | Morning step 3 | One default severity per rule (docs/06) |
+| B-63 | M-9: `security-removed-from-operation` is never folded into the phone and Viewer "N safe changes" rows (`neverFolded`) | Morning step 3 | "never treat it as noise" |
+| B-64 | M-10: callbacks get their own rule, `callback-payload-property-removed` (B), rather than renaming the webhook rule (public rule page URL) | Morning step 3 | Rule ids are links on the website |
+| B-65 | M-6 covers schema `$ref`s (the case found in row 31). Parameter, response and header `$ref`s with siblings still apply the siblings over the component | Morning step 3 | Scope of the finding |
 
 ## Owner rulings (2026-11-15: "go with the recommendation")
 

@@ -68,8 +68,8 @@ describe('OA-10 before/after excerpts', () => {
 
 it('Summary and Settings count rules the same way', () => {
   const cfg = Config.parse({ rules: { 'endpoint-added': { enabled: false } } });
-  expect(rulesOn(cfg)).toEqual({ on: 71, total: 72 });
-  expect(rulesOn(Config.parse({}))).toEqual({ on: 72, total: 72 });
+  expect(rulesOn(cfg)).toEqual({ on: 87, total: 88 });
+  expect(rulesOn(Config.parse({}))).toEqual({ on: 88, total: 88 });
 });
 
 describe('M-02 phone list: the collapsed safe row', () => {

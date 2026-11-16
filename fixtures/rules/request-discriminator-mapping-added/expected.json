@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "request-discriminator-mapping-added",
+      "severity": "safe",
+      "direction": "request",
+      "path": "POST /a › requestBody › discriminator › credit",
+      "kind": "added"
+    }
+  ],
+  "modelRefs": []
+}

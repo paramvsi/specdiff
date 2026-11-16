@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "request-dependency-added",
+      "severity": "breaking",
+      "direction": "request",
+      "path": "POST /a › requestBody › card",
+      "kind": "added"
+    }
+  ],
+  "modelRefs": []
+}

@@ -54,6 +54,9 @@ export interface Resolved {
   refId?: string;
   /** Display name of the target, e.g. `Card`. */
   refName?: string;
+  /** M-6: keywords written next to the `$ref` (already applied over `value`), and the target as written. */
+  siblings?: Record<string, unknown>;
+  target?: unknown;
 }
 
 export interface LoadedSpec {
@@ -277,8 +280,10 @@ export function loadSpec(input: Input, opts: { autoUpgrade: boolean; onStage?: (
       refName = segs[segs.length - 1] ?? l.file;
     }
     // OpenAPI 3.1 allows keywords next to $ref (usually description); apply them over the target.
+    const target = v;
     if (siblings && isObj(v)) v = { ...v, ...siblings };
     const out: Resolved = { value: v, loc: l };
+    if (siblings && isObj(target)) { out.siblings = siblings; out.target = target; }
     if (refId !== undefined) out.refId = refId;
     if (refName !== undefined) out.refName = refName;
     return out;

@@ -2,7 +2,7 @@
 
 **See what changed between two versions of an API spec, which changes break clients, and how to avoid it.** Everything runs in your browser; nothing is uploaded.
 
-- **Explain, don't just flag.** Every breaking change says who it breaks, what they'll see, and how to avoid it. 76 rules, each with fixtures.
+- **Explain, don't just flag.** Every breaking change says who it breaks, what they'll see, and how to avoid it. 92 rules, each with fixtures.
 - **Review for free, in your repo.** Accept or reject each change; decisions live in `.specdiff/decisions.json`, and the CLI and pre-commit hook respect them.
 - **A version-aware API reference.** The Viewer replaces Swagger UI and shows what changed between versions: timeline, badges, per-endpoint history, "what changed for me".
 - **Not just OpenAPI.** JSON/YAML, Markdown, code (Beta) and text diffs with filters, moves and patches.

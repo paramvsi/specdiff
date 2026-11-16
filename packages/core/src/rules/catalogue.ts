@@ -213,6 +213,24 @@ const defs: Def[] = [
     explanation: { who: 'Clients of {op} that send `{target}` as null.', see: '400 Bad Request.', avoid: 'Keep accepting null and treat it as “not set”.' },
     changelog: '`{target}` on `{op}` can no longer be null.',
   },
+  {
+    id: 'request-param-serialization-changed', title: 'Request parameter serialization changed', severity: 'breaking', direction: 'request', area: 'Parameters', kind: 'changed',
+    explanation: {
+      who: 'Clients of {op} that send `{target}`.',
+      see: 'The server reads `{target}` serialized {after}, not {before}, so values sent the old way are misread or rejected.',
+      avoid: 'Keep the old `style`, `explode` and `allowReserved`, or accept both for a release.',
+    },
+    changelog: '`{target}` on `{op}` is now serialized {after} (was {before}).',
+  },
+  {
+    id: 'request-param-deprecated', title: 'Request parameter deprecated', severity: 'safe', direction: 'request', area: 'Deprecation and versioning', kind: 'changed',
+    explanation: {
+      who: 'Clients of {op} that send `{target}`, later.',
+      see: 'Nothing yet; generated SDKs may show a deprecation warning.',
+      avoid: 'Add an `x-sunset` date so clients know when it goes.',
+    },
+    changelog: 'Deprecated `{target}` on `{op}`.',
+  },
 
   // ---------------------------------------------------------------- Request bodies
   {
@@ -313,6 +331,20 @@ const defs: Def[] = [
     explanation: { who: 'Every client of {op} that sends `{target}`.', see: '400 Bad Request: the schema is now `false`, so no value is valid.', avoid: 'Remove the property instead, after a deprecation period.' },
     changelog: '`{target}` in `{op}` no longer accepts any value.',
   },
+  {
+    id: 'request-dependency-added', title: 'Request property dependency added', severity: 'breaking', direction: 'request', area: 'Request bodies', kind: 'added',
+    explanation: {
+      who: 'Clients of {op} that send `{target}`.',
+      see: '400 Bad Request when `{target}` is sent without {after}.',
+      avoid: 'Make the server fill in the dependency, or add it in a new version.',
+    },
+    changelog: 'Sending `{target}` to `{op}` now also requires {after}.',
+  },
+  {
+    id: 'request-dependency-removed', title: 'Request property dependency removed', severity: 'safe', direction: 'request', area: 'Request bodies', kind: 'removed',
+    explanation: { who: 'No existing client.', see: 'Nothing: `{target}` no longer requires {before}.', avoid: 'Nothing to avoid.' },
+    changelog: 'Sending `{target}` to `{op}` no longer requires {before}.',
+  },
 
   // ---------------------------------------------------------------- Responses
   {
@@ -408,6 +440,20 @@ const defs: Def[] = [
     changelog: 'Added `{target}` to `{op}` responses.',
   },
   {
+    id: 'response-dependency-removed', title: 'Response property dependency removed', severity: 'possibly', direction: 'response', area: 'Responses', kind: 'removed',
+    explanation: {
+      who: 'Clients of {op} that expect {before} whenever `{target}` is present.',
+      see: '`{target}` can now arrive without {before}.',
+      avoid: 'Keep sending {before} with `{target}`, or announce the change.',
+    },
+    changelog: 'In `{op}` responses, `{target}` no longer comes with {before}.',
+  },
+  {
+    id: 'response-dependency-added', title: 'Response property dependency added', severity: 'safe', direction: 'response', area: 'Responses', kind: 'added',
+    explanation: { who: 'No existing client.', see: 'Nothing: when `{target}` is present, {after} now is too.', avoid: 'Nothing to avoid.' },
+    changelog: 'In `{op}` responses, `{target}` now comes with {after}.',
+  },
+  {
     id: 'response-constraint-removed', title: 'Response constraint removed or loosened', severity: 'breaking', direction: 'response', area: 'Responses', kind: 'changed',
     explanation: {
       who: 'Clients of {op} that rely on `{target}` staying within {before}.',
@@ -430,6 +476,15 @@ const defs: Def[] = [
     id: 'response-header-schema-changed', title: 'Response header type changed', severity: 'breaking', direction: 'response', area: 'Responses', kind: 'typeChanged',
     explanation: { who: 'Clients of {op} that parse the `{target}` header as {before}.', see: 'A {after} value they cannot parse.', avoid: 'Send the new format in a new header.' },
     changelog: 'The `{target}` header on `{op}` changed from {before} to {after}.',
+  },
+  {
+    id: 'response-header-serialization-changed', title: 'Response header serialization changed', severity: 'possibly', direction: 'response', area: 'Responses', kind: 'changed',
+    explanation: {
+      who: 'Clients of {op} that parse the `{target}` header.',
+      see: 'The header is now serialized {after} (was {before}); clients that split it the old way may misread it.',
+      avoid: 'Keep the old serialization, or announce the change.',
+    },
+    changelog: 'The `{target}` header on `{op}` is now serialized {after} (was {before}).',
   },
   {
     id: 'response-required-became-write-only', title: 'Required response property became write-only', severity: 'breaking', direction: 'response', area: 'Responses', kind: 'changed',
@@ -479,6 +534,65 @@ const defs: Def[] = [
     },
     changelog: '`{target}` in `{op}` now uses `{after}`.',
   },
+  {
+    id: 'conditional-schema-changed', title: 'Conditional schema changed', severity: 'possibly', direction: 'both', area: 'Shared schemas', kind: 'changed',
+    explanation: {
+      who: 'Clients of {op} whose data meets the changed condition.',
+      see: 'The spec alone cannot tell whether `{target}` now accepts or promises more or less than before.',
+      avoid: 'Check that everything the old condition allowed still validates.',
+    },
+    changelog: 'The conditional schema `{target}` on `{op}` changed.',
+  },
+  {
+    id: 'discriminator-property-changed', title: 'Discriminator property changed', severity: 'breaking', direction: 'both', area: 'Shared schemas', kind: 'changed',
+    explanation: {
+      who: 'Clients of {op} that pick a variant by `{before}`.',
+      see: 'The variant is now chosen by `{after}`, so payloads that set `{before}` no longer select one.',
+      avoid: 'Keep the old property name, or send both for a release.',
+    },
+    changelog: 'The discriminator on `{op}` is now `{after}` (was `{before}`).',
+  },
+  {
+    id: 'discriminator-mapping-changed', title: 'Discriminator mapping value removed or repointed', severity: 'breaking', direction: 'both', area: 'Shared schemas', kind: 'changed',
+    explanation: {
+      who: 'Clients of {op} that send or receive the `{target}` variant.',
+      see: '`{target}` no longer selects the schema it did ({before} → {after}).',
+      avoid: 'Keep the old mapping value pointing where it did.',
+    },
+    changelog: 'The `{target}` discriminator value on `{op}` changed ({before} → {after}).',
+  },
+  {
+    id: 'request-discriminator-mapping-added', title: 'Request discriminator value added', severity: 'safe', direction: 'request', area: 'Shared schemas', kind: 'added',
+    explanation: { who: 'No existing client.', see: 'Nothing: `{target}` is a new variant clients may send.', avoid: 'Nothing to avoid.' },
+    changelog: 'Added the `{target}` variant to `{op}` requests.',
+  },
+  {
+    id: 'response-discriminator-mapping-added', title: 'Response discriminator value added', severity: 'possibly', direction: 'response', area: 'Shared schemas', kind: 'added',
+    explanation: {
+      who: 'Clients of {op} that switch on the discriminator without a default case.',
+      see: 'A `{target}` variant they were never written to handle.',
+      avoid: 'Tell clients to ignore unknown variants, or announce the new one first.',
+    },
+    changelog: 'Responses from `{op}` can now be the `{target}` variant.',
+  },
+  {
+    id: 'discriminator-presence-changed', title: 'Discriminator added or removed', severity: 'possibly', direction: 'both', area: 'Shared schemas', kind: 'changed',
+    explanation: {
+      who: 'Clients of {op} generated from the spec.',
+      see: 'The same variants, now told apart {after}: generated code may pick them differently.',
+      avoid: 'Check generated clients against the new spec.',
+    },
+    changelog: 'The variants on `{op}` are now told apart {after}.',
+  },
+  {
+    id: 'property-deprecated', title: 'Property deprecated', severity: 'safe', direction: 'both', area: 'Deprecation and versioning', kind: 'changed',
+    explanation: {
+      who: 'Clients of {op} that use `{target}`, later.',
+      see: 'Nothing yet; generated SDKs may show a deprecation warning.',
+      avoid: 'Add an `x-sunset` date so clients know when it goes.',
+    },
+    changelog: 'Deprecated `{target}` on `{op}`.',
+  },
 
   // ---------------------------------------------------------------- Security
   {
@@ -510,6 +624,15 @@ const defs: Def[] = [
     id: 'security-flow-url-changed', title: 'OAuth URL changed', severity: 'possibly', direction: 'request', area: 'Security', kind: 'changed',
     explanation: { who: 'Clients with the `{target}` URL configured.', see: 'Token requests to the old host ({before}) may fail.', avoid: 'Keep the old URL working as a redirect.' },
     changelog: 'The `{target}` URL changed to {after}.',
+  },
+  {
+    id: 'security-removed-from-operation', title: 'Authentication no longer required', severity: 'safe', direction: 'request', area: 'Security', kind: 'removed',
+    explanation: {
+      who: 'No client breaks: requests with credentials still work.',
+      see: 'Anyone can now call {op} without authenticating ({before} before). Check that this is intended.',
+      avoid: 'If it was not intended, restore the security requirement.',
+    },
+    changelog: '`{op}` no longer requires authentication (was {before}).',
   },
 
   // ---------------------------------------------------------------- Deprecation, sunset and versioning
@@ -555,6 +678,11 @@ const defs: Def[] = [
     changelog: 'Removed `{target}` from the {op} payload.',
   },
   {
+    id: 'callback-payload-property-removed', title: 'Callback payload property removed', severity: 'breaking', direction: 'response', area: 'Servers, webhooks, other', kind: 'removed',
+    explanation: { who: 'Clients implementing the {op} callback that read `{target}`.', see: '`{target}` is missing from the callback request.', avoid: 'Keep sending `{target}`, deprecated, for a release.' },
+    changelog: 'Removed `{target}` from the {op} callback payload.',
+  },
+  {
     id: 'callback-changed', title: 'Callback changed', severity: null, direction: 'both', area: 'Servers, webhooks, other', kind: 'changed', reportedAs: 'contained',
     explanation: {
       who: 'Clients that implement the `{target}` callback.',
@@ -586,6 +714,9 @@ const defs: Def[] = [
 ];
 
 export const rules: readonly RuleMeta[] = defs.map((d) => ({ reportedAs: 'change', preset: 'W', ...d }));
+
+/** M-9: safe, but a reviewer must always see it: never folded into an "N safe changes" row. */
+export const neverFolded = (c: { ruleId?: string | undefined }) => c.ruleId === 'security-removed-from-operation';
 
 export const ruleById: ReadonlyMap<string, RuleMeta> = new Map(rules.map((r) => [r.id, r]));
 

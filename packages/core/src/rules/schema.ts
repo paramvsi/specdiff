@@ -5,6 +5,7 @@ import { type Ctx, type Engine, asObj, has, isObj, push } from '../openapi/engin
 import { stableStringify } from '../openapi/hash';
 import { type Loc, type LoadedSpec, type Resolved, child } from '../openapi/load';
 import type { Severity } from '../schemas';
+import { getRule } from './catalogue';
 
 export interface SNode {
   v: unknown;
@@ -224,6 +225,21 @@ export function compareSchema(e: Engine, ctx: Ctx, bv: unknown, bl: Loc, av: unk
   if (!e.opts.openapi.matchInlineRefs && (b.refId === undefined) !== (a.refId === undefined)) {
     e.emit(ctx, 'inline-ref-equivalent', { bLoc: bl, aLoc: al, before: b.refName ?? 'inline schema', after: a.refName ?? 'inline schema' });
   }
+  if (b.siblings || a.siblings) {
+    // M-6: keywords written next to a $ref are compared where they were written; the component itself
+    // is compared on its own, once, at the component (OA-14 dedup only for changes inside it).
+    const own = (r: typeof b) => (r.siblings ? { ...r, value: r.target } : r);
+    const tb = own(b);
+    const ta = own(a);
+    const runT = (c: Ctx) => schemaBody(e, c, { v: tb.value, loc: tb.loc }, { v: ta.value, loc: ta.loc }, b.nullable, a.nullable);
+    if (tb.refId !== undefined || ta.refId !== undefined) e.viaRef(ctx, tb, ta, runT);
+    else runT(ctx);
+    const sib = (r: typeof b) => (r.refId !== undefined ? (r.siblings ?? {}) : undefined);
+    const bsib = sib(b);
+    const asib = sib(a);
+    if (bsib && asib) schemaBody(e, ctx, { v: bsib, loc: bl }, { v: asib, loc: al }, false, false);
+    return;
+  }
   const run = (c: Ctx) => schemaBody(e, c, { v: b.value, loc: b.loc }, { v: a.value, loc: a.loc }, b.nullable, a.nullable);
   if (b.refId !== undefined || a.refId !== undefined) e.viaRef(ctx, b, a, run);
   else run(ctx);
@@ -295,7 +311,86 @@ function schemaBody(e: Engine, ctx: Ctx, b0: SNode, a0: SNode, bNull: boolean, a
   compareItems(e, ctx, b, a);
   compareTuple(e, ctx, b, a);
   for (const kw of ['oneOf', 'anyOf']) compareUnion(e, ctx, b, a, kw);
+  compareDiscriminator(e, ctx, b, a);
+  compareDependencies(e, ctx, b, a);
   if (!flat) compareAllOf(e, ctx, b, a);
+}
+
+// ---------------------------------------------------------------- discriminators (M-17)
+
+function compareDiscriminator(e: Engine, ctx: Ctx, b: SNode, a: SNode): void {
+  const bs = asObj(b.v);
+  const as = asObj(a.v);
+  const bd = isObj(bs.discriminator) ? bs.discriminator : undefined;
+  const ad = isObj(as.discriminator) ? as.discriminator : undefined;
+  if (!bd && !ad) return;
+  const dctx: Ctx = { ...ctx, param: false, hp: push(ctx.hp, 'discriminator') };
+  const bLoc = child(b.loc, 'discriminator');
+  const aLoc = child(a.loc, 'discriminator');
+  if (!bd || !ad) {
+    // Only when the variants themselves did not change: then the way they are told apart is the change.
+    const same = ['oneOf', 'anyOf'].every((k) => stableStringify(bs[k] ?? null) === stableStringify(as[k] ?? null));
+    if (same) e.emit(dctx, 'discriminator-presence-changed', { bLoc, aLoc, kind: ad ? 'added' : 'removed', before: bd ? `by ${String(bd.propertyName)}` : 'by shape', after: ad ? `by ${String(ad.propertyName)}` : 'by shape' });
+    return;
+  }
+  if (bd.propertyName !== ad.propertyName) {
+    e.emit(dctx, 'discriminator-property-changed', { bLoc: child(bLoc, 'propertyName'), aLoc: child(aLoc, 'propertyName'), before: bd.propertyName, after: ad.propertyName });
+  }
+  const bm = asObj(bd.mapping);
+  const am = asObj(ad.mapping);
+  for (const k of Object.keys(bm)) {
+    if (has(am, k) && am[k] === bm[k]) continue;
+    e.emit({ ...dctx, hp: push(dctx.hp, k) }, 'discriminator-mapping-changed', {
+      bLoc: child(child(bLoc, 'mapping'), k), aLoc: has(am, k) ? child(child(aLoc, 'mapping'), k) : child(aLoc, 'mapping'),
+      target: k, before: bm[k], after: has(am, k) ? am[k] : 'nothing',
+    });
+  }
+  for (const k of Object.keys(am)) {
+    if (has(bm, k)) continue;
+    e.emit({ ...dctx, hp: push(dctx.hp, k) }, ctx.dir === 'request' ? 'request-discriminator-mapping-added' : 'response-discriminator-mapping-added', {
+      bLoc: child(bLoc, 'mapping'), aLoc: child(child(aLoc, 'mapping'), k), target: k, after: am[k],
+    });
+  }
+}
+
+// ---------------------------------------------------------------- dependencies and conditions (M-8)
+
+function compareDependencies(e: Engine, ctx: Ctx, b: SNode, a: SNode): void {
+  const bs = asObj(b.v);
+  const as = asObj(a.v);
+  const req = ctx.dir === 'request';
+  const c: Ctx = { ...ctx, param: false };
+  const names = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []);
+  // dependentRequired: { trigger: [names] }. Each trigger compares its list; a whole new trigger adds all of its names.
+  const bdr = asObj(bs.dependentRequired);
+  const adr = asObj(as.dependentRequired);
+  for (const trigger of [...Object.keys(bdr), ...Object.keys(adr).filter((k) => !has(bdr, k))]) {
+    const before = new Set(names(bdr[trigger]));
+    const after = new Set(names(adr[trigger]));
+    const added = [...after].filter((n) => !before.has(n));
+    const removed = [...before].filter((n) => !after.has(n));
+    const tctx: Ctx = { ...c, hp: push(c.hp, trigger), field: push(c.field, trigger) };
+    const bLoc = child(child(b.loc, 'dependentRequired'), trigger);
+    const aLoc = child(child(a.loc, 'dependentRequired'), trigger);
+    if (added.length) e.emit(tctx, req ? 'request-dependency-added' : 'response-dependency-added', { bLoc, aLoc, after: added.join(', ') });
+    if (removed.length) e.emit(tctx, req ? 'request-dependency-removed' : 'response-dependency-removed', { bLoc, aLoc, before: removed.join(', ') });
+  }
+  // dependentSchemas: a new trigger adds a dependency, a removed one removes it; a changed schema is a changed condition.
+  const bds = asObj(bs.dependentSchemas);
+  const ads = asObj(as.dependentSchemas);
+  for (const trigger of [...Object.keys(bds), ...Object.keys(ads).filter((k) => !has(bds, k))]) {
+    const tctx: Ctx = { ...c, hp: push(c.hp, trigger), field: push(c.field, trigger) };
+    const bLoc = child(child(b.loc, 'dependentSchemas'), trigger);
+    const aLoc = child(child(a.loc, 'dependentSchemas'), trigger);
+    if (!has(bds, trigger)) e.emit(tctx, req ? 'request-dependency-added' : 'response-dependency-added', { bLoc: child(b.loc, 'dependentSchemas'), aLoc, after: 'its dependent schema' });
+    else if (!has(ads, trigger)) e.emit(tctx, req ? 'request-dependency-removed' : 'response-dependency-removed', { bLoc, aLoc: child(a.loc, 'dependentSchemas'), before: 'its dependent schema' });
+    else if (stableStringify(bds[trigger]) !== stableStringify(ads[trigger])) e.emit(tctx, 'conditional-schema-changed', { bLoc, aLoc, target: `dependentSchemas.${trigger}` });
+  }
+  const cond = (s: Record<string, unknown>) => stableStringify({ if: s.if ?? null, then: s.then ?? null, else: s.else ?? null });
+  if (cond(bs) !== cond(as)) {
+    const k = ['if', 'then', 'else'].find((x) => stableStringify(bs[x] ?? null) !== stableStringify(as[x] ?? null)) ?? 'if';
+    e.emit({ ...c, hp: push(c.hp, 'if/then/else') }, 'conditional-schema-changed', { bLoc: has(bs, k) ? child(b.loc, k) : b.loc, aLoc: has(as, k) ? child(a.loc, k) : a.loc, target: 'if/then/else' });
+  }
 }
 
 // ---------------------------------------------------------------- types and nullability
@@ -477,9 +572,9 @@ function compareProperties(e: Engine, ctx: Ctx, b: SNode, a: SNode): void {
       const required = bReq.has(name);
       let rule: string;
       if (req) rule = 'request-property-removed';
-      else if (ctx.webhook) rule = 'webhook-payload-property-removed';
+      else if (ctx.webhook) rule = ctx.callback ? 'callback-payload-property-removed' : 'webhook-payload-property-removed';
       else rule = required ? 'response-property-removed' : 'response-optional-property-removed';
-      const base: Severity = rule === 'request-property-removed' ? 'possibly' : rule === 'response-optional-property-removed' ? 'docs' : 'breaking';
+      const base: Severity = getRule(rule).severity ?? 'breaking';
       const severity = removalSeverity(e, flags, base);
       e.emit(docsCtx(flags), rule, { bLoc: bl, aLoc: propsLoc(a), before: bp[name], ...(severity !== undefined ? { severity } : {}) });
       continue;
@@ -505,6 +600,7 @@ function compareProperties(e: Engine, ctx: Ctx, b: SNode, a: SNode): void {
         e.emit(pctx, 'response-required-became-write-only', { bLoc: bl, aLoc: child(al, 'writeOnly'), after: { writeOnly: true } });
       }
     }
+    if (bf.deprecated !== true && af.deprecated === true) e.emit(pctx, 'property-deprecated', { bLoc: bl, aLoc: child(al, 'deprecated'), after: { deprecated: true } });
     compareSunset(e, pctx, { v: bf, loc: bl }, { v: af, loc: al });
     const hidden = req ? bf.readOnly === true || af.readOnly === true : bf.writeOnly === true || af.writeOnly === true;
     compareSchema(e, hidden ? { ...pctx, docsOnly: true } : pctx, bp[name], bl, ap[name], al);

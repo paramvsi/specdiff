@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "request-param-deprecated",
+      "severity": "safe",
+      "direction": "request",
+      "path": "GET /a › query q",
+      "kind": "changed"
+    }
+  ],
+  "modelRefs": []
+}

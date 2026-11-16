@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "security-removed-from-operation",
+      "severity": "safe",
+      "direction": "request",
+      "path": "GET /a › security",
+      "kind": "removed"
+    }
+  ],
+  "modelRefs": []
+}

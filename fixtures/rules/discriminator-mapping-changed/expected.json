@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "discriminator-mapping-changed",
+      "severity": "breaking",
+      "direction": "both",
+      "path": "GET /a › response 200 › discriminator › card",
+      "kind": "changed"
+    }
+  ],
+  "modelRefs": []
+}

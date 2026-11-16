@@ -1,0 +1,29 @@
+openapi: 3.1.0
+info:
+  title: Fixture
+  version: 1.0.0
+paths:
+  /a:
+    post:
+      operationId: postA
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                card:
+                  type: string
+                cvc:
+                  type: string
+                expiry:
+                  type: string
+              if:
+                required:
+                  - card
+              then:
+                required:
+                  - cvc
+      responses:
+        "200":
+          description: OK

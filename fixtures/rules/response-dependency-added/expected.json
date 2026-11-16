@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "response-dependency-added",
+      "severity": "safe",
+      "direction": "response",
+      "path": "GET /a › response 200 › card",
+      "kind": "added"
+    }
+  ],
+  "modelRefs": []
+}

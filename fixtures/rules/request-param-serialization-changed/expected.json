@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "request-param-serialization-changed",
+      "severity": "breaking",
+      "direction": "request",
+      "path": "GET /a › query ids",
+      "kind": "changed"
+    }
+  ],
+  "modelRefs": []
+}

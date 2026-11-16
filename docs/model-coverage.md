@@ -13,7 +13,7 @@ Model 0.1.0-draft, generated from oasdiff v1.38.0: 784 named changes.
 | Not covered, by level | info 399, error 350, warning 22 | info 332, error 115, warning 8 |
 | Not covered, by area | schema 605, parameters 75, security 24, paths 20, responses 18, headers 12, requestBody 12, components 2, tags 2, info 1 | schema 386, parameters 15, responses 12, security 11, paths 10, requestBody 10, headers 8, components 2, info 1 |
 
-Rules with at least one mapping: 61 of 76.
+Rules with at least one mapping: 61 of 92.
 
 ## How a mapping was decided
 

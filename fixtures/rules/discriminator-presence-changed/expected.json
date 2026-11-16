@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "discriminator-presence-changed",
+      "severity": "possibly",
+      "direction": "both",
+      "path": "GET /a › response 200 › discriminator",
+      "kind": "added"
+    }
+  ],
+  "modelRefs": []
+}

@@ -1,5 +1,5 @@
 // Phone read-only layouts (X-07): M-01 shared link / summary, M-02 change list, M-03 change detail.
-import type { Change, Severity } from '@specdiff/core';
+import { neverFolded, type Change, type Severity } from '@specdiff/core';
 import { diffText } from '@specdiff/core/text';
 import { MethodChip, SeverityBadge, useToast } from '@specdiff/ui';
 import * as icons from 'lucide-react';
@@ -31,7 +31,7 @@ export function PhoneOpenApi() {
     const groups = phoneGroups(shown, filter === 'all');
     const docs = filter === 'all' ? shown.filter((c) => c.severity === 'docs') : [];
     // M-02 under All: the changes that need attention one by one; safe and docs-only ones as one row each.
-    const safe = filter === 'all' ? shown.filter((c) => c.severity === 'safe') : [];
+    const safe = filter === 'all' ? shown.filter((c) => c.severity === 'safe' && !neverFolded(c)) : [];
     const collapsed = (label: string, detail: string, sev: 'safe' | 'docs', f: Severity) => (
       <section aria-label={label}>
         <p className={css.group}>{label}</p>
@@ -134,7 +134,7 @@ const cx = (...c: Array<string | false | undefined>) => c.filter(Boolean).join('
 function phoneGroups(changes: Change[], collapse: boolean): Array<[string, Change[]]> {
   const groups = new Map<string, Change[]>();
   for (const c of changes) {
-    if (collapse && (c.severity === 'docs' || c.severity === 'safe')) continue;
+    if (collapse && (c.severity === 'docs' || c.severity === 'safe') && !neverFolded(c)) continue;
     const k = groupKey(c, 'path');
     groups.set(k, [...(groups.get(k) ?? []), c]);
   }

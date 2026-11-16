@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "property-deprecated",
+      "severity": "safe",
+      "direction": "both",
+      "path": "GET /a › response 200 › old",
+      "kind": "changed"
+    }
+  ],
+  "modelRefs": []
+}

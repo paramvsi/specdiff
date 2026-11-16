@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "ruleId": "response-header-serialization-changed",
+      "severity": "possibly",
+      "direction": "response",
+      "path": "GET /a › response 200 › header X-Ids",
+      "kind": "changed"
+    }
+  ],
+  "modelRefs": []
+}

@@ -49,7 +49,7 @@ function counts(report: Report, includeDocs: boolean): string {
 
 function kacCategory(c: Change): string {
   if (c.ruleId?.startsWith('security-')) return 'Security';
-  if (c.ruleId === 'endpoint-deprecated') return 'Deprecated';
+  if (c.ruleId?.endsWith('-deprecated')) return 'Deprecated'; // endpoint, parameter or property (M-18)
   if (c.kind === 'removed') return 'Removed';
   if (c.kind === 'added' && sev(c) === 'safe') return 'Added';
   return 'Changed';
