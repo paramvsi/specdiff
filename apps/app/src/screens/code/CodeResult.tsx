@@ -210,7 +210,7 @@ function Structural({ diff }: { diff: CodeDiff }) {
               </li>
             ))}
             {listed.length > 0 && <li className={css.item}><span className={css.muted2}>{seen} of {listed.length} viewed</span></li>}
-            {formattingLines > 0 && <li className={css.item}><span className={css.badge} data-status="formatting">Format</span><span>{formattingLines} lines, hidden</span></li>}
+            {formattingLines > 0 && <li className={css.item}><span className={css.badge} data-status="formatting">Format</span><span>{formattingLines} line{formattingLines === 1 ? '' : 's'}, hidden</span></li>}
           </ul>
           <Checkbox label="Hide renames" checked={hideRenames} onCheckedChange={(c) => { setHideRenames(c); setOpen(new Set()); }} />
           <Checkbox label="Hide comment-only changes" checked={hideComments} onCheckedChange={(c) => { setHideComments(c); setOpen(new Set()); }} />

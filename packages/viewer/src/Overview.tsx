@@ -53,7 +53,7 @@ export function Overview() {
         prev && report?.status === 'ready' ? (
           <a className={css.phoneSince} href={v.href({ page: 'changes' })}>
             <span>
-              <strong>{total} changes since {prev.label}</strong>
+              <strong>{total} change{total === 1 ? '' : 's'} since {prev.label}</strong>
               <span className={css.small}>{index.counts.breaking} breaking · {index.counts.new} new endpoints</span>
             </span>
             <ChevronRight aria-hidden="true" size={18} />
@@ -74,7 +74,7 @@ export function Overview() {
             </div>
             <div className={css.infoCard}>
               <span className={css.infoLabel}>Spec</span>
-              <span className={css.infoValue}>OpenAPI {specVersion} · {m.ops.length} operations</span>
+              <span className={css.infoValue}>OpenAPI {specVersion} · {m.ops.length} operation{m.ops.length === 1 ? '' : 's'}</span>
             </div>
           </div>
           {prev ? (

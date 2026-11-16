@@ -79,7 +79,7 @@ function nonOpenApi(before: Input, after: Input, io: Io, o: CiOptions): number {
     if ('error' in a || 'error' in b) { io.err(`Could not parse ${'error' in a ? before.name : after.name}.`); return 2; }
     const d = diffJson(a.value, b.value, { ignoreKeyOrder: true, ignoreArrayOrder: false, arrayMatchKey: 'auto', nullEqualsMissing: false, ignoreKeys: [], numberTolerance: 0 });
     io.out(o.format === 'json' ? JSON.stringify(d.changes, null, 2) + '\n' : d.changes.map((c) => `${c.kind}\t${c.jsonPath}`).join('\n') + '\n');
-    io.err(`${d.changes.length} changes (${mode.toUpperCase()}); only OpenAPI changes can fail the check.`);
+    io.err(`${d.changes.length} change${d.changes.length === 1 ? '' : 's'} (${mode.toUpperCase()}); only OpenAPI changes can fail the check.`);
     return 0;
   }
   const t = diffText(before.content, after.content, { ignoreWhitespace: false, ignoreCase: false, ignoreLineEndings: true, precision: 'smart', filters: [], transforms: [] });

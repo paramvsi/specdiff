@@ -57,7 +57,7 @@ function Timeline() {
               </button>
               {l.version.date ? <span className={css.small}>{l.version.date}</span> : null}
               <span className={css.small}>
-                {i === 0 ? `${total} operations` : total === undefined ? (v.compareAvailable ? '…' : '') : `${total} changes`}
+                {i === 0 ? `${total} operation${total === 1 ? '' : 's'}` : total === undefined ? (v.compareAvailable ? '…' : '') : `${total} change${total === 1 ? '' : 's'}`}
                 {breaking ? <> · <strong className={css.breakingText}>{breaking} breaking</strong></> : null}
               </span>
             </li>
@@ -110,7 +110,7 @@ export function Changes() {
           {v.myEndpoints ? (
             <section className={css.filterCard} aria-labelledby="sd-filter">
               <h2 id="sd-filter" className={css.h4}>Showing changes for the {v.myEndpoints.size === 1 ? 'endpoint' : `${v.myEndpoints.size} endpoints`} you use</h2>
-              <p className={css.small}>{all.length - shown.length} of {all.length} changes hidden. Saved in this browser.</p>
+              <p className={css.small}>{all.length - shown.length} of {all.length} change{all.length === 1 ? '' : 's'} hidden. Saved in this browser.</p>
               <div className={css.row}>
                 <Button onClick={v.openMyEndpoints}>Edit my endpoints</Button>
                 <Button variant="ghost" onClick={() => v.setMyEndpoints(undefined)}>Show everything</Button>

@@ -11,7 +11,7 @@ export async function compareOpenApiInWorker(req: CompareRequest, config: Config
   try {
     // IN-08: core reports each real stage as it starts; mark the one before it done.
     const refFiles = Object.keys(req.after.files ?? {}).length;
-    const resolveDetail = refFiles ? `${refFiles} files` : 'internal $refs';
+    const resolveDetail = refFiles ? `${refFiles} file${refFiles === 1 ? '' : 's'}` : 'internal $refs';
     // Core parses (then normalises) Before first, then After; the stage callbacks come in that order.
     let parses = 0;
     let normalised = 0;
@@ -45,7 +45,7 @@ export async function compareOpenApiInWorker(req: CompareRequest, config: Config
     onProgress({ step: 'parse', state: 'done', detail: 'both files, positions kept' });
     onProgress({ step: 'normalise', state: 'done', detail: config.openapi.autoUpgrade ? 'upgraded to 3.1' : 'as written' });
     onProgress({ step: 'resolve', state: 'done', detail: resolveDetail });
-    onProgress({ step: 'compare', state: 'done', detail: `${report.summary.total} changes · ${ms} ms` });
+    onProgress({ step: 'compare', state: 'done', detail: `${report.summary.total} change${report.summary.total === 1 ? '' : 's'} · ${ms} ms` });
     return { mode: 'openapi', detected: pair.mode, report, text: raw() };
   } catch (e) {
     if (e instanceof OpenApiParseError) {

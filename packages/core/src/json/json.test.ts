@@ -150,6 +150,9 @@ describe('exports', () => {
     expect(md).toContain('| ~ | a | `1` → `2` |');
     expect(md.split('\n').filter((l) => l.startsWith('| ') && !l.startsWith('| |') && !l.startsWith('| ---'))).toHaveLength(3);
   });
+  it('Markdown summary says "1 change", not "1 changes"', () => {
+    expect(jsonMarkdown(diffJson({ a: 1 }, { a: 2 }, o()), { before: 'a.json', after: 'b.json' })).toContain('\n1 change: ');
+  });
   it('Markdown table cells escape pipes', () => {
     const d = diffJson({ a: 'x|y' }, { a: 'z' }, o());
     expect(jsonMarkdown(d, { before: 'a.json', after: 'b.json' })).toContain('| ~ | a | `"x\\|y"` → `"z"` |');

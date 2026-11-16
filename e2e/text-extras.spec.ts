@@ -184,7 +184,7 @@ test('IN-06 reload re-fetches a URL side, on Compare and on the result', async (
   await expect(page.getByRole('heading', { name: '4 lines differ' })).toBeVisible();
   version = 2;
   await reload.click();
-  await expect(page.getByRole('heading', { name: '1 lines differ' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '1 line differs' })).toBeVisible();
   expect(fetches).toBe(3);
   await expectAxeClean(page);
 });

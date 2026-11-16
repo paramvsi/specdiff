@@ -157,6 +157,6 @@ export function jsonExport(
     name: `${stem}.changes.md`,
     content: jsonMarkdown(data.diff, names),
     type: 'text/markdown',
-    meta: `${data.diff.changes.length} changes`,
+    meta: `${data.diff.changes.length} change${data.diff.changes.length === 1 ? '' : 's'}`,
   };
 }

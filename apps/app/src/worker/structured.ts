@@ -48,7 +48,7 @@ export async function compareStructured(
     { before: req.before.name, after: req.after.name },
     mode === 'json' ? 'json' : 'yaml',
   );
-  onProgress({ step: 'compare', state: 'done', detail: `${changes.length} changes` });
+  onProgress({ step: 'compare', state: 'done', detail: `${changes.length} change${changes.length === 1 ? '' : 's'}` });
   const strip = (d: typeof a.duplicates) => d.map(({ path, key, line }) => ({ path, key, line }));
   return {
     mode: mode === 'json' ? 'json' : 'yaml',

@@ -283,7 +283,7 @@ export function TextResult() {
         <h1 className={css.h1}>
           {moves.length
             ? `${plural(moves.length, 'move')}, ${plural(edits, 'edit')}`
-            : `${plus + minus} lines differ${opts.filters.length ? ' after filters' : ''}`}
+            : `${plus + minus} ${plus + minus === 1 ? 'line differs' : 'lines differ'}${opts.filters.length ? ' after filters' : ''}`}
         </h1>
         <p className={css.stats}>
           <span className={css.add}>+ {plus}</span> lines <span className={css.del}>− {minus}</span>{' '}

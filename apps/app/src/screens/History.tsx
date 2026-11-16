@@ -281,7 +281,7 @@ export default function History() {
         <Dialog
           open
           title="Clear history?"
-          description={`This deletes all ${all.length} comparisons from this browser. It can’t be undone.`}
+          description={`This deletes ${all.length === 1 ? 'the 1 comparison' : `all ${all.length} comparisons`} from this browser. It can’t be undone.`}
           onOpenChange={(o) => {
             if (!o) setConfirm(false);
           }}

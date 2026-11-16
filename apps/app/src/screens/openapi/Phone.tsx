@@ -51,7 +51,7 @@ export function PhoneOpenApi() {
       <div className={cx(css.page, css.listPage)}>
         <header className={css.bar}>
           <button type="button" className={css.icon} aria-label="Back to summary" onClick={() => setView({ kind: 'summary' })}><icons.ChevronLeft size={20} /></button>
-          <h1 className={css.barTitle}>{s.total} changes</h1>
+          <h1 className={css.barTitle}>{s.total} change{s.total === 1 ? '' : 's'}</h1>
           <button type="button" className={css.icon} aria-label="Search changes" onClick={openPalette}><icons.Search size={18} /></button>
         </header>
         <div className={css.chips} role="group" aria-label="Filter changes">
@@ -79,7 +79,7 @@ export function PhoneOpenApi() {
           ))}
           {/* M-02: safe and docs-only changes collapse into one row each; the row opens that filter. */}
           {safe.length > 0 && collapsed(safe.length, `${safe.length} safe changes`, 'Additions and relaxed rules', 'safe', 'safe')}
-          {docs.length > 0 && collapsed(docs.length, `${docs.length} operations`, 'Descriptions updated', 'docs', 'docs')}
+          {docs.length > 0 && collapsed(docs.length, `${docs.length} operation${docs.length === 1 ? '' : 's'}`, 'Descriptions updated', 'docs', 'docs')}
         </div>
       </div>
     );
@@ -110,7 +110,7 @@ export function PhoneOpenApi() {
           </ul>
         </section>
       )}
-      <button type="button" className={css.primary} onClick={() => setView({ kind: 'list' })}>See all {s.total} changes</button>
+      <button type="button" className={css.primary} onClick={() => setView({ kind: 'list' })}>{s.total === 1 ? 'See the change' : `See all ${s.total} changes`}</button>
       <p className={css.privacy}><icons.Shield size={13} aria-hidden="true" /> Decoded on this phone. Nothing was uploaded.</p>
     </div>
   );

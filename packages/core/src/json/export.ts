@@ -141,7 +141,7 @@ const SYM: Record<string, string> = { added: '+', removed: '−', changed: '~', 
 const show = (v: unknown) => '`' + (JSON.stringify(v) ?? 'undefined').slice(0, 120) + '`';
 export function jsonMarkdown(d: JsonDiff, names: { before: string; after: string }): string {
   const s = d.stats;
-  const lines = [`# ${names.before} → ${names.after}`, '', `${d.changes.length} changes: ${s.added} added, ${s.removed} removed, ${s.changed} changed, ${s.typeChanged} type changed, ${s.moved} moved.`, ''];
+  const lines = [`# ${names.before} → ${names.after}`, '', `${d.changes.length} change${d.changes.length === 1 ? '' : 's'}: ${s.added} added, ${s.removed} removed, ${s.changed} changed, ${s.typeChanged} type changed, ${s.moved} moved.`, ''];
   // A07-JsonExport: "A table of every change". Pipes in cells are escaped so a value can't add a column.
   const cell = (t: string) => t.replace(/\|/g, '\\|').replace(/\r?\n/g, ' ');
   if (d.changes.length) lines.push('| | Path | Change |', '| --- | --- | --- |');

@@ -177,7 +177,7 @@ test('IN-06 swap exchanges Before and After, and the result flips', async ({ pag
   await expect(page.getByRole('textbox', { name: /^Before/ })).toHaveValue('one\ntwo\nthree\n');
   await expect(page.getByRole('textbox', { name: /^After/ })).toHaveValue('one\ntwo\n');
   await compareBtn(page).click();
-  await expect(page.getByRole('heading', { name: '1 lines differ' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '1 line differs' })).toBeVisible();
   await expect(page.getByText('− 1').first()).toBeVisible();
   await expect(textRegion(page).locator('[data-kind="del"]', { hasText: 'three' })).toBeVisible();
 });

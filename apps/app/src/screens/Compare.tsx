@@ -702,7 +702,7 @@ function Recent() {
                   {e.mode === 'openapi' ? (
                     <SeverityBadge severity={sev} />
                   ) : (
-                    <span className={css.changes}>{e.summary.total} changes</span>
+                    <span className={css.changes}>{e.summary.total} change{e.summary.total === 1 ? '' : 's'}</span>
                   )}{' '}
                   {ago(e.openedAt)}
                 </span>
