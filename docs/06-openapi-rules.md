@@ -14,6 +14,7 @@ Apply this, and write each rule's severity from it, not from intuition:
 4. **Direction matters.** Requests may accept more but not less; responses may promise more but not less. Adding `null` to a request field's type is safe; adding it to a response field is possibly breaking.
 5. `readOnly` properties never appear in requests and `writeOnly` never in responses, so changes to them on that side are D.
 6. A removal of something marked `deprecated` follows its `x-sunset` date: before the date it is B, after the date it is not reported, with no date it is P.
+   `x-sunset` is read as an ISO date or date-time (no zone means UTC) or as an HTTP date (`Tue, 01 Dec 2026 00:00:00 GMT`, as in the Sunset header). Other forms, such as `12/1/2026`, are ambiguous and count as no date.
 
 ## Decision D-1: OpenAPI Changes Model
 

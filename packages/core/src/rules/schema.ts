@@ -21,10 +21,29 @@ const FORMAT_WIDENS: Record<string, string> = { int32: 'int64', float: 'double' 
 
 // ---------------------------------------------------------------- helpers
 
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const ISO = /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?(Z|[+-]\d{2}:\d{2})?)?$/;
+const HTTP_DATE = /^[A-Z][a-z]{2}, (\d{2}) ([A-Z][a-z]{2}) (\d{4}) (\d{2}):(\d{2}):(\d{2}) GMT$/; // RFC 9110 IMF-fixdate (Sunset header)
+
+/**
+ * An `x-sunset` date. Only forms with one meaning are read: an ISO date or date-time (no zone = UTC)
+ * and the HTTP date the Sunset header uses. `Date.parse` alone reads "2026-12-01 00:00" and
+ * "12/1/2026" in the machine's time zone, so reports would differ between machines (X-13).
+ */
 export function parseDate(v: unknown): Date | undefined {
-  if (typeof v !== 'string' && !(v instanceof Date)) return undefined;
-  const t = v instanceof Date ? v.getTime() : Date.parse(v);
-  return Number.isNaN(t) ? undefined : new Date(t);
+  if (v instanceof Date) return Number.isNaN(v.getTime()) ? undefined : v;
+  if (typeof v !== 'string') return undefined;
+  const s = v.trim();
+  const iso = ISO.exec(s);
+  if (iso) {
+    const [, y, mo, d, h = '00', mi = '00', sec = '00', zone] = iso;
+    const t = Date.parse(`${y}-${mo}-${d}T${h}:${mi}:${sec}${zone ?? 'Z'}`);
+    return Number.isNaN(t) ? undefined : new Date(t);
+  }
+  const http = HTTP_DATE.exec(s);
+  const month = http ? MONTHS.indexOf(http[2]!) : -1;
+  if (http && month >= 0) return new Date(Date.UTC(+http[3]!, month, +http[1]!, +http[4]!, +http[5]!, +http[6]!));
+  return undefined;
 }
 export const isoDate = (d: Date): string => d.toISOString().slice(0, 10);
 
