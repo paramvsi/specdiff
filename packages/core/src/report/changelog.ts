@@ -23,6 +23,12 @@ export const SEVERITY_SYMBOL: Record<Severity, string> = { breaking: '!', possib
 export const SEVERITY_LABEL: Record<Severity, string> = { breaking: 'Breaking', possibly: 'Possibly breaking', safe: 'Safe', docs: 'Docs only' };
 const HEADINGS: Record<Severity, string> = { breaking: 'Breaking changes', possibly: 'Possibly breaking', safe: 'New and improved', docs: 'Documentation' };
 
+/**
+ * Slack reads `<…>` as control syntax everywhere, code spans included: `<!channel>` pings, `<url|text>`
+ * hides a link. Escape what the Markdown escaping left raw; entities already in the line stay as they are.
+ */
+const slackSafe = (s: string) => s.replace(/&(?!(?:amp|lt|gt);)/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
 const sev = (c: Change): Severity => c.severity ?? 'docs';
 const line = (c: Change) => c.changelogLine ?? c.path;
 
@@ -79,13 +85,13 @@ export function buildChangelog(report: Report, template: ChangelogTemplate, opts
     }
     if (changes.length === 0) out.push('No changes to the API.', '');
   } else if (template === 'slack') {
-    out.push(`*${title}${version ? ` (${version})` : ''}*: ${counts(report, includeDocs)}`);
+    out.push(`*${slackSafe(title)}${version ? ` (${slackSafe(version)})` : ''}*: ${counts(report, includeDocs)}`);
     if (group) {
       for (const [s, list] of bySeverity(changes)) {
         if (!list.length) continue;
-        out.push('', `*${SEVERITY_SYMBOL[s]} ${HEADINGS[s]}*`, ...list.map((c) => `• ${line(c).replace(/\*\*/g, '*')}`));
+        out.push('', `*${SEVERITY_SYMBOL[s]} ${HEADINGS[s]}*`, ...list.map((c) => `• ${slackSafe(line(c)).replace(/\*\*/g, '*')}`));
       }
-    } else out.push('', ...changes.map((c) => `• ${prefixed(c, (x) => `*${x}*`).replace(/\*\*/g, '*')}`));
+    } else out.push('', ...changes.map((c) => `• ${slackSafe(prefixed(c, (x) => `*${x}*`)).replace(/\*\*/g, '*')}`));
     out.push('');
   } else {
     out.push(`### Specdiff: ${counts(report, includeDocs)}`, '');

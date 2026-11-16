@@ -72,6 +72,15 @@ describe('OA-08 version check (B-8)', () => {
     expect(versionCheck('1.5.0', 'latest', n(0)).verdict).toBe('unparseable');
     expect(versionCheck('0.4.0', '0.5.0', n(1)).verdict).toBe('ok');
   });
+  it('OUT-01 Slack text escapes <, > and & so spec values cannot ping a channel or hide a link', () => {
+    const doc = (e: string[]) => stringify({ openapi: '3.1.0', info: { title: 'T', version: '1.0.0' }, paths: { '/a': { get: { responses: { '200': { description: 'OK', content: { 'application/json': { schema: { type: 'string', enum: e } } } } } } } } });
+    const r = compareOpenApi({ name: 'a<b>.yaml', content: doc(['x']) }, { name: 'b.yaml', content: doc(['x', '<!channel>', '<https://evil.example|docs>', 'a & b', '&lt;']) });
+    const slack = buildChangelog(r, 'slack', { includeDocs: true });
+    expect(slack).not.toMatch(/<[^\n]*>/);
+    expect(slack).toContain('`&lt;!channel&gt;`');
+    expect(slack).toContain('`a &amp; b`');
+    expect(slack).toContain('a&lt;b&gt;.yaml');
+  });
   it('a 1-day sunset grace period reads "1 day", not "1 days"', () => {
     const dir = 'fixtures/rules/sunset-inside-grace-period';
     const read = (f: string) => readFileSync(join(__dirname, '../../../..', dir, f), 'utf8');
