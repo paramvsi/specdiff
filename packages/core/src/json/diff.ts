@@ -219,7 +219,7 @@ function nearest(pos: Map<string, { line: number; column: number }>, p: string) 
   return undefined;
 }
 export function humanPath(jsonPath: string): string {
-  return jsonPath.replace(/^\$\.?/, '').replace(/\[\?\(@\.(\w+)==("?)(.*?)\2\)\]/g, '[$1=$3]').replace(/\['(.*?)'\]/g, '.$1').replace(/\./g, ' › ') || '(root)';
+  return jsonPath.replace(/^\$\.?/, '').replace(/\[\?\(@\.(\w+)==("?)(.*?)\2\)\]/g, '[$1=$3]').replace(/\['(.*?)'\]/g, '.$1').replace(/^\./, '').replace(/\./g, ' › ') || '(root)';
 }
 
 /** FNV-1a 64-bit as hex: sync, deterministic, no WebCrypto. */

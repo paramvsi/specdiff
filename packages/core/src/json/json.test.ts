@@ -182,6 +182,8 @@ describe('toChanges', () => {
     expect(JSON.stringify(c1)).toBe(JSON.stringify(c2));
     expect(c1.map((c) => c.id)).toEqual(['c-0001', 'c-0002']);
     expect(humanPath("$.items[?(@.id==3)].v")).toBe('items[id=3] › v');
+    expect(humanPath("$['@team'].a")).toBe('@team › a'); // a bracketed first key has no leading separator
+
   });
 });
 
