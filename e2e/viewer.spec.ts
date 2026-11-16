@@ -206,6 +206,8 @@ test('Try it shows CORS guidance when the browser blocks the request (VW-13)', a
   await page.getByRole('button', { name: 'Send request' }).click();
   await expect(page.getByRole('heading', { name: 'The browser blocked this request' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Copy as curl' })).toBeVisible();
+  // One server in this spec: no advice to switch to a sandbox that doesn't exist.
+  await expect(page.getByText(/sandbox server/)).toHaveCount(0);
   await expectAxeClean(page);
 });
 

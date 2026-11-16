@@ -207,7 +207,7 @@ export function TryIt({ op, onClose }: { op: Op; onClose: () => void }) {
             <code className={css.code}>{phase.host}</code> didn’t send an <code className={css.code}>Access-Control-Allow-Origin</code> header for this page, so the browser stopped it before it left. Your API may be fine; it just doesn’t allow calls from this origin.
           </p>
           <ol className={css.steps}>
-            <li>Use the sandbox server if it allows browser calls.</li>
+            {otherServer ? <li>{/sandbox/i.test(`${otherServer.description ?? ''}${otherServer.url}`) ? 'Use the sandbox server' : 'Use the other server'} if it allows browser calls.</li> : null}
             <li>Add this origin to your API’s CORS settings: <code className={css.code}>{typeof location !== 'undefined' ? location.origin : ''}</code></li>
             <li>Or set a CORS proxy you trust below. Specdiff doesn’t run one.</li>
           </ol>
