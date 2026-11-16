@@ -112,7 +112,9 @@ function parseJson(text: string, index: PositionIndex): unknown {
     }
   };
   const fail = (msg: string, hint = JSON_HINT): never => {
-    throw new JsonError(msg, Math.min(i, n), hint);
+    // Stopped on a comment (JSONC habits from tsconfig and editor settings): say so.
+    const atComment = text.startsWith('//', i) || text.startsWith('/*', i);
+    throw new JsonError(msg, Math.min(i, n), atComment ? 'JSON has no comments: remove the // or /* */ comment, or save the spec as YAML and use #.' : hint);
   };
   const str = (): string => {
     const start = ++i; // after the opening quote

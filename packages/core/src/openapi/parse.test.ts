@@ -120,3 +120,12 @@ describe('X-13 utf8Length matches TextEncoder, malformed text included', () => {
     for (const s of ['abc', 'é', '€', '😀', '\ud800é', '\ud800', 'a\udc00b', '😀\ud800x']) expect(utf8Length(s), JSON.stringify(s)).toBe(new TextEncoder().encode(s).length);
   });
 });
+
+describe('IN-09 a JSON spec with comments gets a hint about comments', () => {
+  it('names the comment as the problem, not the quotes', async () => {
+    const { parseDocument } = await import('./parse');
+    const r = parseDocument('{\n  // spec\n  "openapi": "3.1.0"\n}', 'a.json');
+    expect(r.errors[0]).toMatchObject({ line: 2, column: 3 });
+    expect(r.errors[0]!.hint).toMatch(/JSON has no comments/);
+  });
+});
