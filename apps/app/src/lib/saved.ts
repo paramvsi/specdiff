@@ -4,6 +4,18 @@ import type { SavedSource } from '@specdiff/core';
 import { getSnapshot, listSaved, pushSnapshot, putSaved, sha256 } from '../state/persist';
 import { loadUrl, type LoadError } from './input';
 
+/** "Checked 2 hours ago": when the source was last fetched successfully. */
+export function checkedLabel(iso?: string, now = Date.now()): string {
+  if (!iso) return 'Not checked yet';
+  const mins = Math.floor((now - Date.parse(iso)) / 60000);
+  if (mins < 2) return 'Checked just now';
+  if (mins < 60) return `Checked ${mins} minutes ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `Checked ${hours} ${hours === 1 ? 'hour' : 'hours'} ago`;
+  const days = Math.floor(hours / 24);
+  return `Checked ${days === 1 ? 'yesterday' : `${days} days ago`}`;
+}
+
 export type SavedStatus = 'checking' | 'changed' | 'same' | 'new' | 'error';
 export interface SavedRow {
   source: SavedSource;

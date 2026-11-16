@@ -21,7 +21,6 @@
   margin: var(--sd-space-2) 0 0;
   color: var(--sd-muted);
   font-size: 14.5px;
-  max-width: 72ch;
 }
 .banner {
   display: flex;

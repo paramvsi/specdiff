@@ -6,7 +6,7 @@ import { Button, Dialog, EmptyState, ModeBadge, TextField } from '@specdiff/ui';
 import * as icons from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { loadUrl } from '../lib/input';
-import { checkSource as check, explainFetch as explain, lastTwo, openedChecks, type SavedRow } from '../lib/saved';
+import { checkedLabel, checkSource as check, explainFetch as explain, lastTwo, openedChecks, type SavedRow } from '../lib/saved';
 import { deleteSaved, getSnapshot, listSaved, pushSnapshot, putSaved, sha256 } from '../state/persist';
 import { useCommand } from '../shell/commands';
 import { useApp } from '../state/store';
@@ -22,16 +22,6 @@ const MODE: Record<SavedSource['mode'], string> = {
   code: 'Code',
   text: 'Text',
 };
-
-function checked(iso?: string) {
-  if (!iso) return 'Not checked yet';
-  const mins = Math.floor((Date.now() - Date.parse(iso)) / 60000);
-  if (mins < 2) return 'Checked just now';
-  if (mins < 60) return `Checked ${mins} minutes ago`;
-  const days = Math.floor(mins / 1440);
-  if (days < 1) return `Checked ${Math.floor(mins / 60)} hours ago`;
-  return `Checked ${days === 1 ? 'yesterday' : `${days} days ago`}`;
-}
 
 export default function SavedSources() {
   const { setSource, setMode, compare, setScreen } = useApp();
@@ -176,7 +166,7 @@ export default function SavedSources() {
                   </span>
                 )}
               </div>
-              <div className={css.when}>{checked(s.lastFetchedAt)}</div>
+              <div className={css.when}>{checkedLabel(s.lastFetchedAt)}</div>
               <div className={css.actions}>
                 {status === 'changed' ? (
                   <Button variant="brand" onClick={() => void compareWithLast(s)}>
