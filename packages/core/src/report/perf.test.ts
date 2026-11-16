@@ -9,7 +9,8 @@ import { compareOpenApi } from './build';
 
 const FILE = join(__dirname, '../../../../fixtures/specs/large/large.json');
 
-it.skipIf(!existsSync(FILE))('compares two copies of the 10 MB generated spec in under 5 s', () => {
+// A wall-clock budget: a busy machine can miss it once; a real slowdown misses all three tries.
+it.skipIf(!existsSync(FILE))('compares two copies of the 10 MB generated spec in under 5 s', { timeout: 30_000, retry: 2 }, () => {
   const content = readFileSync(FILE, 'utf8');
   const changed = content.replace('"maximum": 100', '"maximum": 50');
   const start = performance.now();
@@ -17,4 +18,4 @@ it.skipIf(!existsSync(FILE))('compares two copies of the 10 MB generated spec in
   const ms = performance.now() - start;
   expect(report.summary.breaking).toBe(1);
   expect(ms).toBeLessThan(5000);
-}, 30_000);
+});

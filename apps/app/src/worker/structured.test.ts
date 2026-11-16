@@ -17,7 +17,8 @@ function doc(v: number) {
   return JSON.stringify({ version: v, items: v ? items.filter((_, i) => i % 3).concat(items.filter((_, i) => !(i % 3))) : items });
 }
 
-it('a minified JSON pair: the raw diff is line-by-line over pretty-printed documents, and fast', async () => {
+// A wall-clock budget: a busy machine can miss it once; a real slowdown misses all three tries.
+it('a minified JSON pair: the raw diff is line-by-line over pretty-printed documents, and fast', { timeout: 60_000, retry: 2 }, async () => {
   const before = doc(0), after = doc(1);
   const req = { before: { name: 'a.json', content: before, size: before.length }, after: { name: 'b.json', content: after, size: after.length }, mode: 'json' as const, config: {} };
   const pair = detectPair(detectMode('a.json', before), detectMode('b.json', after));
@@ -28,7 +29,7 @@ it('a minified JSON pair: the raw diff is line-by-line over pretty-printed docum
   expect(r.text.rows.length).toBeGreaterThan(1000);
   expect(r.text.rows[0]!.left!.segs[0]!.text).toBe('{');
   expect(ms).toBeLessThan(2000);
-}, 60_000);
+});
 
 it('a formatted pair keeps its own lines in the raw diff', async () => {
   const before = '{\n  "a": 1,\n    "b": 2\n}\n', after = '{\n  "a": 1,\n  "b": 3\n}\n';

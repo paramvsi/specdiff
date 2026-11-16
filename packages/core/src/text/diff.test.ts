@@ -108,7 +108,8 @@ describe('diffText moves (TX-11)', () => {
 });
 
 describe('large, mostly different inputs (X-02)', () => {
-  it('a 20,000-line diff where every line changed finishes quickly with an approximate alignment', () => {
+  // A wall-clock budget: a busy machine can miss it once; a real slowdown misses all three tries.
+  it('a 20,000-line diff where every line changed finishes quickly with an approximate alignment', { retry: 2 }, () => {
     const a = Array.from({ length: 20000 }, (_, i) => `line ${i} alpha ${i * 7}`).join('\n') + '\n';
     const b = Array.from({ length: 20000 }, (_, i) => `row ${i} beta ${i * 3}`).join('\n') + '\n';
     const t0 = performance.now();
