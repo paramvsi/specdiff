@@ -14,7 +14,11 @@ const hostOf = (url: string) => {
 export function parseSpecText(text: string): object {
   const t = text.trim();
   if (t.startsWith('{')) {
-    try { return keepWrittenVersion(JSON.parse(t) as object, t); } catch { /* fall through: YAML is a superset */ }
+    try { return keepWrittenVersion(JSON.parse(t) as object, t); } catch {
+      // YAML has no // or /* */ comments and would fold one into the next key; say what is wrong instead.
+      if (/[{[,]\s*(\/\/|\/\*)/.test(t)) throw new Error('JSON has no comments: remove the // or /* */ comment, or save the spec as YAML and use #.');
+      /* otherwise fall through: YAML is a superset */
+    }
   }
   // merge: YAML `<<` keys, as core's parser applies them when comparing.
   const doc = parse(text, { maxAliasCount: 100, merge: true }) as unknown;

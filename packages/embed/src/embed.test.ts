@@ -57,3 +57,14 @@ describe('version labels', () => {
     expect(v.label).toBe('1.10');
   });
 });
+
+describe('IN-09 a JSON spec with comments', () => {
+  it('says JSON has no comments instead of folding the comment into a key', () => {
+    expect(() => parseSpecText('{\n  // spec\n  "openapi": "3.1.0", "info": {"title": "T", "version": "1"}, "paths": {}\n}')).toThrow(/JSON has no comments/);
+    expect(() => parseSpecText('{ /* c */ "openapi": "3.1.0" }')).toThrow(/JSON has no comments/);
+    expect(() => parseSpecText('{"openapi": "3.1.0", // trailing\n "paths": {}}')).toThrow(/JSON has no comments/);
+  });
+  it('still reads YAML flow mappings that hold a URL', () => {
+    expect(parseSpecText('{openapi: 3.1.0, servers: [{url: http://x.example}]}')).toMatchObject({ servers: [{ url: 'http://x.example' }] });
+  });
+});
