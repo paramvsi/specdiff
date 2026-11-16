@@ -4,7 +4,7 @@ import { lazy, Suspense, useState } from 'react';
 import { useApp } from '../state/store';
 import { usePatch } from './chrome';
 import { openPalette, runOrQueue } from './commands';
-import { modeLabel } from './labels';
+import { modeLabel, searchLabel } from './labels';
 // Loaded on demand so report builders and the schema library stay out of the start-up bundle.
 // Export and Copy for LLM mount only once there is a result, so the empty Compare screen never fetches them.
 const ShareDialog = lazy(() => import('../screens/ShareDialog').then((m) => ({ default: m.ShareDialog })));
@@ -132,7 +132,7 @@ export function AppTopBar() {
 
   const end = (
     <div className={css.actions}>
-      <SearchButton label={screen === 'result' ? 'Search changes' : 'Search'} />
+      <SearchButton label={screen === 'result' && hasResult ? searchLabel(result) : screen === 'result' ? 'Search changes' : 'Search'} />
       <MoreMenu />
       {hasResult && result.mode === 'openapi' && (
         // Phones are read-only (M-01): Copy for LLM is a review tool and doesn't fit the compact bar.

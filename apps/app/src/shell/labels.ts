@@ -15,3 +15,10 @@ export function modeLabel(r: Exclude<CompareResult, { kind: 'parse' }>): string 
 }
 
 const LANG: Record<string, string> = { typescript: 'TypeScript', tsx: 'TypeScript', javascript: 'JavaScript', java: 'Java', python: 'Python', go: 'Go', csharp: 'C#', cpp: 'C++', kotlin: 'Kotlin', ruby: 'Ruby', rust: 'Rust' };
+
+/** The top-bar search label (A03-TextDiff "Search text", A09-Code "Search code", others "Search changes"). */
+export function searchLabel(r: Exclude<CompareResult, { kind: 'parse' }>): string {
+  if (r.mode === 'text' || (r.mode === 'code' && 'code' in r && 'fallback' in r.code)) return 'Search text';
+  if (r.mode === 'code') return 'Search code';
+  return 'Search changes';
+}

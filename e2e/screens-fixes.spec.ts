@@ -337,6 +337,8 @@ for (const scheme of ['light', 'dark'] as const) {
     await expect(page.getByText(/Go is on the list\./)).toBeVisible();
     // A09-Fallback: the badge says Text, since the result is a text diff.
     await expect(page.getByText('Text', { exact: true }).first()).toBeVisible();
+    // A09-Fallback / A03: the search names what it searches.
+    await expect(page.getByRole('button', { name: 'Search text' })).toBeVisible();
     await expectAxeClean(page);
   });
 
