@@ -159,3 +159,13 @@ describe('VW-06 code samples with path parameters', () => {
     expect(sample('curl', sampleInputFor(spec, charge!, 'https://api.x.com'))).toContain('https://api.x.com/charges/ch_1');
   });
 });
+
+describe('VW-11 patterns written for non-Unicode ECMAScript regex', () => {
+  it('a pattern like ^[a-z\\_]+$ (invalid with the u flag) is still checked', async () => {
+    const { requestIssues } = await import('./request');
+    const spec = { openapi: '3.1.0', info: { title: 'T', version: '1' }, paths: { '/a': { get: { parameters: [{ name: 'slug', in: 'query', schema: { type: 'string', pattern: '^[a-z\\_]+$' } }], responses: { '200': { description: 'OK' } } } } } };
+    const op = buildModel(spec).ops[0]!;
+    expect(requestIssues(spec, op, { server: '', path: {}, query: { slug: 'Not Valid' }, headers: {} }).map((i) => i.message)).toEqual(['slug must match ^[a-z\\_]+$']);
+    expect(requestIssues(spec, op, { server: '', path: {}, query: { slug: 'ok_slug' }, headers: {} })).toEqual([]);
+  });
+});

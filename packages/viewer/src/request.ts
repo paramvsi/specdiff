@@ -41,9 +41,19 @@ function valueProblem(spec: Json, schemaNode: Json, value: unknown, name: string
   if (typeof value === 'string') {
     if (typeof s.maxLength === 'number' && value.length > s.maxLength) return { message: `${name} must be at most ${s.maxLength} ${s.maxLength === 1 ? 'character' : 'characters'}`, fix: { label: `Shorten ${name}`, value: value.slice(0, s.maxLength) } };
     if (typeof s.pattern === 'string') {
-      try { if (!new RegExp(s.pattern, 'u').test(value)) return { message: `${name} must match ${s.pattern}` }; } catch { /* unsupported pattern: skip */ }
+      const re = specRegex(s.pattern);
+      if (re && !re.test(value)) return { message: `${name} must match ${s.pattern}` };
     }
   }
+  return undefined;
+}
+
+/**
+ * A schema `pattern` (ECMA-262). Unicode mode first; many specs use escapes such as `\_` or `\-` that only the
+ * older non-Unicode syntax accepts, so fall back to it. Undefined when neither compiles (the check is skipped).
+ */
+function specRegex(pattern: string): RegExp | undefined {
+  for (const flags of ['u', '']) { try { return new RegExp(pattern, flags); } catch { /* try the next syntax */ } }
   return undefined;
 }
 
