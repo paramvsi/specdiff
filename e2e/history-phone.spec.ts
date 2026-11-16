@@ -24,7 +24,7 @@ test('History on a phone: stacked cards, an overflow menu with pin and delete, n
   const cards = page.getByRole('listitem').filter({ has: page.getByRole('button', { name: /^Open / }) });
   await expect(cards).toHaveCount(2);
   expect(await sideways(page)).toEqual([]);
-  await cards.first().getByRole('button', { name: /^More for / }).click();
+  await cards.first().getByRole('button', { name: /^Actions for / }).click();
   await expect(page.getByRole('menuitem', { name: 'Pin' })).toBeVisible();
   await page.getByRole('menuitem', { name: 'Delete' }).click();
   await expect(cards).toHaveCount(1);

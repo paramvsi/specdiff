@@ -221,7 +221,7 @@ export default function History() {
                     </span>
                     <Menu
                       align="end"
-                      trigger={<Button variant="ghost" iconOnly icon={<icons.EllipsisVertical size={16} />} aria-label={`More for ${files(e)}`} />}
+                      trigger={<Button variant="ghost" iconOnly icon={<icons.EllipsisVertical size={16} />} aria-label={`Actions for ${files(e)}`} />}
                       items={[
                         { label: e.pinned ? 'Unpin' : 'Pin', icon: e.pinned ? <icons.PinOff size={15} /> : <icons.Pin size={15} />, onSelect: () => void pin(e) },
                         { label: 'Delete', icon: <icons.Trash2 size={15} />, onSelect: () => void remove(e) },
