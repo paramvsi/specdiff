@@ -1,6 +1,6 @@
 // Test harness for the Viewer (e2e/viewer.spec.ts). Served by `vite packages/viewer/harness --port 5174`.
 // Scenarios via query string: ?spec=payments (default, v1 → v2) | petstore | swagger2 | load-error,
-// plus &theme=light|dark and &brand=1 (V06 embedded look).
+// plus &theme=light|dark (default: the system scheme) and &brand=1 (V06 embedded look).
 import '../src/styles.css';
 import { compareOpenApi, parseDocument } from '@specdiff/core';
 import { createElement } from 'react';
@@ -16,7 +16,8 @@ import type { VersionSet } from '../src/types';
 const parse = (text: string, name: string) => parseDocument(text, name).value as object;
 const q = new URLSearchParams(location.search);
 const scenario = q.get('spec') ?? 'payments';
-const theme = (q.get('theme') ?? 'light') as 'light' | 'dark';
+// Follows the system colour scheme like the real Viewer; ?theme=light|dark pins one (visual tests do).
+const theme = (q.get('theme') ?? 'system') as 'light' | 'dark' | 'system';
 
 const sets: Record<string, VersionSet> = {
   payments: {
