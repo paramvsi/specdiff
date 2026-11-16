@@ -949,9 +949,10 @@ test('@phone X-07 a shared OpenAPI link opens read-only at 390 px, without sidew
   await d.goto('/app/?sample=openapi');
   await expect(d.getByRole('tab', { name: 'Summary', selected: true })).toBeVisible();
   await d.getByRole('button', { name: 'Share', exact: true }).click();
+  // The link is made asynchronously ("Making the link…" first).
+  await expect(d.getByRole('textbox', { name: 'Share link' })).toHaveValue(/#v=/);
   const link = await d.getByRole('textbox', { name: 'Share link' }).inputValue();
   await desk.close();
-  expect(link).toMatch(/#v=/);
   await page.goto(link);
   await expect(page.getByText('View-only on phones.')).toBeVisible();
   await expect(page.getByRole('button', { name: /See all \d+ changes/ })).toBeVisible();
