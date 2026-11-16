@@ -36,7 +36,7 @@ pnpm --filter @specdiff/website dev    # website
 pnpm verify                            # lint, typecheck, unit, build, size, e2e + axe (also runs on git push)
 ```
 
-There is no CI service: `pnpm verify` runs locally and on pre-push, and `pnpm verify:netlify` runs as the Netlify build command. The handover pack that specified this project is in [`specdiff-handover/`](specdiff-handover/README.md); decisions taken during the build are in [`docs/10`](docs/10-decisions-and-open-questions.md).
+There is no CI service: `pnpm verify` runs locally and on pre-push, and `pnpm verify:netlify` runs as the Netlify build command. Decisions taken during the build are in [`docs/10`](docs/10-decisions-and-open-questions.md).
 
 ## Licence
 
