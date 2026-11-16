@@ -13,6 +13,11 @@
   padding: var(--sd-space-8) var(--sd-space-10) var(--sd-space-12);
   outline: none;
 }
+/* The skip link's target: focused so screen readers and Tab start there; not a control, so no ring around the page. */
+.main:focus {
+  outline: none;
+  box-shadow: none;
+}
 .skip {
   position: absolute;
   left: -9999px;

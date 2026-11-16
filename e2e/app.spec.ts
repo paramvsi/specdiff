@@ -68,3 +68,13 @@ test('A-09 fallback: unsupported language shows a text diff with a notice', asyn
   await page.getByRole('button', { name: 'Compare', exact: true }).click();
   await expect(page.getByText(/Structural diff supports TypeScript, JavaScript, Java and Python/)).toBeVisible();
 });
+
+test('X-05 the skip link moves focus to main without a ring around the whole page', async ({ page }) => {
+  test.skip(test.info().project.name !== 'desktop');
+  await page.goto('/app/');
+  await page.locator('a[href="#main"]').focus();
+  await page.keyboard.press('Enter');
+  const main = page.locator('main#main');
+  await expect(main).toBeFocused();
+  expect(await main.evaluate((m) => [getComputedStyle(m).boxShadow, getComputedStyle(m).outlineStyle])).toEqual(['none', 'none']);
+});
