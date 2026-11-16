@@ -46,6 +46,9 @@ const GROUPS: Array<[string, Array<[string, string[]]>]> = [
   ],
 ];
 
+/** Screen readers read ⌘ ⇧ ⌥ by glyph name ("place of interest"); say the key instead. */
+const SPOKEN: Record<string, string> = { '⌘': 'Command', '⇧': 'Shift', '⌥': 'Option' };
+
 export function Shortcuts() {
   const open = useOverlays((s) => s.shortcuts);
   const set = useOverlays((s) => s.set);
@@ -78,7 +81,16 @@ export function Shortcuts() {
                   <dt>{label}</dt>
                   <dd>
                     {keys.map((k) => (
-                      <Kbd key={k}>{k}</Kbd>
+                      <Kbd key={k}>
+                        {SPOKEN[k] ? (
+                          <>
+                            <span aria-hidden="true">{k}</span>
+                            <span className="sd-visually-hidden">{SPOKEN[k]}</span>
+                          </>
+                        ) : (
+                          k
+                        )}
+                      </Kbd>
                     ))}
                   </dd>
                 </div>
