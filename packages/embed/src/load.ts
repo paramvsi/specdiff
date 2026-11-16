@@ -16,6 +16,7 @@ export function parseSpecText(text: string): object {
   if (t.startsWith('{')) {
     try { return keepWrittenVersion(JSON.parse(t) as object, t); } catch {
       // YAML has no // or /* */ comments and would fold one into the next key; say what is wrong instead.
+      // ponytail: same text as core's openapi/parse.ts, copied not imported: core reaches the embed only via the lazy specdiff-compare.js.
       if (/[{[,]\s*(\/\/|\/\*)/.test(t)) throw new Error('JSON has no comments: remove the // or /* */ comment, or save the spec as YAML and use #.');
       /* otherwise fall through: YAML is a superset */
     }
