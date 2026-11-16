@@ -18,6 +18,10 @@ export function llmText(changes: Change[], title: string): string {
   }
   return lines.join('\n') + '\n';
 }
+/** Open in Claude: the prompt, cut at 6000 characters by code point (a split emoji would make encodeURIComponent throw). */
+export const claudeUrl = (text: string) =>
+  `https://claude.ai/new?q=${encodeURIComponent([...`Explain these API changes and how to migrate:\n\n${text}`].slice(0, 6000).join(''))}`;
+
 export const kb = (s: string) => `${(new Blob([s]).size / 1024).toFixed(1)} KB`;
 const n = (k: number) => `${k} change${k === 1 ? '' : 's'}`;
 
@@ -74,7 +78,7 @@ export function CopyLlmMenu() {
     { title: 'Copy breaking changes for LLM', detail: `${n(breaking.length)} with paths, before, after and rule. ${kb(t.breaking)}.`, icon: <icons.Copy size={15} />, disabled: !breaking.length, onSelect: () => copy(t.breaking) },
     { title: 'Copy all changes for LLM', detail: `${n(all.length)}. ${kb(t.all)}.`, icon: <icons.Copy size={15} />, onSelect: () => copy(t.all) },
     { title: 'Copy current change only', detail: current ? changeDetail(current) : 'Open a change in the Workspace first.', icon: <icons.Layers size={15} />, disabled: !current, onSelect: () => copy(t.current) },
-    { title: 'Open in Claude', detail: 'Starts a chat on claude.ai with the breaking changes. Only when you click.', icon: <icons.ExternalLink size={15} />, disabled: !breaking.length, onSelect: () => { close(); window.open(`https://claude.ai/new?q=${encodeURIComponent(`Explain these API changes and how to migrate:\n\n${t.breaking}`.slice(0, 6000))}`, '_blank', 'noopener,noreferrer'); } },
+    { title: 'Open in Claude', detail: 'Starts a chat on claude.ai with the breaking changes. Only when you click.', icon: <icons.ExternalLink size={15} />, disabled: !breaking.length, onSelect: () => { close(); window.open(claudeUrl(t.breaking), '_blank', 'noopener,noreferrer'); } },
   ];
   const enabled = list.map((x, i) => (x.disabled ? -1 : i)).filter((i) => i >= 0);
   const move = (d: number) => {
