@@ -128,4 +128,13 @@ describe('IN-09 a JSON spec with comments gets a hint about comments', () => {
     expect(r.errors[0]).toMatchObject({ line: 2, column: 3 });
     expect(r.errors[0]!.hint).toMatch(/JSON has no comments/);
   });
+  it('M-21: a commented JSON spec without a .json name is an error, not YAML with the comment folded into a key', async () => {
+    const { parseDocument } = await import('./parse');
+    for (const t of ['{\n  // spec\n  "openapi": "3.1.0"\n}', '{ /* c */ "openapi": "3.1.0" }', '{"openapi": "3.1.0", // trailing\n "paths": {}}']) {
+      const r = parseDocument(t, 'spec');
+      expect(r.value, t).toBeUndefined();
+      expect(r.errors[0]!.hint, t).toMatch(/JSON has no comments/);
+    }
+    expect(parseDocument('{openapi: 3.1.0, servers: [{url: http://x.example}]}', 'spec').value).toMatchObject({ servers: [{ url: 'http://x.example' }] });
+  });
 });

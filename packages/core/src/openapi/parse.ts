@@ -99,6 +99,7 @@ class JsonError extends Error {
   }
 }
 
+const COMMENT_HINT = 'JSON has no comments: remove the // or /* */ comment, or save the spec as YAML and use #.';
 const JSON_HINT = 'Check for a missing or trailing comma, an unquoted key, or a missing closing bracket.';
 
 function parseJson(text: string, index: PositionIndex): unknown {
@@ -114,7 +115,7 @@ function parseJson(text: string, index: PositionIndex): unknown {
   const fail = (msg: string, hint = JSON_HINT): never => {
     // Stopped on a comment (JSONC habits from tsconfig and editor settings): say so.
     const atComment = text.startsWith('//', i) || text.startsWith('/*', i);
-    throw new JsonError(msg, Math.min(i, n), atComment ? 'JSON has no comments: remove the // or /* */ comment, or save the spec as YAML and use #.' : hint);
+    throw new JsonError(msg, Math.min(i, n), atComment ? COMMENT_HINT : hint);
   };
   const str = (): string => {
     const start = ++i; // after the opening quote
@@ -353,9 +354,10 @@ export function parseDocument(content: string, file = 'input'): ParsedDocument {
       const err = e instanceof JsonError ? e : new JsonError(String(e), 0, JSON_HINT);
       const jsonErrors = [{ ...index.lineCol(err.offset), message: err.message, hint: err.hint }];
       // A YAML flow mapping also starts with "{": accept it when it is valid YAML, unless the
-      // file says it is JSON (then a trailing comma is an error worth showing).
+      // file says it is JSON (then a trailing comma is an error worth showing). Not after a comment:
+      // YAML has no // or /* */ and would fold the comment into the next key.
       result = { value: undefined, errors: jsonErrors, rootOffset: 0 };
-      if (!/\.json$/i.test(file)) {
+      if (!/\.json$/i.test(file) && err.hint !== COMMENT_HINT) {
         const yamlIndex = new PositionIndex(text);
         const y = parseYaml(text, yamlIndex);
         if (y.errors.length === 0) {
