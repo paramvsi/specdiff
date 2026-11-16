@@ -522,7 +522,7 @@ test('JS-08 the Markdown export lists every change; JSON Patch says it round-tri
   await page.getByRole('radio', { name: /^Markdown/ }).click();
   await expect(preview).toContainText('flags.prod.changes.md · 7 changes');
   await expect(preview).toContainText('7 changes: 1 added, 1 removed, 2 changed, 1 type changed, 1 moved.');
-  await expect(preview).toContainText('| ~ | limits › timeoutMs | `30000` → `45000` |');
+  await expect(preview).toContainText('| ~ | `limits › timeoutMs` | `30000` → `45000` |');
   const { name } = await download(page, () => preview.getByRole('button', { name: 'Download' }).click());
   expect(name).toMatch(/\.md$/);
 });

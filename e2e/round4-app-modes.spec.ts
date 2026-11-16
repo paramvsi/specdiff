@@ -191,7 +191,7 @@ test.describe('A07 JSON', () => {
     const preview = page.getByRole('region', { name: 'Export preview' });
     await expect(preview).toContainText('| | Path | Change |');
     await expect(preview).toContainText('| --- | --- | --- |');
-    await expect(preview).toContainText('| ~ | limits › timeoutMs | `30000` → `45000` |');
+    await expect(preview).toContainText('| ~ | `limits › timeoutMs` | `30000` → `45000` |');
   });
 
   test('JsonTree: every change is one line; JSONPath stays on the copy button (JS-05)', async ({ page }) => {
