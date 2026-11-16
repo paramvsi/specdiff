@@ -108,3 +108,31 @@ Claude Code adds rows here when it takes a default without the owner.
 | B-14 | Keep the three severities as docs/06 lists them (rule 10: default severities don't change) |
 | B-21 | Lighthouse is run ad hoc with `npx lighthouse` (not a repo dependency) against the production preview; the scores are recorded in `docs/audit/lighthouse.md`. Visual baselines are locked after the round-4 design fixes, and the round-4 screen audit counts as the review by eye (B-3) |
 | B-27 – B-38 | Accepted as recorded above |
+
+## Owner rulings (2026-11-16, overnight audit M-1 … M-21)
+
+Source: owner's reply to `docs/audit/overnight-2026-11-16.md` § Morning decisions. Plan and progress: `docs/audit/morning-2026-11-16.md`.
+
+| # | Ruling |
+|---|---|
+| M-7 | Changing `style`, `explode` or `allowReserved` on a request parameter is **B**. Writing out the default explicitly is not a change. Response headers: **P** |
+| M-8 | `dependentRequired` / `dependentSchemas`: request side, adding a dependency or a property to one is **B**, removing is **S**. Response side, removing is **P**, adding is **S**. `if`/`then`/`else` changes: **P** |
+| M-9 | Operation dropped its auth requirement: **S**, tagged security, always shown in the summary's Security area and the changelog, visible when docs-only is hidden. A different scheme or scope set stays **B** |
+| M-17 | Discriminator: `propertyName` changed, or a mapping value removed or repointed: **B** both directions. Mapping value added: **S** in requests, **P** in responses. Discriminator added or removed with the `oneOf`/`anyOf` unchanged: **P** |
+| M-18 | `deprecated: true` on a parameter or field: **S** (as `endpoint-deprecated`), changelog section Deprecated. Removing a deprecated param/field follows severity-law rule 6 (`x-sunset`) |
+| M-10 | Webhooks and callbacks are both API → consumer calls: their request bodies use **response** rules, their responses use **request** rules. A payload property removed is **B** for both. docs/06 and fixtures updated |
+| M-6 | Properties next to a `$ref` are reported where they were written. Shared-schema dedup applies only when the component itself changed |
+| M-21 | One loader: embed, React, Express/Fastify and the Spring Boot starter use core's load → parse → normalise → deref pipeline and options; only input sources differ. A test proves the app loader and the embed give an identical report |
+| M-20 | "Copy link to this change" copies a full share link (Share with "Open on the current change"). Over the size limit: same warning and the `.specdiff.json` file. The hash-only anchor stays for in-tab back/forward |
+| M-14 | A link never overwrites saved settings. The sender's rules apply to that comparison only, with a banner "Using the sender's rules · Use my rules · Save theirs as mine" |
+| M-15 | Exports and copy stay allowed on phones. Banner copy: "View-only on phones. Open on a larger screen to edit or review." |
+| M-3 | No page scrolls sideways (code panes excepted). Below 720 px, History rows are stacked cards: mode badge and file names on two lines, result, time; pin and delete in an overflow menu, 44 px targets |
+| M-16 | Below 720 px, Markdown "Side by side" becomes a Before / After toggle; Rendered stays the default |
+| M-11 | Every website page (Docs, Rules, Rule detail, Changelog, 404) uses the Home v2 floating nav (compact on phones) and the v2 footer; page content kept |
+| M-19 | No placeholders. The changelog page is generated from the Changesets CHANGELOG.md files, real releases only. A website build check fails on `[Launch date]`, `[date]` or any `[UPPER CASE]` placeholder. Launch date given at publish (supersedes D-13) |
+| M-2 | Numbers compared losslessly from normalised source text (sign, leading zeros, trailing fractional zeros, exponent), as decimals/BigInt, never via JS number. Numeric tolerance only inside the safe-integer range |
+| M-4 | "Treat Unicode variants as equal" (NFC before comparing), default on for Text, Markdown and JSON/YAML values; config `unicodeNormalize: true`. JSON keys: normalised for matching; a key whose only change is normalisation is docs-only |
+| M-5 | Passphrases always NFC-normalised before PBKDF2, no option, no trimming |
+| M-1 | Interactive/local: follow relative `$ref`s inside a remote file, against that file's URL, same host only, max 50 files / 25 MB. Cross-host needs `--allow-external-refs`. `--ci`: no remote refs without `--allow-external-refs` |
+| M-13 | One escaper for every spec string entering Markdown, PR-comment or Slack exports: identifiers, paths and versions in code spans; free text Markdown-escaped; `@` and `#` defused with a zero-width joiner; URLs as plain text; Slack also escapes `< > &` and neutralises `@here`, `@channel`, `@everyone`. Tests with hostile input |
+| M-12 | No redo. While working on a step, run only the tests for the changed area; run `pnpm verify` at the end of each step or phase and before a push |
