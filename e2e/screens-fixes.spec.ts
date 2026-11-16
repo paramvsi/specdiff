@@ -67,25 +67,26 @@ test('IN-08 A-02: a large spec shows five steps that progress one by one; the he
   expect(seen.some((s) => /(Resolve \$refs|Normalise|Compare and classify)=running/.test(s))).toBe(true);
 });
 
-// Wall-clock threshold: a loaded machine can push even a tiny compare past it, so retry (X-02).
-test.describe(() => {
-  test.describe.configure({ retries: 2 });
-  test('IN-08: a quick comparison never flashes the Parsing screen', async ({ page }) => {
-    // Production build: the dev server compiles the worker on first use, which is slow under parallel load.
-    await page.goto('http://localhost:4173/app/');
-    await page.evaluate(() => {
-      const w = window as unknown as { __flash: boolean };
-      w.__flash = false;
-      new MutationObserver(() => {
-        if (document.body.textContent?.includes('Preparing your comparison')) w.__flash = true;
-      }).observe(document.body, { childList: true, subtree: true, characterData: true });
-    });
-    await page.getByRole('textbox', { name: 'Before' }).fill('a\nb\n');
-    await page.getByRole('textbox', { name: 'After' }).fill('a\nc\n');
-    await page.getByRole('button', { name: 'Compare', exact: true }).click();
-    await expect(page.getByRole('heading', { name: /lines differ/ })).toBeVisible();
-    expect(await page.evaluate(() => (window as unknown as { __flash: boolean }).__flash)).toBe(false);
+test('IN-08: a quick comparison never flashes the Parsing screen', async ({ page }) => {
+  // Production build: the dev server compiles the worker on first use, which is slow under parallel load.
+  // A fake page clock holds the 300 ms timer, so a loaded machine cannot make a small compare "slow".
+  await page.clock.install();
+  await page.goto('http://localhost:4173/app/');
+  await page.evaluate(() => {
+    const w = window as unknown as { __flash: boolean };
+    w.__flash = false;
+    new MutationObserver(() => {
+      if (document.body.textContent?.includes('Preparing your comparison')) w.__flash = true;
+    }).observe(document.body, { childList: true, subtree: true, characterData: true });
   });
+  await page.getByRole('textbox', { name: 'Before' }).fill('a\nb\n');
+  await page.getByRole('textbox', { name: 'After' }).fill('a\nc\n');
+  await page.getByRole('button', { name: 'Compare', exact: true }).click();
+  await expect(page.getByRole('heading', { name: /lines differ/ })).toBeVisible();
+  // The timer fires after the result: it must not switch to the Parsing screen.
+  await page.clock.runFor(1000);
+  await expect(page.getByRole('heading', { name: /lines differ/ })).toBeVisible();
+  expect(await page.evaluate(() => (window as unknown as { __flash: boolean }).__flash)).toBe(false);
 });
 
 // ---------------------------------------------------------------- IN-11 / O-13
