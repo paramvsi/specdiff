@@ -77,7 +77,7 @@ IndexedDB via idb-keyval: history (with pinning), saved sources and their last s
 
 - All input is untrusted. Markdown is sanitised (rehype-sanitize, GitHub schema). No `eval`, no `new Function`, no `innerHTML` from user content.
 - URL loading uses `fetch` from the browser; CORS failures are explained, never proxied by us.
-- The CLI does not fetch remote `$ref` URLs in `--ci` mode unless `--allow-external-refs` is given, refuses git revisions starting with `-`, and passes `--end-of-options` to every git call.
+- The CLI does not fetch remote `$ref` URLs in `--ci` mode unless `--allow-external-refs` is given (then every host). In the local UI it fetches them and follows relative `$ref`s inside a fetched file on the same host; other hosts need the flag (M-1). At most 50 files and 25 MB in all. It refuses git revisions starting with `-`, and passes `--end-of-options` to every git call.
 - Content Security Policy on website and app: no inline scripts, `connect-src` limited to what the user loads.
 - No analytics on content. At launch, no analytics at all.
 

@@ -54,7 +54,7 @@ The report goes to standard output (or `--out`); the summary above goes to stand
 | `--fail-on` | `breaking`, `possibly`, `missing-version-bump`, `none` | `failOn` from `.specdiff.yaml`, else `breaking` |
 | `--format` | `md`, `json`, `html` | `md` |
 | `--config` | path to a `.specdiff.yaml` | `./.specdiff.yaml`, then the repo root |
-| `--allow-external-refs` | | Off: remote `$ref` URLs are not fetched in `--ci` mode |
+| `--allow-external-refs` | | Off. In `--ci` mode remote `$ref` URLs are not fetched without it. In the local UI remote `$ref`s are fetched, and relative ones inside them on the same host; this flag also follows refs to other hosts. At most 50 files and 25 MB |
 | `--out` | file to write the report to | standard output |
 
 Exit code 0 means nothing failed the gate, 1 means it did, and 2 means a usage or input error (a missing file, a file that does not parse, an invalid `.specdiff.yaml`). Accepted [review decisions](/docs/review/) don’t fail it; rejected ones always do.

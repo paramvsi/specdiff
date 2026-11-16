@@ -27,7 +27,9 @@ export async function runCi(beforeArg: string, afterArg: string, o: CiOptions, i
   if (o.allowExternalRefs) {
     for (const side of [before, after]) {
       side.files ??= {};
-      await prefetchRemoteRefs([side.content, ...Object.values(side.files)], side.files);
+      // --allow-external-refs in --ci: every host (M-1); still at most 50 files / 25 MB.
+      const { skipped } = await prefetchRemoteRefs([side.content, ...Object.values(side.files)], side.files, { allowCrossHost: true });
+      for (const s of skipped) io.err(`Not fetched: ${s}`);
     }
   }
   const report = compareOpenApi(before, after, config);

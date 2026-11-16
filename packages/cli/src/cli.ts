@@ -4,6 +4,7 @@ import { Command, InvalidArgumentError, Option } from 'commander';
 import pc from 'picocolors';
 import { reportJsonSchema } from '@specdiff/core';
 import { buildHistory } from './history';
+import { prefetchRemoteRefs } from './remote';
 import { readInput } from './inputs';
 import { gitDiffDriver, runChangelog, runCi, type ChangelogCliOptions } from './run';
 import { serveLocal } from './serve';
@@ -28,7 +29,7 @@ program
   .addOption(new Option('--format <format>', 'report format').choices(['md', 'json', 'html']).default('md'))
   .addOption(new Option('--fail-on <level>', 'when to exit 1 (default from .specdiff.yaml, else breaking)').choices(['breaking', 'possibly', 'missing-version-bump', 'none']))
   .option('--config <file>', 'path to .specdiff.yaml')
-  .option('--allow-external-refs', 'fetch remote $ref URLs (off in --ci mode by default)')
+  .option('--allow-external-refs', 'fetch remote $refs on other hosts too (in --ci mode: fetch remote $refs at all)')
   .option('--out <file>', 'write the report to a file')
   .option('--no-open', 'with the local UI: print the URL instead of opening a browser')
   .option('--port <port>', 'with the local UI: port to listen on', whole)
@@ -39,7 +40,15 @@ program
         process.exitCode = await runCi(pair[0]!, pair[1]!, { format: o.format, ...(o.failOn ? { failOn: o.failOn } : {}), ...(o.config ? { config: o.config } : {}), allowExternalRefs: !!o.allowExternalRefs, ...(o.out ? { out: o.out } : {}), quiet: !afterArg }, io);
         return;
       }
-      const url = await serveLocal(readInput(pair[0]!), readInput(pair[1]!), { open: o.open, ...(o.port ? { port: o.port } : {}) });
+      const sides = [readInput(pair[0]!), readInput(pair[1]!)] as const;
+      // M-1, local UI: remote $refs are fetched, and relative ones inside them on the same host;
+      // another host needs --allow-external-refs.
+      for (const side of sides) {
+        side.files ??= {};
+        const { skipped } = await prefetchRemoteRefs([side.content, ...Object.values(side.files)], side.files, { allowCrossHost: !!o.allowExternalRefs });
+        for (const s of skipped) io.err(`Not fetched: ${s}`);
+      }
+      const url = await serveLocal(sides[0], sides[1], { open: o.open, ...(o.port ? { port: o.port } : {}) });
       io.err(`${pc.bold('specdiff')} is running at ${url}\nPress Ctrl+C to stop.`);
     } catch (e) {
       const msg = (e as Error).message ?? String(e);

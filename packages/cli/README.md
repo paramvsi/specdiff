@@ -17,7 +17,7 @@ Installed (`npm i -D specdiff-cli`), the command is `specdiff`.
 | `--format md\|json\|html` | Report format (default `md`). JSON follows the published report schema |
 | `--fail-on breaking\|possibly\|missing-version-bump\|none` | When to exit 1 (default from `.specdiff.yaml`, else `breaking`) |
 | `--config <file>` | `.specdiff.yaml` to use (default: `./.specdiff.yaml`, then the repo root) |
-| `--allow-external-refs` | Fetch remote `$ref` URLs. Off by default in `--ci` |
+| `--allow-external-refs` | In `--ci`: fetch remote `$ref` URLs (off by default). In the local UI: also follow refs to other hosts (same-host refs are followed anyway). At most 50 files / 25 MB |
 | `--out <file>` | Write the report to a file |
 
 Inputs are file paths or git `rev:path` (`main:openapi.yaml`, `v1.5.0:api/openapi.yaml`). Revisions that start with `-` are refused.
