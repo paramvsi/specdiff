@@ -303,3 +303,14 @@ test('V-04 My endpoints rows fit a phone: call counts are not clipped (VW-10) @p
   expect(rows.length).toBeGreaterThan(0);
   expect(rows.filter((r) => !r.fits || r.box < 18)).toEqual([]);
 });
+
+test('V-02 the page column is focused on navigation without a ring around it (V02-Deprecated)', async ({ page }) => {
+  await ready(page, H);
+  // Keyboard navigation, the case where :focus-visible applies to the focused column.
+  await page.getByRole('link', { name: /Retrieve a refund/ }).first().focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('heading', { level: 1, name: 'Retrieve a refund' })).toBeVisible();
+  const main = page.getByRole('main');
+  await expect(main).toBeFocused();
+  expect(await main.evaluate((m) => [getComputedStyle(m).boxShadow, getComputedStyle(m).outlineStyle])).toEqual(['none', 'none']);
+});

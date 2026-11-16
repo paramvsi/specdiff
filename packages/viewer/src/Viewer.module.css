@@ -182,8 +182,11 @@
 .main {
   min-width: 0;
 }
+/* The column is focused after each navigation so screen readers start there; it is not a control, so no ring
+   (the global :focus-visible ring is a box-shadow). */
 .main:focus {
   outline: none;
+  box-shadow: none;
 }
 .asideCol {
   position: sticky;
