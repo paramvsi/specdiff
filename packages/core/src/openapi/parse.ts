@@ -156,6 +156,11 @@ function parseJson(text: string, index: PositionIndex): unknown {
         if (text.charCodeAt(i) !== 34) fail('Expected a quoted key', 'Keys in JSON must be in double quotes, and no trailing comma.');
         const keyStart = i;
         const key = str();
+        // As in YAML: a repeated key is an error, not a silent last-one-wins (often a copy-pasted path).
+        if (Object.hasOwn(obj, key)) {
+          i = keyStart;
+          fail(`Map keys must be unique: ${JSON.stringify(key)} appears twice in this object`, 'Remove or rename one of them; JSON readers keep only the last.');
+        }
         ws();
         if (text.charCodeAt(i) !== 58) fail('Expected a colon after the key');
         i++;

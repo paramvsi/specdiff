@@ -104,3 +104,12 @@ describe('hash helpers', () => {
     expect(fnv1a64('foobar')).toBe('85944171f73967e8');
   });
 });
+
+describe('OA-01 duplicate keys in an OpenAPI JSON file', () => {
+  it('are an error at the second key, as in YAML, not a silent last-one-wins', async () => {
+    const { parseDocument } = await import('./parse');
+    const text = '{\n  "paths": {\n    "/a": { "get": {} },\n    "/a": { "post": {} }\n  }\n}';
+    const r = parseDocument(text, 'b.json');
+    expect(r.errors.map((e) => [e.line, e.message])).toEqual([[4, 'Map keys must be unique: "/a" appears twice in this object']]);
+  });
+});
