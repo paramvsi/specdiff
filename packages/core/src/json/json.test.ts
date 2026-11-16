@@ -92,6 +92,14 @@ describe('parse', () => {
     for (let i = 0; i < 20000; i++) { deep = [deep]; deep2 = [deep2]; }
     expect(() => diffJson(deep, deep2, Config.parse({}).json)).toThrow(/nested too deeply/i);
   });
+  it('reads JSON with comments (JSONC: tsconfig, VS Code settings) instead of folding them into keys', () => {
+    const r = parse('{\n  // the base URL\n  "url": "https://x.example/v1", /* inline */ "n": 1,\n}');
+    expect(r.value).toEqual({ url: 'https://x.example/v1', n: 1 });
+    expect(r.positions.get('$.url')).toEqual({ line: 3, column: 3 });
+  });
+  it('leaves YAML whose flow mapping holds an unquoted URL alone', () => {
+    expect(parse('{a: http://x.example}').value).toEqual({ a: 'http://x.example' });
+  });
   it('explains a file with several YAML documents', () => {
     const r = parseWithPositions('a: 1\n---\nb: 2\n');
     expect('error' in r && r.error.hint).toMatch(/one document/i);

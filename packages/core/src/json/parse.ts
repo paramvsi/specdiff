@@ -26,7 +26,27 @@ function hintFor(code: string, message: string): string {
   return 'Fix the syntax on this line and compare again.';
 }
 
+/**
+ * JSON with comments (JSONC: tsconfig, VS Code settings). YAML, which reads the file, has no `//` or `/* *\/` comments
+ * and would fold them into keys. Comments outside strings become spaces (lines and columns stay put); the result is
+ * used only if it is then plain JSON (trailing commas allowed), so YAML that merely contains `//` is left alone.
+ */
+function withoutJsonComments(text: string): string {
+  if (!/^\s*[{[]/.test(text) || !/\/[/*]/.test(text)) return text;
+  let out = '', i = 0, inString = false;
+  while (i < text.length) {
+    const c = text[i]!;
+    if (inString) { out += c; if (c === '\\') { out += text[i + 1] ?? ''; i += 2; continue; } if (c === '"') inString = false; i++; continue; }
+    if (c === '"') { inString = true; out += c; i++; continue; }
+    if (c === '/' && text[i + 1] === '/') { while (i < text.length && text[i] !== '\n') { out += text[i] === '\r' ? '\r' : ' '; i++; } continue; }
+    if (c === '/' && text[i + 1] === '*') { const end = text.indexOf('*/', i + 2); const stop = end < 0 ? text.length : end + 2; for (; i < stop; i++) out += text[i] === '\n' || text[i] === '\r' ? text[i] : ' '; continue; }
+    out += c; i++;
+  }
+  try { JSON.parse(out.replace(/,(\s*[}\]])/g, '$1')); return out; } catch { return text; }
+}
+
 export function parseWithPositions(content: string): Parsed | { error: ParseError } {
+  content = withoutJsonComments(content);
   const lc = new LineCounter();
   const doc = parseDocument(content, { lineCounter: lc, uniqueKeys: false, prettyErrors: false, strict: false, merge: true });
   const err = doc.errors[0];
