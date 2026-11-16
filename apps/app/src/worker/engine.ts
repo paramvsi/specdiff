@@ -30,8 +30,8 @@ export async function runCompare(
   if (mode === 'markdown') {
     onProgress({ step: 'parse', state: 'done', detail: 'GitHub-flavoured Markdown' });
     onProgress({ step: 'compare', state: 'running' });
-    const markdown = diffMarkdown(req.before.content, req.after.content);
-    const text = diffText(req.before.content, req.after.content, config.text);
+    const markdown = diffMarkdown(req.before.content, req.after.content, { unicodeNormalize: config.unicodeNormalize });
+    const text = diffText(req.before.content, req.after.content, { ...config.text, unicodeNormalize: config.unicodeNormalize });
     onProgress({ step: 'compare', state: 'done' });
     return { mode: 'markdown', detected: pair.mode, markdown, text };
   }
@@ -42,14 +42,14 @@ export async function runCompare(
     const id = code.language ?? pair.language ?? a.language ?? b.language;
     const language = id ? (LANGUAGE_NAMES[id] ?? id[0]!.toUpperCase() + id.slice(1)) : undefined;
     onProgress({ step: 'parse', state: 'done', ...(language ? { detail: language } : {}) });
-    const text = diffText(req.before.content, req.after.content, config.text);
+    const text = diffText(req.before.content, req.after.content, { ...config.text, unicodeNormalize: config.unicodeNormalize });
     onProgress({ step: 'compare', state: 'done' });
     return { mode: 'code', detected: pair.mode, code: code.outcome, text, ...(language ? { language } : {}) };
   }
   onProgress({ step: 'parse', state: 'done' });
   onProgress({ step: 'compare', state: 'running' });
   // TX-11: text mode detects moved blocks; TX-12: a side rebuilt from a patch gets its real line numbers back.
-  const diff = diffText(req.before.content, req.after.content, config.text, { moves: true });
+  const diff = diffText(req.before.content, req.after.content, { ...config.text, unicodeNormalize: config.unicodeNormalize }, { moves: true });
   const text =
     req.before.patch && req.after.patch ? layoutPatch(diff, req.before.patch, req.after.patch) : diff;
   onProgress({ step: 'compare', state: 'done' });

@@ -219,3 +219,19 @@ describe('M-2 numbers are compared by their source text, not as JS numbers', () 
     expect([typeof c.before, typeof c.after]).toEqual(['number', 'number']);
   });
 });
+
+
+describe('M-4 Unicode variants in JSON/YAML (NFC)', () => {
+  it('values equal after NFC are unchanged, unless the option is off', () => {
+    expect(diffJson({ a: 'café' }, { a: 'café' }, o()).changes).toEqual([]);
+    expect(diffJson(['café'], ['café'], o()).changes).toEqual([]);
+    expect(diffJson({ a: 'café' }, { a: 'café' }, { ...o(), unicodeNormalize: false }).changes.map((c) => c.kind)).toEqual(['changed']);
+  });
+  it('a key whose only change is normalisation is matched, and reported as a docs-only rename', () => {
+    const d = diffJson({ 'café': 1 }, { 'café': 2 }, o());
+    expect(d.changes.map((c) => [c.kind, c.before, c.after])).toEqual([['renamed', 'café', 'café'], ['changed', 1, 2]]);
+    const pa = parseWithPositions('{"café": 1}') as Parsed, pb = parseWithPositions('{"café": 1}') as Parsed;
+    const changes = toChanges(diffJson(pa.value, pb.value, o()), pa, pb, { before: 'a.json', after: 'b.json' }, 'json');
+    expect(changes.map((c) => [c.kind, c.severity])).toEqual([['renamed', 'docs']]);
+  });
+});

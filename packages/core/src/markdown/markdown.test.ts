@@ -148,3 +148,11 @@ describe('MD-03 anchors', () => {
     expect(d.brokenAnchors.map((a) => a.anchor)).toEqual(['save-50%']);
   });
 });
+
+
+describe('M-4 Unicode variants are equal by default (NFC)', () => {
+  it('a heading typed with a decomposed é is unchanged, unless the option is off', () => {
+    expect(diffMarkdown('# Café\n', '# Café\n').stats).toEqual({ added: 0, removed: 0, edited: 0 });
+    expect(diffMarkdown('# Café\n', '# Café\n', { unicodeNormalize: false }).stats.edited + diffMarkdown('# Café\n', '# Café\n', { unicodeNormalize: false }).stats.added).toBeGreaterThan(0);
+  });
+});

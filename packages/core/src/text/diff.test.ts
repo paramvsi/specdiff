@@ -152,3 +152,13 @@ describe('TX-03 highlights never split a character as people see it (grapheme cl
     expect(marked('café ok', 'cafè ok', p)).toEqual(['é', 'è']);
   });
 });
+
+
+describe('M-4 Unicode variants are equal by default (NFC)', () => {
+  const t = Config.parse({}).text;
+  it('é typed composed or as e + U+0301 is the same line, unless the option is off', () => {
+    expect(diffText('café\n', 'café\n', t).identical).toBe(true);
+    expect(diffText('café\n', 'café\n', { ...t, unicodeNormalize: false }).identical).toBe(false);
+    expect(Config.parse({}).unicodeNormalize).toBe(true);
+  });
+});

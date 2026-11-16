@@ -2,7 +2,7 @@
 import { diffArrays, diffChars, diffWordsWithSpace } from 'diff';
 import type { Config, TextFilter } from '../schemas';
 
-export type TextOptions = Config['text'];
+export type TextOptions = Config['text'] & { /** M-4, default on. */ unicodeNormalize?: boolean };
 export type SegKind = 'same' | 'add' | 'del';
 export interface Seg { text: string; kind: SegKind }
 export interface Side { n: number; segs: Seg[] }
@@ -158,6 +158,7 @@ export function diffText(before: string, after: string, opts: TextOptions, extra
   // jsdiff's ignoreWhitespace only trims ends; "ignore whitespace" here means any run of whitespace is equal.
   const norm = (l: string) => {
     let t = opts.ignoreWhitespace ? l.replace(/\s+/g, ' ').trim() : l;
+    if (opts.unicodeNormalize !== false) t = t.normalize('NFC');
     if (opts.ignoreCase) t = t.toLowerCase();
     return t;
   };

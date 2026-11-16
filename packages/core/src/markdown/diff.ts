@@ -299,7 +299,8 @@ const frontMatterAsCode = (s: string): string =>
   // Only when it reads as YAML (a `key:` line): a document may also open with a thematic break.
   s.replace(FRONT_MATTER, (m: string, nl: string, body: string) => (/^[\w"'-][^\n]*:(\s|$)/m.test(body) ? `~~~~yaml${nl}${body}${nl}~~~~` : m));
 
-export function diffMarkdown(before: string, after: string): MdDiff {
+export function diffMarkdown(before: string, after: string, opts: { /** M-4, default on. */ unicodeNormalize?: boolean } = {}): MdDiff {
+  if (opts.unicodeNormalize !== false) { before = before.normalize('NFC'); after = after.normalize('NFC'); }
   const a = parser.parse(frontMatterAsCode(before)).children;
   const b = parser.parse(frontMatterAsCode(after)).children;
   const parts = diffArrays(a.map(signature), b.map(signature));

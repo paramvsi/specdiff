@@ -85,6 +85,7 @@ text:
   filters:
     - { name: Timestamps, pattern: '\d{4}-\d{2}-\d{2}T[\d:.]+Z', replace: '‹time›' }
     - { name: Request IDs, pattern: 'req_[a-z0-9]{8,}', replace: '‹req-id›' }
+unicodeNormalize: true       # é typed as one character or as e + accent compares equal (text, Markdown, JSON/YAML)
 decisions: .specdiff/decisions.json
 ```
 

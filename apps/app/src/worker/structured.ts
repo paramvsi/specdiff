@@ -26,6 +26,7 @@ export async function compareStructured(
       minified ? (prettyJson(value, content) ?? content) : content;
     return diffText(side(req.before.content, values?.before), side(req.after.content, values?.after), {
       ...config.text,
+      unicodeNormalize: config.unicodeNormalize,
       filters: [],
       transforms: [],
     });
@@ -40,7 +41,7 @@ export async function compareStructured(
   if ('error' in b) return fail('after', b.error, req.after.content);
   onProgress({ step: 'parse', state: 'done', detail: 'both files, positions kept' });
   onProgress({ step: 'compare', state: 'running' });
-  const diff = diffJson(a.value, b.value, config.json, { before: a.exactNumbers, after: b.exactNumbers });
+  const diff = diffJson(a.value, b.value, { ...config.json, unicodeNormalize: config.unicodeNormalize }, { before: a.exactNumbers, after: b.exactNumbers });
   const changes = toChanges(
     diff,
     a,

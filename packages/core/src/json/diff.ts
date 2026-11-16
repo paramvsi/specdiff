@@ -4,7 +4,7 @@ import { jsonPathKey, type Parsed } from './parse';
 import { byCodePoint } from '../order';
 import { ExactNumber } from './numbers';
 
-export type JsonOptions = Config['json'];
+export type JsonOptions = Config['json'] & { /** M-4, default on. */ unicodeNormalize?: boolean };
 type Json = null | boolean | number | string | Json[] | { [k: string]: Json };
 
 export interface JsonChange {
@@ -90,11 +90,32 @@ function diffJsonUnchecked(a: unknown, b: unknown, o: JsonOptions): JsonDiff {
     return Math.abs(x - y) <= o.numberTolerance;
   };
 
+  const nfc = o.unicodeNormalize === false ? (s: string) => s : (s: string) => s.normalize('NFC');
+
+  /** After-side keys that are an unmatched Before key in another Unicode form (one each way), → that Before key. */
+  const keyAliases = (x: Record<string, Json>, y: Record<string, Json>): Map<string, string> => {
+    const out = new Map<string, string>();
+    if (o.unicodeNormalize === false) return out;
+    let xForms: Map<string, string | null> | undefined, yForms: Map<string, number> | undefined;
+    for (const k of Object.keys(y)) {
+      if (Object.hasOwn(x, k)) continue;
+      if (!xForms || !yForms) {
+        xForms = new Map(); yForms = new Map();
+        for (const xk of Object.keys(x)) { const n = nfc(xk); xForms.set(n, xForms.has(n) ? null : xk); }
+        for (const yk of Object.keys(y)) { const n = nfc(yk); yForms.set(n, (yForms.get(n) ?? 0) + 1); }
+      }
+      const xk = xForms.get(nfc(k));
+      if (xk && !Object.hasOwn(y, xk) && yForms.get(nfc(k)) === 1) out.set(k, xk);
+    }
+    return out;
+  };
+
   const equal = (x: unknown, y: unknown): boolean => {
     if (typeOf(x) === 'number' && typeOf(y) === 'number') return eqNum(x as number | ExactNumber, y as number | ExactNumber);
     if (typeOf(x) !== typeOf(y)) return false;
     if (Array.isArray(x)) return stableIgnoring(x) === stableIgnoring(y);
     if (isObj(x)) return stableIgnoring(x) === stableIgnoring(y);
+    if (typeof x === 'string' && typeof y === 'string') return nfc(x) === nfc(y);
     return x === y;
   };
   // `canon` ignores key order (used to pool array items by value); `stableIgnoring` respects key
@@ -104,9 +125,12 @@ function diffJsonUnchecked(a: unknown, b: unknown, o: JsonOptions): JsonDiff {
       if (Array.isArray(v)) return `[${v.map(h).join(',')}]`;
       if (isObj(v)) {
         const keys = Object.keys(v).filter((k) => !ignore.has(k));
-        return `{${(sortKeys ? keys.sort() : keys).map((k) => `${JSON.stringify(k)}:${h(v[k])}`).join(',')}}`;
+        const entries = keys.map((k) => [k, v[k]] as const); // keys as written: a key in another form is a rename to report
+        if (sortKeys) entries.sort((p, q) => (p[0] < q[0] ? -1 : p[0] > q[0] ? 1 : 0));
+        return `{${entries.map(([k, x]) => `${JSON.stringify(k)}:${h(x)}`).join(',')}}`;
       }
       if (v instanceof ExactNumber) return `#${v.text}`;
+      if (typeof v === 'string') return JSON.stringify(nfc(v));
       return JSON.stringify(v) ?? 'undefined';
     };
     return h;
@@ -123,18 +147,23 @@ function diffJsonUnchecked(a: unknown, b: unknown, o: JsonOptions): JsonDiff {
       return;
     }
     if (isObj(x) && isObj(y)) {
-      const keys = [...new Set([...Object.keys(x), ...Object.keys(y)])].filter((k) => !ignore.has(k)).sort();
+      // M-4: a key spelled with another Unicode form on the After side is the same key, renamed (docs only).
+      const alias = keyAliases(x, y);
+      // fromEntries defines own keys, so a key named __proto__ stays a key.
+      const yo: Record<string, Json> = alias.size ? Object.fromEntries(Object.entries(y).map(([k, v]) => [alias.get(k) ?? k, v])) : y;
+      const keys = [...new Set([...Object.keys(x), ...Object.keys(yo)])].filter((k) => !ignore.has(k)).sort();
+      for (const [after, before] of alias) changes.push({ kind: 'renamed', jsonPath: jsonPathKey(path, before), before, after });
       for (const k of keys) {
         const p = jsonPathKey(path, k), s = jsonPathKey(shape, k);
-        const inX = Object.hasOwn(x, k), inY = Object.hasOwn(y, k);
+        const inX = Object.hasOwn(x, k), inY = Object.hasOwn(yo, k);
         if (inX && !inY) { if (!(o.nullEqualsMissing && x[k] === null)) push({ kind: 'removed', jsonPath: p, before: x[k] }, x[k] === null); }
-        else if (!inX && inY) { if (!(o.nullEqualsMissing && y[k] === null)) push({ kind: 'added', jsonPath: p, after: y[k] }, y[k] === null); }
-        else walk(x[k], y[k], p, s);
+        else if (!inX && inY) { if (!(o.nullEqualsMissing && yo[k] === null)) push({ kind: 'added', jsonPath: p, after: yo[k] }, yo[k] === null); }
+        else walk(x[k], yo[k], p, s);
       }
       if (!o.ignoreKeyOrder) {
         // JS-01: keys whose position changed among the keys both sides share (LIS: the fewest moves).
         const common = (obj: Record<string, Json>, other: Record<string, Json>) => Object.keys(obj).filter((k) => !ignore.has(k) && Object.hasOwn(other, k));
-        const cx = common(x, y), cy = common(y, x);
+        const cx = common(x, yo), cy = common(yo, x);
         const keep = stayed(cx, cy);
         for (const k of cx) if (!keep.has(k)) changes.push({ kind: 'moved', jsonPath: jsonPathKey(path, k), before: cx.indexOf(k), after: cy.indexOf(k) });
       }
@@ -149,7 +178,7 @@ function diffJsonUnchecked(a: unknown, b: unknown, o: JsonOptions): JsonDiff {
     const key = detectMatchKey(x, y, o.arrayMatchKey);
     if (key) {
       matchKeys[s] = key;
-      const idx = (arr: unknown[]) => new Map(arr.map((it, i) => [String((it as Record<string, Json>)[key]), i] as const));
+      const idx = (arr: unknown[]) => new Map(arr.map((it, i) => [nfc(String((it as Record<string, Json>)[key])), i] as const));
       const ix = idx(x), iy = idx(y);
       // Order of the common items on each side, to tell real moves from shifts.
       const commonX = [...ix.keys()].filter((k) => iy.has(k));
@@ -233,6 +262,8 @@ export function toChanges(d: JsonDiff, before: Parsed, after: Parsed, files: { b
       },
       ...(c.before !== undefined ? { before: c.before } : {}),
       ...(c.after !== undefined ? { after: c.after } : {}),
+      // M-4: a key that only changed Unicode form.
+      ...(c.kind === 'renamed' ? { severity: 'docs' as const } : {}),
     };
   });
   out.sort((x, y) => line(x) - line(y) || byCodePoint(x.jsonPath!, y.jsonPath!) || byCodePoint(x.kind, y.kind));

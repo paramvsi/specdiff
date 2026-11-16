@@ -171,6 +171,9 @@ export default function Settings() {
           <Checkbox label="Ignore line endings" checked={t.ignoreLineEndings} onCheckedChange={(v) => setT({ ignoreLineEndings: v })} />
           <p className={css.muted}>Regex filters are edited in the text view’s Filters panel and saved here.</p>
         </fieldset>
+        <fieldset className={css.group}><legend>Text, Markdown, JSON and YAML</legend>
+          <Checkbox label="Treat Unicode variants as equal (é typed as one character or as e + accent)" checked={config.unicodeNormalize} onCheckedChange={(v) => updateConfig((c) => ({ ...c, unicodeNormalize: v }))} />
+        </fieldset>
       </>
     );
   }

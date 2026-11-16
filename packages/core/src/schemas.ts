@@ -119,6 +119,8 @@ export const Config = z.object({
     filters: z.array(TextFilter).default([]),
     transforms: z.array(z.enum(['sortLines', 'lowercase', 'trim', 'normaliseLineBreaks'])).default([]),
   }).prefault({}),
+  /** M-4: compare text, Markdown and JSON/YAML strings after Unicode NFC (é typed two ways is equal). */
+  unicodeNormalize: z.boolean().default(true),
   decisions: z.string().default('.specdiff/decisions.json'),
 });
 export type Config = z.infer<typeof Config>;
