@@ -22,7 +22,11 @@ export async function openPayload(p: SharePayload) {
   s.setSource('before', src(p.left));
   s.setSource('after', src(p.right));
   s.setMode(p.mode as Mode);
-  if (p.options) s.updateConfig(() => p.options as never);
+  // A link's options are checked first: invalid ones would be saved and break every later comparison.
+  if (p.options) {
+    const { Config } = await import('@specdiff/core');
+    if (Config.safeParse(p.options).success) s.updateConfig(() => p.options as never);
+  }
   if (p.decisions) s.setDecisions(p.decisions);
   // OUT-05: a link shared from a change opens on that change, in the Workspace, unless it names a tab.
   if (p.view)
