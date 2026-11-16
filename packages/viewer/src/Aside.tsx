@@ -31,13 +31,19 @@ export function authPlaceholder(spec: Json, op: Op): Record<string, string> {
   return {};
 }
 
+const hasExample = (spec: Json, schema: Json) => {
+  const s = deref(spec, schema);
+  return !!s && (s.example !== undefined || !!s.examples?.length || s.default !== undefined || !!s.enum?.length);
+};
+
 export function sampleInputFor(spec: Json, op: Op, server: string): SampleInput {
   const path: Record<string, string> = {};
   const query: Record<string, string> = {};
   const headers: Record<string, string> = { ...authPlaceholder(spec, op) };
   for (const p of op.params) {
     const ex = str(exampleFor(spec, p.schema));
-    if (p.in === 'path') path[p.name] = ex;
+    // A path value only from a real example; a type placeholder ("string") in a URL reads like a real id.
+    if (p.in === 'path') { if (hasExample(spec, p.schema)) path[p.name] = ex; }
     else if (p.in === 'query' && p.required) query[p.name] = ex;
     else if (p.in === 'header' && p.required) headers[p.name] = ex;
   }

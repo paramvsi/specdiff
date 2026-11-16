@@ -29,7 +29,7 @@ export function exampleFor(spec: Json, schema: Json, depth = 0, seen = new Set<J
 }
 
 export function buildUrl(i: SampleInput): string {
-  const path = i.op.path.replace(/\{([^}]+)\}/g, (_, n: string) => encodeURIComponent(i.path[n] ?? `{${n}}`));
+  const path = i.op.path.replace(/\{([^}]+)\}/g, (_, n: string) => (i.path[n] === undefined ? `{${n}}` : encodeURIComponent(i.path[n])));
   const qs = new URLSearchParams(Object.entries(i.query).filter(([, v]) => v !== '')).toString();
   return i.server.replace(/\/$/, '') + path + (qs ? `?${qs}` : '');
 }

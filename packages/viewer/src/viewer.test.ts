@@ -144,3 +144,18 @@ describe('VW-01 malformed $ref escapes', () => {
     expect(refName({ $ref: '#/components/schemas/A%20B' })).toBe('A B');
   });
 });
+
+describe('VW-06 code samples with path parameters', () => {
+  it('keep {id} when the spec gives no example, instead of the type name "string"', async () => {
+    const { sampleInputFor } = await import('./Aside');
+    const { sample } = await import('./samples');
+    const spec = { openapi: '3.1.0', info: { title: 'T', version: '1' }, paths: {
+      '/refunds/{id}': { get: { parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }], responses: { '200': { description: 'OK' } } } },
+      '/charges/{id}': { get: { parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', example: 'ch_1' } }], responses: { '200': { description: 'OK' } } } },
+    } };
+    const ops = buildModel(spec).ops;
+    const refund = ops.find((o) => o.path === '/refunds/{id}'), charge = ops.find((o) => o.path === '/charges/{id}');
+    expect(sample('curl', sampleInputFor(spec, refund!, 'https://api.x.com'))).toContain('https://api.x.com/refunds/{id}');
+    expect(sample('curl', sampleInputFor(spec, charge!, 'https://api.x.com'))).toContain('https://api.x.com/charges/ch_1');
+  });
+});
