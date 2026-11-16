@@ -953,7 +953,7 @@ test('@phone X-07 a shared OpenAPI link opens read-only at 390 px, without sidew
   await desk.close();
   expect(link).toMatch(/#v=/);
   await page.goto(link);
-  await expect(page.getByText('Read-only on phones.')).toBeVisible();
+  await expect(page.getByText('View-only on phones.')).toBeVisible();
   await expect(page.getByRole('button', { name: /See all \d+ changes/ })).toBeVisible();
   await expect(page.getByRole('textbox', { name: 'Before' })).toHaveCount(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);

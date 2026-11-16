@@ -8,7 +8,8 @@ import * as icons from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { VirtualList, type RowSlot, type VirtualListApi } from '../../lib/VirtualList';
 import { useCommand } from '../../shell/commands';
-import { changeLink, focusChange, useNav } from '../../shell/nav';
+import { focusChange, useNav } from '../../shell/nav';
+import { copyChangeLink } from '../changeLink';
 import { useApp } from '../../state/store';
 import { useExplain } from './explainStore';
 import { DecisionsActions } from './DecisionsActions';
@@ -71,7 +72,7 @@ export function Workspace() {
   useCommand('reject', useCallback(() => current && needsDecision(current) && setDecision(decisionOf(decisions, current) === 'rejected' ? null : 'rejected'), [current, decisions, setDecision]));
   useCommand('mark-viewed', useCallback(() => current && toggleViewed(current.id), [current, toggleViewed]));
   useCommand('explain', useCallback(() => current && useExplain.getState().open(current.id), [current]));
-  useCommand('copy-link', useCallback(() => { if (current) { void copy(changeLink(current.id)); toast({ title: 'Link to this change copied' }); } }, [current, toast]));
+  useCommand('copy-link', useCallback(() => { if (current) void copyChangeLink(current.id, toast); }, [current, toast]));
 
   if (!result || !('report' in result) || !current) return <p>No changes.</p>;
   const sev = (s: Filter) => changes.filter((c) => (s === 'review' ? needsDecision(c) && !decisionOf(decisions, c) : c.severity === s)).length;

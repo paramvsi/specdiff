@@ -5,7 +5,8 @@ import { BetaLabel, Button, Checkbox, IdenticalState, SegmentedControl, useToast
 import * as icons from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useCommand } from '../../shell/commands';
-import { changeLink, focusChange, readChangeHash, useNav } from '../../shell/nav';
+import { focusChange, readChangeHash, useNav } from '../../shell/nav';
+import { copyChangeLink } from '../changeLink';
 import { useApp } from '../../state/store';
 import { TextResult } from '../text/TextResult';
 import { VirtualList } from '../../lib/VirtualList';
@@ -155,7 +156,7 @@ function Structural({ diff }: { diff: CodeDiff }) {
   useCommand('next-change', useCallback(() => goTo(cur + 1), [goTo, cur]));
   useCommand('prev-change', useCallback(() => goTo(cur - 1), [goTo, cur]));
   useCommand('mark-viewed', useCallback(() => { const i = listed[cur]; if (i) toggleViewed(itemId(i)); }, [listed, cur, toggleViewed]));
-  useCommand('copy-link', useCallback(() => { const i = listed[cur]; if (i) void navigator.clipboard?.writeText(changeLink(itemId(i))).then(() => toast({ title: 'Link to this change copied' })); }, [listed, cur, toast]));
+  useCommand('copy-link', useCallback(() => { const i = listed[cur]; if (i) void copyChangeLink(itemId(i), toast); }, [listed, cur, toast]));
   useEffect(() => {
     const id = readChangeHash();
     if (id) document.getElementById(id)?.focus();

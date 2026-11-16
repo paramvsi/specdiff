@@ -20,7 +20,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { VirtualList, type RowSlot, type VirtualListApi } from '../../lib/VirtualList';
 import { startTextDiff } from '../../worker/client';
 import { useCommand } from '../../shell/commands';
-import { changeLink, focusChange, readChangeHash, useNav } from '../../shell/nav';
+import { focusChange, readChangeHash, useNav } from '../../shell/nav';
+import { copyChangeLink } from '../changeLink';
 import { useApp } from '../../state/store';
 import type { JsonResultData } from '../../worker/protocol';
 import { copyText, download } from '../ExportMenu';
@@ -345,7 +346,7 @@ function DiffTab({
     'copy-link',
     useCallback(() => {
       const c = visible[current];
-      if (c) void navigator.clipboard?.writeText(changeLink(c.id)).then(() => toast({ title: 'Link to this change copied' }));
+      if (c) void copyChangeLink(c.id, toast);
     }, [visible, current, toast]),
   );
   useCommand(

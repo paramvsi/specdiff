@@ -300,7 +300,7 @@ test('O-13 toasts: a file that cannot be read is named in the toast', async ({ p
 test('@phone M-01 summary: title on the ground with its format, four severity tiles, neutral notice', async ({ page }) => {
   test.skip(test.info().project.name !== 'phone');
   await page.goto('/app/?sample=openapi');
-  await expect(page.getByText('Read-only on phones.')).toBeVisible();
+  await expect(page.getByText('View-only on phones.')).toBeVisible();
   await expect(page.getByRole('heading', { level: 1, name: 'payments-v1.yaml → payments-v2.yaml' })).toBeVisible();
   await expect(page.locator('main').getByText('OpenAPI 3.1', { exact: true })).toBeVisible();
   await expect(page.locator('dl > div')).toHaveCount(4);

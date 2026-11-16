@@ -1,0 +1,30 @@
+.banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sd-space-2) var(--sd-space-3);
+  width: 100%;
+  max-width: calc(var(--sd-layout-max) + 2 * var(--sd-space-10));
+  margin: var(--sd-space-4) auto 0;
+  padding: var(--sd-space-2) var(--sd-space-3);
+  border: 1px solid var(--sd-line);
+  border-radius: var(--sd-radius-lg);
+  background: var(--sd-raised);
+  color: var(--sd-ink);
+  font-size: 13.5px;
+}
+.text {
+  flex: 1;
+  min-width: 12ch;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sd-space-2);
+}
+@media (max-width: 639px) {
+  .banner {
+    margin: var(--sd-space-3) var(--sd-space-4) 0;
+    width: auto;
+  }
+}

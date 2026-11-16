@@ -6,7 +6,7 @@ import { isComparisonName, readComparisonFile } from '../lib/comparison';
 import { samples, SAMPLE_FILTERS, SAMPLE_JSON_IGNORE_KEYS } from '../lib/samples';
 import { lastTwo, recheckOnOpen } from '../lib/saved';
 import { loadSettings, saveSettings } from '../state/persist';
-import { defaultSettings, useApp } from '../state/store';
+import { defaultSettings, persistedSettings, useApp } from '../state/store';
 import { useNotices } from '../state/toasts';
 import { useNav } from './nav';
 
@@ -25,7 +25,8 @@ export async function openPayload(p: SharePayload) {
   // A link's options are checked first: invalid ones would be saved and break every later comparison.
   if (p.options) {
     const { Config } = await import('@specdiff/core');
-    if (Config.safeParse(p.options).success) s.updateConfig(() => p.options as never);
+    // M-14: the sender's rules apply to this comparison only; saved settings are never overwritten.
+    if (Config.safeParse(p.options).success) s.applyLinkConfig(p.options as never);
   }
   if (p.decisions) s.setDecisions(p.decisions);
   // OUT-05: a link shared from a change opens on that change, in the Workspace, unless it names a tab.
@@ -48,7 +49,7 @@ export function useBoot() {
       const stored = await loadSettings().catch(() => undefined);
       if (stored) useApp.getState().setSettings({ ...defaultSettings, ...stored });
       useApp.subscribe((s, prev) => {
-        if (s.settings !== prev.settings) void saveSettings(s.settings).catch(() => {});
+        if (s.settings !== prev.settings || s.savedConfig !== prev.savedConfig) void saveSettings(persistedSettings(s)).catch(() => {});
       });
       afterFirstPaint(checkSavedSources);
       consumeLaunchedFiles();

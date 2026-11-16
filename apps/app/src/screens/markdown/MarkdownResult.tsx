@@ -8,7 +8,8 @@ import * as icons from 'lucide-react';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type FocusEvent, type KeyboardEvent, type MouseEvent, type Ref } from 'react';
 import { VirtualList, type RowSlot, type VirtualListApi } from '../../lib/VirtualList';
 import { useCommand } from '../../shell/commands';
-import { changeLink, focusChange, readChangeHash, useNav } from '../../shell/nav';
+import { focusChange, readChangeHash, useNav } from '../../shell/nav';
+import { copyChangeLink } from '../changeLink';
 import { useApp } from '../../state/store';
 import { DiffRows } from '../json/DiffRows';
 import { blockLabel, sectionsOf } from './summary';
@@ -141,7 +142,7 @@ export default function MarkdownResult() {
   // X-11: mark the current changed block as viewed; X-12: copy a link to it, open the linked one on load.
   const at = current >= 0 ? changed[current] : changed[0];
   useCommand('mark-viewed', useCallback(() => { if (at !== undefined) toggleViewed(changeIdOf(at)); }, [at, toggleViewed]));
-  useCommand('copy-link', useCallback(() => { if (at !== undefined) void navigator.clipboard?.writeText(changeLink(changeIdOf(at))).then(() => toast({ title: 'Link to this change copied' })); }, [at, toast]));
+  useCommand('copy-link', useCallback(() => { if (at !== undefined) void copyChangeLink(changeIdOf(at), toast); }, [at, toast]));
   useEffect(() => {
     const id = readChangeHash();
     const i = id?.startsWith('m-') ? Number(id.slice(2)) : -1;

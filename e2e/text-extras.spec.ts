@@ -149,7 +149,13 @@ test('X-12 deep link #change=t-1 scrolls to and focuses the block; V marks viewe
   await expect(page.locator('#sd-t-1')).toHaveAttribute('data-viewed', 'true');
   await page.keyboard.press('Shift+C');
   await expect(page.getByText('Link to this change copied')).toBeVisible();
-  expect(await page.evaluate(() => navigator.clipboard.readText())).toMatch(/#change=t-1$/);
+  // M-20: a full share link, so it opens in any tab or browser, on this change.
+  const link = await page.evaluate(() => navigator.clipboard.readText());
+  expect(link).toMatch(/#v=1&/);
+  const elsewhere = await (await page.context().browser()!.newContext()).newPage();
+  await elsewhere.goto(link);
+  await expect(elsewhere.locator('#sd-t-1')).toBeFocused();
+  await elsewhere.close();
   await page.keyboard.press('v');
   await expect(progress).toHaveText(/^0 of \d+ viewed$/);
 });

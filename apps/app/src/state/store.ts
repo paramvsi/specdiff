@@ -35,6 +35,11 @@ interface State {
   result: CompareResult | null;
   /** The settings.config the current result was made with (screens re-compare only when it differs). */
   comparedConfig: ConfigInput | null;
+  /**
+   * M-14: my own config while a share link's rules are in use (settings.config then holds the sender's,
+   * for this comparison only). Saved settings keep this one; null when no link rules are in use.
+   */
+  savedConfig: ConfigInput | null;
   error: string | null;
   decisions: DecisionsFile;
   viewed: Record<string, true>;
@@ -44,6 +49,12 @@ interface State {
   swap: () => void;
   setMode: (m: Mode | 'auto') => void;
   updateConfig: (fn: (c: ConfigInput) => ConfigInput) => void;
+  /** M-14: compare with a link's rules without saving them. */
+  applyLinkConfig: (c: ConfigInput) => void;
+  /** M-14 "Use my rules". */
+  restoreMyConfig: () => void;
+  /** M-14 "Save theirs as mine". */
+  keepLinkConfig: () => void;
   setSettings: (s: Partial<Settings>) => void;
   /**
    * Run the comparison. `background` (TX-10 live re-diff): keep the current screen and result visible and swap the
@@ -67,6 +78,9 @@ export const defaultSettings: Settings = {
   saveHistory: true,
 };
 
+/** What is written to storage: my own config, never a link's (M-14). */
+export const persistedSettings = (s: Pick<State, 'settings' | 'savedConfig'>): Settings => (s.savedConfig ? { ...s.settings, config: s.savedConfig } : s.settings);
+
 export const useApp = create<State>((set, get) => ({
   screen: 'compare',
   before: null,
@@ -77,11 +91,14 @@ export const useApp = create<State>((set, get) => ({
   job: null,
   result: null,
   comparedConfig: null,
+  savedConfig: null,
   error: null,
   decisions: { version: 1, decisions: {} },
   viewed: {},
   setScreen: (screen) => set({ screen }),
-  setSource: (side, s) => set({ [side]: s } as Pick<State, Side>),
+  // A new file is a new comparison: a link's rules stop applying (M-14).
+  setSource: (side, src) =>
+    set((s) => ({ [side]: src, ...(s.savedConfig ? { settings: { ...s.settings, config: s.savedConfig }, savedConfig: null } : {}) }) as Partial<State>),
   setText: (side, content) => {
     const prev = get()[side];
     set({
@@ -97,6 +114,9 @@ export const useApp = create<State>((set, get) => ({
   setMode: (mode) => set({ mode }),
   updateConfig: (fn) =>
     set((s) => ({ settings: { ...s.settings, config: fn(s.settings.config) } })),
+  applyLinkConfig: (c) => set((s) => ({ savedConfig: s.savedConfig ?? s.settings.config, settings: { ...s.settings, config: c } })),
+  restoreMyConfig: () => set((s) => (s.savedConfig ? { settings: { ...s.settings, config: s.savedConfig }, savedConfig: null } : {})),
+  keepLinkConfig: () => set({ savedConfig: null }),
   setSettings: (p) => set((s) => ({ settings: { ...s.settings, ...p } })),
   compare: async (opts = {}) => {
     const { before, after, mode, settings } = get();

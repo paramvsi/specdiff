@@ -18,7 +18,8 @@ import * as icons from 'lucide-react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useCommand } from '../../shell/commands';
-import { changeLink, focusChange, readChangeHash, useNav } from '../../shell/nav';
+import { focusChange, readChangeHash, useNav } from '../../shell/nav';
+import { copyChangeLink } from '../changeLink';
 import { useApp } from '../../state/store';
 import { languageFor, MAX_BYTES, MAX_ROWS, tokenize, type Token } from './highlight';
 import { ReloadButton } from './ReloadButton';
@@ -189,10 +190,7 @@ export function TextResult() {
     'copy-link',
     useCallback(() => {
       if (!blockView.length) return;
-      void navigator.clipboard
-        ?.writeText(changeLink(currentId))
-        .then(() => toast({ title: 'Link to this change copied' }))
-        .catch(() => toast({ title: "Couldn't copy the link", tone: 'error' }));
+      void copyChangeLink(currentId, toast);
     }, [blockView, currentId, toast]),
   );
   useCommand(

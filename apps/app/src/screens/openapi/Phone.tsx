@@ -5,10 +5,10 @@ import { MethodChip, SeverityBadge, useToast } from '@specdiff/ui';
 import * as icons from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { openPalette } from '../../shell/commands';
-import { changeLink } from '../../shell/nav';
+import { copyChangeLink } from '../changeLink';
 import { useApp } from '../../state/store';
 import { Md, Title } from './Title';
-import { copy, groupKey, lineWindow, methodOf, safeRowLabel, SEV_LABEL } from './util';
+import { groupKey, lineWindow, methodOf, safeRowLabel, SEV_LABEL } from './util';
 import css from './Phone.module.css';
 
 type View = { kind: 'summary' } | { kind: 'list' } | { kind: 'change'; id: string };
@@ -87,7 +87,7 @@ export function PhoneOpenApi() {
   const breaking = all.filter((c) => c.severity === 'breaking');
   return (
     <div className={css.page}>
-      <p className={css.notice}><icons.Eye size={15} aria-hidden="true" /> Read-only on phones. Open on a larger screen to review or export.</p>
+      <p className={css.notice}><icons.Eye size={15} aria-hidden="true" /> View-only on phones. Open on a larger screen to edit or review.</p>
       {/* M-01: the title on the ground, then the version, four severity tiles and the breaking list. */}
       <section className={css.summary} aria-labelledby="m-title">
         <p className={css.kicker}>Shared comparison</p>
@@ -190,7 +190,7 @@ function PhoneChange({ c, index, total, onBack, onGo }: { c: Change; index: numb
           <code className={css.small}>rule: {c.ruleId}</code>
         </section>
       )}
-      <button type="button" className={css.secondary} onClick={() => { void copy(changeLink(c.id)); toast({ title: 'Link copied' }); }}><icons.Link size={15} aria-hidden="true" /> Copy link to this change</button>
+      <button type="button" className={css.secondary} onClick={() => void copyChangeLink(c.id, toast)}><icons.Link size={15} aria-hidden="true" /> Copy link to this change</button>
     </div>
   );
 }

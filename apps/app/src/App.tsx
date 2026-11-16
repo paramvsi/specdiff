@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useState } from 'react';
 import { Toaster } from '@specdiff/ui';
 import { useApp } from './state/store';
 import { AppTopBar } from './shell/AppTopBar';
+import { LinkRulesBanner } from './shell/LinkRulesBanner';
 import { useBoot } from './shell/boot';
 import { useGlobalKeys } from './shell/keys';
 import { useOverlays } from './shell/commands';
@@ -67,6 +68,7 @@ function Main() {
           Skip to content
         </a>
         <AppTopBar />
+        <LinkRulesBanner />
         <main id="main" className={css.main} tabIndex={-1}>
           <Suspense fallback={null}>
             {screen === 'compare' && <Compare />}

@@ -22,7 +22,3 @@ export function readChangeHash(): string | null {
   if (!m) return null;
   try { return decodeURIComponent(m[1]!); } catch { return m[1]!; } // a mangled link: read as written
 }
-
-export function changeLink(id: string): string {
-  return `${location.origin}${location.pathname}#change=${encodeURIComponent(id)}`;
-}
