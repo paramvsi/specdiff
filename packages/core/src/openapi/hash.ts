@@ -64,10 +64,10 @@ export function utf8Length(text: string): number {
     const c = text.charCodeAt(i);
     if (c < 0x80) n += 1;
     else if (c < 0x800) n += 2;
-    else if (c >= 0xd800 && c <= 0xdbff) {
-      n += 4;
+    else if (c >= 0xd800 && c <= 0xdbff && i + 1 < text.length && text.charCodeAt(i + 1) >= 0xdc00 && text.charCodeAt(i + 1) <= 0xdfff) {
+      n += 4; // a surrogate pair
       i++;
-    } else n += 3;
+    } else n += 3; // BMP, or a lone surrogate (written as U+FFFD, 3 bytes)
   }
   return n;
 }

@@ -113,3 +113,10 @@ describe('OA-01 duplicate keys in an OpenAPI JSON file', () => {
     expect(r.errors.map((e) => [e.line, e.message])).toEqual([[4, 'Map keys must be unique: "/a" appears twice in this object']]);
   });
 });
+
+describe('X-13 utf8Length matches TextEncoder, malformed text included', () => {
+  it('counts each string exactly as TextEncoder encodes it', async () => {
+    const { utf8Length } = await import('./hash');
+    for (const s of ['abc', 'é', '€', '😀', '\ud800é', '\ud800', 'a\udc00b', '😀\ud800x']) expect(utf8Length(s), JSON.stringify(s)).toBe(new TextEncoder().encode(s).length);
+  });
+});
