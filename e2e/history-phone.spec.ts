@@ -12,10 +12,11 @@ const sideways = (page: Page) =>
 
 test('History on a phone: stacked cards, an overflow menu with pin and delete, nothing scrolls sideways @phone', async ({ page }) => {
   test.skip(test.info().project.name !== 'phone');
-  for (const s of ['openapi', 'markdown']) {
-    await page.goto(`/app/?sample=${s}`);
-    await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible();
-  }
+  // Wait for each result (the Compare heading is server-rendered before the app is ready).
+  await page.goto('/app/?sample=markdown');
+  await expect(page.getByRole('radiogroup', { name: 'View' })).toBeVisible();
+  await page.goto('/app/?sample=openapi');
+  await expect(page.getByText('Suggested version')).toBeVisible();
   await page.getByRole('button', { name: 'More' }).click();
   await page.getByRole('menuitem', { name: 'History' }).click();
   await expect(page.getByRole('heading', { name: 'History', level: 1 })).toBeVisible();
