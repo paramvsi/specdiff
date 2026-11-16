@@ -1,5 +1,5 @@
-// RSS 2.0 feed for Specdiff's own changelog (WEB-06). Items without a real date omit <pubDate>
-// (optional in RSS 2.0) until the owner replaces the [Launch date] / [Beta date] placeholders (D-13).
+// RSS 2.0 feed for Specdiff's own changelog (WEB-06), from the packages' CHANGELOG.md (M-19). A release
+// without a known date omits <pubDate> (optional in RSS 2.0).
 import type { APIRoute } from 'astro';
 import { hasDate, releases } from '../lib/changelog';
 

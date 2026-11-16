@@ -169,13 +169,16 @@ test('WEB-05 guides: embed, React, CLI with "use in any CI", pre-commit, Express
 test('WEB-06 the changelog page lists releases and links its RSS feed', async ({ page, request }) => {
   await page.goto(WEB + '/changelog/');
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-  await expect(page.locator('main')).toContainText('1.0.0');
-  await expect(page.locator('main')).toContainText('0.9.0');
+  // M-19: real releases only, from the packages' CHANGELOG.md.
+  await expect(page.locator('main')).toContainText('0.1.0');
+  await expect(page.locator('main')).toContainText('15 Nov 2026');
+  await expect(page.locator('main')).toContainText('First public release');
+  await expect(page.locator('main')).not.toContainText('[Launch date]');
   const feed = await page.locator('link[rel=alternate][type="application/rss+xml"]').getAttribute('href');
   expect(feed).toBe('/changelog.xml');
   const res = await request.get(WEB + feed);
   expect(res.headers()['content-type']).toMatch(/xml/);
-  expect(await res.text()).toMatch(/<item>[\s\S]*<title>Specdiff 1\.0\.0<\/title>/);
+  expect(await res.text()).toMatch(/<item>[\s\S]*<title>Specdiff 0\.1\.0<\/title>/);
 });
 
 test('WEB-07 SEO: sitemap, canonical URLs, Open Graph image and tags, light/dark theme colours', async ({ page, request }) => {

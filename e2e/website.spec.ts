@@ -187,13 +187,14 @@ test('rule detail shows severity, before/after, and the .specdiff.yaml snippet',
   await expect(page.locator('.aside-card')).toContainText('request-property-became-required:');
 });
 
-test('changelog RSS feed is valid RSS with both releases', async ({ request }) => {
+test('changelog RSS feed is valid RSS with the real releases (M-19)', async ({ request }) => {
   const res = await request.get(WEB + '/changelog.xml');
   expect(res.ok()).toBe(true);
   const xml = await res.text();
   expect(xml).toContain('<rss version="2.0"');
-  expect(xml).toContain('<title>Specdiff 1.0.0</title>');
-  expect(xml).toContain('<title>Specdiff 0.9.0</title>');
+  expect(xml).toContain('<title>Specdiff 0.1.0</title>');
+  expect(xml).toContain('<pubDate>Sun, 15 Nov 2026 00:00:00 GMT</pubDate>');
+  expect(xml).not.toMatch(/1\.0\.0|0\.9\.0|\[[A-Za-z ]*date\]/);
 });
 
 test('SEO: title, description, canonical, Open Graph and theme-color', async ({ page }) => {
