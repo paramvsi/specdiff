@@ -5,9 +5,9 @@
 import { Menu, Moon, Sun, X } from 'lucide-react';
 
 const links: Array<[string, string]> = [
-  ['Product', '#product'],
-  ['Viewer', '#viewer'],
-  ['Packages', '#packages'],
+  ['Product', '/#product'],
+  ['Viewer', '/#viewer'],
+  ['Packages', '/#packages'],
   ['Docs', '/docs/'],
   ['Rules', '/rules/'],
   ['Changelog', '/changelog/'],

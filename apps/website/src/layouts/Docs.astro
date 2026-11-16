@@ -3,7 +3,7 @@
 import type { MarkdownHeading } from 'astro';
 import { Search } from 'lucide-react';
 import Base from './Base.astro';
-import SiteHeader from '../components/SiteHeader.astro';
+import HomeNav from '../components/HomeNav.astro';
 import Footer from '../components/Footer.astro';
 import { docsNav, flatDocs, normalise } from '../lib/docs-nav';
 import { REPO } from '../lib/site';
@@ -30,7 +30,7 @@ const toc = headings.filter((h) => h.depth === 2 || h.depth === 3);
 const source = file ? file.slice(file.indexOf('apps/website/')) : undefined;
 ---
 <Base title={`${frontmatter.title} · Specdiff docs`} description={frontmatter.description} ogType="article">
-  <SiteHeader current="docs" />
+  <HomeNav current="docs" />
   <main id="main" class="docs-main">
     <div class="docs-side">
       <label class="search-box"><Search size={15} aria-hidden="true" /><input type="search" placeholder="Search docs" aria-label="Search docs" aria-keyshortcuts="/" data-docs-search /><kbd aria-hidden="true">/</kbd></label>

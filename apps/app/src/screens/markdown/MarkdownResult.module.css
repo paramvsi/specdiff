@@ -335,6 +335,14 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
 }
+/* M-16: one side at a time below 720 px. */
+.sbsRow[data-only] {
+  grid-template-columns: 1fr;
+}
+.sbsRow[data-only='before'] .sbsCell[data-side='after'],
+.sbsRow[data-only='after'] .sbsCell[data-side='before'] {
+  display: none;
+}
 .sbsCell {
   padding: var(--sd-space-1) var(--sd-space-5);
   min-width: 0;

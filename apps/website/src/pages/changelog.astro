@@ -1,14 +1,14 @@
 ---
 // W-06 Changelog (WEB-06), with an RSS feed at /changelog.xml.
 import Base from '../layouts/Base.astro';
-import SiteHeader from '../components/SiteHeader.astro';
+import HomeNav from '../components/HomeNav.astro';
 import Footer from '../components/Footer.astro';
 import { releases } from '../lib/changelog';
 import { REPO } from '../lib/site';
 import '../styles/pages.css';
 ---
 <Base title="Changelog · Specdiff" description="What’s new in Specdiff. Written by Specdiff, from its own spec. Subscribe with RSS.">
-  <SiteHeader current="changelog" />
+  <HomeNav current="changelog" />
   <main id="main" class="log-main">
     <h1 class="page-h1">Changelog</h1>
     <div class="log-top">

@@ -6,6 +6,7 @@ import { diffText } from '@specdiff/core/text';
 import { SegmentedControl, Tooltip, useToast } from '@specdiff/ui';
 import * as icons from 'lucide-react';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type FocusEvent, type KeyboardEvent, type MouseEvent, type Ref } from 'react';
+import { NARROW, useMedia } from '../../lib/media';
 import { VirtualList, type RowSlot, type VirtualListApi } from '../../lib/VirtualList';
 import { useCommand } from '../../shell/commands';
 import { focusChange, readChangeHash, useNav } from '../../shell/nav';
@@ -73,6 +74,9 @@ export default function MarkdownResult() {
   const { toast } = useToast();
   const md = result && 'markdown' in result ? result.markdown : null;
   const [view, setView] = useState<View>(memo.view);
+  // M-16: below 720 px two columns are too narrow; Side by side becomes a Before / After toggle.
+  const narrow = useMedia(NARROW);
+  const [side, setSide] = useState<'before' | 'after'>('after');
   // X-12: start on the block named in the URL hash (#change=m-<n>), if it changed.
   const [current, setCurrent] = useState(() => {
     const id = readChangeHash();
@@ -208,15 +212,19 @@ export default function MarkdownResult() {
         <div className={css.toolbar}>
           <SegmentedControl
             label="View"
-            value={view}
-            onValueChange={(v) => {
-              memo.view = v;
-              setView(v);
+            value={narrow && view === 'side' ? side : view}
+            onValueChange={(v: View | 'before' | 'after') => {
+              const next: View = v === 'before' || v === 'after' ? 'side' : v;
+              if (v === 'before' || v === 'after') setSide(v);
+              memo.view = next;
+              setView(next);
             }}
             options={[
               { value: 'rendered', label: 'Rendered' },
               { value: 'source', label: 'Source' },
-              { value: 'side', label: 'Side by side' },
+              ...(narrow
+                ? [{ value: 'before' as const, label: 'Before' }, { value: 'after' as const, label: 'After' }]
+                : [{ value: 'side' as const, label: 'Side by side' }]),
             ]}
           />
           <span className={css.hint}>word-level highlights</span>
@@ -241,7 +249,7 @@ export default function MarkdownResult() {
             )}
           />
         )}
-        {view === 'side' && <SideBySide md={md} apiRef={listApi} />}
+        {view === 'side' && <SideBySide md={md} apiRef={listApi} {...(narrow ? { only: side } : {})} />}
         {view === 'source' && (
           <DiffRows
             rows={'text' in result ? result.text.rows : []}
@@ -513,12 +521,12 @@ function CodeDiff({ code }: { code: NonNullable<MdBlock['code']> }) {
   );
 }
 
-function SideBySide({ md, apiRef }: { md: MdDiff; apiRef: Ref<VirtualListApi> }) {
+function SideBySide({ md, apiRef, only }: { md: MdDiff; apiRef: Ref<VirtualListApi>; only?: 'before' | 'after' }) {
   return (
     <VirtualList
       count={md.blocks.length}
       estimate={60}
-      label="Side by side, scrollable"
+      label={only ? `${only === 'before' ? 'Before' : 'After'}, scrollable` : 'Side by side, scrollable'}
       className={css.docScroll}
       listClassName={css.sbs}
       apiRef={apiRef}
@@ -533,6 +541,7 @@ function SideBySide({ md, apiRef }: { md: MdDiff; apiRef: Ref<VirtualListApi> })
             id={`sbs-${blockId(i)}`}
             className={css.sbsRow}
             data-status={b.status}
+            {...(only ? { 'data-only': only } : {})}
             {...(slot ? { ref: slot.measure, 'data-index': slot['data-index'], style: slot.style } : {})}
           >
             <div className={css.sbsCell} data-side="before">

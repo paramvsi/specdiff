@@ -332,6 +332,11 @@ code {
   color: var(--sd-ink);
   text-decoration: none;
 }
+/* M-11: the page's own section in the shared nav. */
+.fnav-links a[aria-current='page'] {
+  font-weight: 600;
+  background: var(--sd-raised);
+}
 .fnav-gh {
   gap: 8px;
   padding: 0 14px;
@@ -427,69 +432,6 @@ code {
     font-size: 14px;
   }
   .fnav-compact .icon-btn {
-    width: 44px;
-    height: 44px;
-  }
-}
-
-/* ---------- Flat header (Docs, Rules, Changelog, 404) ---------- */
-.shead {
-  background: var(--sd-ground);
-  border-bottom: 1px solid var(--sd-line);
-}
-.shead-in {
-  max-width: 1288px; /* 1240 px content + 24 px gutters */
-  margin: 0 auto;
-  padding: 14px 24px;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px 20px;
-}
-.shead-left {
-  display: flex;
-  align-items: center;
-  gap: 22px;
-  flex-wrap: wrap;
-}
-.shead nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2px;
-}
-.shead nav a {
-  min-height: 40px;
-  display: inline-flex;
-  align-items: center;
-  padding: 0 10px;
-  border-radius: 8px;
-  font: 500 14px var(--sd-font-sans);
-  color: var(--sd-muted);
-  text-decoration: none;
-}
-.shead nav a[aria-current='page'] {
-  font-weight: 600;
-  color: var(--sd-ink);
-}
-.shead nav a:hover {
-  color: var(--sd-ink);
-}
-.shead-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-@media (max-width: 760px) {
-  .shead-in {
-    padding: 10px 24px;
-  }
-  .shead nav a,
-  .shead-right .btn {
-    min-height: 44px;
-  }
-  .shead-right .icon-btn {
     width: 44px;
     height: 44px;
   }

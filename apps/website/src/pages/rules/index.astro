@@ -1,7 +1,7 @@
 ---
 // W-03 Rules reference (WEB-04). Generated at build time from @specdiff/core (or docs/06 as fallback).
 import Base from '../../layouts/Base.astro';
-import SiteHeader from '../../components/SiteHeader.astro';
+import HomeNav from '../../components/HomeNav.astro';
 import Footer from '../../components/Footer.astro';
 import Severity from '../../components/Severity.astro';
 import { Search } from 'lucide-react';
@@ -17,7 +17,7 @@ const sevButtons: Array<[string, string, number]> = [
 ];
 ---
 <Base title="Breaking-change rules · Specdiff" description={`Every one of the ${rules.length} OpenAPI changes Specdiff can report, what it means for clients, and how to avoid it. Generated from the rules and fixtures the app uses.`}>
-  <SiteHeader current="rules" />
+  <HomeNav current="rules" />
   <main id="main" class="rules-main">
     <h1 class="page-h1">Breaking-change rules</h1>
     <p class="lede">Every change Specdiff can report, what it means for clients, and how to avoid it. Generated from the same rules and test fixtures the app uses.</p>

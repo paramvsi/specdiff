@@ -2,7 +2,7 @@
 // W-04 Rule detail (WEB-04): one page per rule, generated from @specdiff/core rules and fixtures.
 import type { GetStaticPaths } from 'astro';
 import Base from '../../layouts/Base.astro';
-import SiteHeader from '../../components/SiteHeader.astro';
+import HomeNav from '../../components/HomeNav.astro';
 import Footer from '../../components/Footer.astro';
 import Severity from '../../components/Severity.astro';
 import CodeCard from '../../components/CodeCard.astro';
@@ -56,7 +56,7 @@ const line = rawLine && rule.severity ? `**${sevLabel[rule.severity]}:** ${rawLi
 const description = `${sevText}: ${copy.intro.replace(/`/g, '').replace(/\.$/, '')}. Who it breaks, how to avoid it, and how to change its severity in .specdiff.yaml.`;
 ---
 <Base title={`${rule.id} · Rules · Specdiff`} description={description} ogType="article">
-  <SiteHeader current="rules" />
+  <HomeNav current="rules" />
   <main id="main" class="rule-main">
     <div class="rule-body">
       <nav aria-label="Breadcrumb" class="crumbs"><a href="/rules/">Rules</a> / {rule.area}</nav>

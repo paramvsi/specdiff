@@ -1,13 +1,13 @@
 ---
 // W-08 Page not found (WEB-08). Built as /404.html, which Netlify serves for unknown paths.
 import Base from '../layouts/Base.astro';
-import SiteHeader from '../components/SiteHeader.astro';
+import HomeNav from '../components/HomeNav.astro';
 import Footer from '../components/Footer.astro';
 import { APP } from '../lib/site';
 import '../styles/pages.css';
 ---
 <Base title="Page not found · Specdiff" description="This page was removed, or never existed." noindex>
-  <SiteHeader />
+  <HomeNav />
   <main id="main" class="nf-main">
     <div class="nf-diff" role="img" aria-label="Expected GET /the-page-you-wanted, actual 404 Not Found">
       <div><p aria-hidden="true">expected</p><div class="nf-line nf-rem" aria-hidden="true">- GET /the-page-you-wanted</div></div>

@@ -1,9 +1,10 @@
 // A-11 History and empty state (OUT-07): kept only in this browser (IndexedDB).
 import type { Mode } from '@specdiff/core';
-import { Button, Checkbox, Dialog, EmptyHistoryState, ModeBadge, TextField } from '@specdiff/ui';
+import { Button, Checkbox, Dialog, EmptyHistoryState, Menu, ModeBadge, TextField } from '@specdiff/ui';
 import * as icons from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { formatBytes } from '../lib/input';
+import { NARROW, useMedia } from '../lib/media';
 import { openSample } from '../shell/boot';
 import { clearHistory, deleteEntry, listHistory, loadPayload, updateEntry, type StoredHistoryEntry as HistoryEntry } from '../state/persist';
 import { useApp } from '../state/store';
@@ -87,6 +88,8 @@ export default function History() {
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
   const [confirm, setConfirm] = useState(false);
+  // M-3: no sideways scroll on a phone: below 720 px each row is a card.
+  const narrow = useMedia(NARROW);
 
   const refresh = useCallback(
     () =>
@@ -205,7 +208,38 @@ export default function History() {
         </div>
       </div>
 
-      {shown.length ? (
+      {shown.length && narrow ? (
+        groups.map((g) => (
+          <section key={g.label || 'all'} aria-label={g.label || 'Comparisons'} className={css.cardGroup}>
+            {g.label && <h2 className={css.groupHead}>{g.label}</h2>}
+            <ul className={css.cards}>
+              {g.items.map((e) => (
+                <li key={e.id} className={css.card}>
+                  <div className={css.cardTop}>
+                    <span style={{ display: 'contents', ...modeVars(e.mode) }}>
+                      <ModeBadge mode={MODE_LABEL[e.mode]} />
+                    </span>
+                    <Menu
+                      align="end"
+                      trigger={<Button variant="ghost" iconOnly icon={<icons.EllipsisVertical size={16} />} aria-label={`More for ${files(e)}`} />}
+                      items={[
+                        { label: e.pinned ? 'Unpin' : 'Pin', icon: e.pinned ? <icons.PinOff size={15} /> : <icons.Pin size={15} />, onSelect: () => void pin(e) },
+                        { label: 'Delete', icon: <icons.Trash2 size={15} />, onSelect: () => void remove(e) },
+                      ]}
+                    />
+                  </div>
+                  <button type="button" className={css.cardFiles} onClick={() => void open(e)} aria-label={`Open ${files(e)}`}>
+                    <span>{e.before.name}</span>
+                    <span><icons.ArrowRight size={13} aria-hidden="true" /> {e.after.name}</span>
+                  </button>
+                  <p className={css.cardResult}>{resultText(e)}</p>
+                  <p className={css.when}>{opened(e.openedAt)}</p>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))
+      ) : shown.length ? (
         <div className={css.tableWrap}>
           <table className={css.table}>
             <thead>
