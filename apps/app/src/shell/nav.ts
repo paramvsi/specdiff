@@ -19,7 +19,8 @@ export function focusChange(id: string, tab = 'workspace') {
 
 export function readChangeHash(): string | null {
   const m = /^#change=([^&]+)/.exec(location.hash);
-  return m ? decodeURIComponent(m[1]!) : null;
+  if (!m) return null;
+  try { return decodeURIComponent(m[1]!); } catch { return m[1]!; } // a mangled link: read as written
 }
 
 export function changeLink(id: string): string {

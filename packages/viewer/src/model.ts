@@ -40,7 +40,9 @@ export function deref(spec: Json, node: Json, seen = new Set<string>()): Json {
 
 export function refName(node: Json): string | undefined {
   const r = node?.$ref;
-  return typeof r === 'string' && r.startsWith('#/components/schemas/') ? decodeURIComponent(r.slice('#/components/schemas/'.length)) : undefined;
+  if (typeof r !== 'string' || !r.startsWith('#/components/schemas/')) return undefined;
+  const name = r.slice('#/components/schemas/'.length);
+  try { return decodeURIComponent(name); } catch { return name; } // a stray %: read as written
 }
 
 function contentMap(spec: Json, content: Json) {

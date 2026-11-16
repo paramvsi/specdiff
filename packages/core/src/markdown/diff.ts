@@ -378,7 +378,10 @@ export function diffMarkdown(before: string, after: string): MdDiff {
   const brokenAnchors: MdDiff['brokenAnchors'] = [];
   const walk = (n: Nodes) => {
     if (n.type === 'link' && n.url.startsWith('#')) {
-      const anchor = decodeURIComponent(n.url.slice(1));
+      // A stray % (#save-50%) is not valid percent-encoding; read such an anchor as written.
+      const raw = n.url.slice(1);
+      let anchor = raw;
+      try { anchor = decodeURIComponent(raw); } catch { /* keep raw */ }
       if (!known.has(anchor)) {
         const to = renamed.get(anchor);
         brokenAnchors.push({ anchor, line: n.position?.start.line ?? 0, ...(beforeSlugs.includes(anchor) ? { renamedFrom: anchor } : {}), ...(to ? { renamedTo: to } : {}) });

@@ -141,3 +141,10 @@ describe('link targets and alt text (MD-02)', () => {
     expect(diffMarkdown('![old alt](a.png)\n', '![new alt](a.png)\n').stats.edited).toBe(1);
   });
 });
+
+describe('MD-03 anchors', () => {
+  it('a link with a stray % in its anchor (#save-50%) is checked, not a crash', () => {
+    const d = diffMarkdown('# Deals\n\nText.\n', '# Deals\n\n[deal](#save-50%) and [ok](#deals)\n');
+    expect(d.brokenAnchors.map((a) => a.anchor)).toEqual(['save-50%']);
+  });
+});

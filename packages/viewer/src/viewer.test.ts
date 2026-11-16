@@ -136,3 +136,11 @@ describe('VW-11 request checks read well at 1', () => {
     expect(requestIssues(spec, op, { server: '', path: {}, query: { c: 'ab' }, headers: {} })[0]?.message).toBe('c must be at most 1 character');
   });
 });
+
+describe('VW-01 malformed $ref escapes', () => {
+  it('a $ref with a stray % does not stop the model being built', async () => {
+    const { refName } = await import('./model');
+    expect(refName({ $ref: '#/components/schemas/Price%' })).toBe('Price%');
+    expect(refName({ $ref: '#/components/schemas/A%20B' })).toBe('A B');
+  });
+});
