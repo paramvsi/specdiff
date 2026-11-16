@@ -37,3 +37,11 @@ it('a formatted pair keeps its own lines in the raw diff', async () => {
   if ('kind' in r) throw new Error('parse failure');
   expect(r.text.rows.map((x) => x.left?.segs.map((s) => s.text).join(''))).toContain('    "b": 2');
 });
+
+it('M-2: the app reports a change between two big integers that round to the same JS number', async () => {
+  const before = '{"id": 9007199254740993}', after = '{"id": 9007199254740992}';
+  const req = { before: { name: 'a.json', content: before, size: before.length }, after: { name: 'b.json', content: after, size: after.length }, mode: 'json' as const, config: {} };
+  const r = await compareStructured('json', req, Config.parse({}), detectPair(detectMode('a.json', before), detectMode('b.json', after)), () => {});
+  if (!('json' in r)) throw new Error('parse failure');
+  expect(r.json.diff.changes.map((c) => c.kind)).toEqual(['changed']);
+});

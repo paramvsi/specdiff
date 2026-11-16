@@ -192,3 +192,30 @@ function stableSort(v: unknown): unknown {
   if (v && typeof v === 'object') return Object.fromEntries(Object.keys(v).sort().map((k) => [k, stableSort((v as Record<string, unknown>)[k])]));
   return v;
 }
+
+describe('M-2 numbers are compared by their source text, not as JS numbers', () => {
+  const diff = (a: string, b: string, x: Partial<Config['json']> = {}) => {
+    const pa = parseWithPositions(a) as Parsed, pb = parseWithPositions(b) as Parsed;
+    return diffJson(pa.value, pb.value, o(x), { before: pa.exactNumbers, after: pb.exactNumbers });
+  };
+  it('integers beyond 2^53 that round to the same double are different', () => {
+    expect(diff('{"a": 9007199254740993}', '{"a": 9007199254740992}').changes.map((c) => c.kind)).toEqual(['changed']);
+    expect(diff('[9007199254740993]', '[9007199254740992]').changes.length).toBeGreaterThan(0);
+    expect(diff('{"a": 0.10000000000000000001}', '{"a": 0.1}').changes.map((c) => c.kind)).toEqual(['changed']);
+  });
+  it('the same number written another way is equal (sign, leading zeros, trailing zeros, exponent, hex)', () => {
+    expect(diff('{"a": 12345678901234567890}', '{"a": 1.2345678901234567890e19}').changes).toEqual([]);
+    expect(diff('a: 0x20000000000001\n', 'a: 9007199254740993\n').changes).toEqual([]);
+    expect(diff('a: 9007199254740993.000\n', 'a: +9007199254740993\n').changes).toEqual([]);
+    expect(diff('{"a": 1e400}', '{"a": 1e401}').changes.map((c) => c.kind)).toEqual(['changed']);
+  });
+  it('tolerance applies only inside the safe integer range', () => {
+    expect(diff('{"a": 10}', '{"a": 12}', { numberTolerance: 5 }).changes).toEqual([]);
+    expect(diff('{"a": 9007199254740993}', '{"a": 9007199254740999}', { numberTolerance: 10 }).changes.map((c) => c.kind)).toEqual(['changed']);
+    expect(diff('{"a": 1e300}', '{"a": 1.0000000000001e300}', { numberTolerance: 1e290 }).changes.map((c) => c.kind)).toEqual(['changed']);
+  });
+  it('reported values stay plain numbers', () => {
+    const c = diff('{"a": 9007199254740993}', '{"a": 9007199254740992}').changes[0]!;
+    expect([typeof c.before, typeof c.after]).toEqual(['number', 'number']);
+  });
+});

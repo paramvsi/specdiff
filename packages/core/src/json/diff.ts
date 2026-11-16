@@ -2,6 +2,7 @@
 import type { Change, Config, Kind } from '../schemas';
 import { jsonPathKey, type Parsed } from './parse';
 import { byCodePoint } from '../order';
+import { ExactNumber } from './numbers';
 
 export type JsonOptions = Config['json'];
 type Json = null | boolean | number | string | Json[] | { [k: string]: Json };
@@ -26,7 +27,7 @@ export interface JsonDiff {
   matchKeys: Record<string, string>; // array JSONPath (with [*]) → key used
 }
 
-const typeOf = (v: unknown) => (v === null ? 'null' : Array.isArray(v) ? 'array' : typeof v);
+const typeOf = (v: unknown) => (v === null ? 'null' : Array.isArray(v) ? 'array' : v instanceof ExactNumber ? 'number' : typeof v);
 const isObj = (v: unknown): v is Record<string, Json> => typeOf(v) === 'object';
 
 export function stable(v: unknown): string {
@@ -50,9 +51,28 @@ export function detectMatchKey(a: unknown[], b: unknown[], preferred: string): s
 
 const TOO_DEEP = 'These files are nested too deeply to compare (more levels than the browser allows).';
 
+/** `Parsed.exactNumbers` of each side: those numbers are compared by their source text (M-2). */
+export interface ExactNumbers { before?: Map<string, string> | undefined; after?: Map<string, string> | undefined }
+
+/** Stand in an ExactNumber for each number listed at its JSONPath (a copy; only when there are any). */
+function withExact(v: unknown, map: Map<string, string> | undefined, path = '$'): unknown {
+  if (!map?.size) return v;
+  if (typeof v === 'number') { const t = map.get(path); return t === undefined ? v : new ExactNumber(t, v); }
+  if (Array.isArray(v)) return v.map((x, i) => withExact(x, map, jsonPathKey(path, i)));
+  if (isObj(v)) return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, withExact(x, map, jsonPathKey(path, k))]));
+  return v;
+}
+const plain = (v: unknown): unknown =>
+  v instanceof ExactNumber ? v.value : Array.isArray(v) ? v.map(plain) : isObj(v) ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, plain(x)])) : v;
+
 /** Compare two parsed JSON/YAML values. Nesting deep enough to overflow the stack throws a plain Error. */
-export function diffJson(a: unknown, b: unknown, o: JsonOptions): JsonDiff {
-  try { return diffJsonUnchecked(a, b, o); }
+export function diffJson(a: unknown, b: unknown, o: JsonOptions, exact: ExactNumbers = {}): JsonDiff {
+  try {
+    if (!exact.before?.size && !exact.after?.size) return diffJsonUnchecked(a, b, o);
+    const d = diffJsonUnchecked(withExact(a, exact.before), withExact(b, exact.after), o);
+    for (const c of d.changes) { if (c.before !== undefined) c.before = plain(c.before); if (c.after !== undefined) c.after = plain(c.after); }
+    return d;
+  }
   catch (e) { if (e instanceof RangeError) throw new Error(TOO_DEEP); throw e; }
 }
 
@@ -62,10 +82,16 @@ function diffJsonUnchecked(a: unknown, b: unknown, o: JsonOptions): JsonDiff {
   const push = (c: JsonChange, isNullMissing: boolean) => { changes.push(c); if (isNullMissing) nullMissing.add(c); };
   const matchKeys: Record<string, string> = {};
   const ignore = new Set(o.ignoreKeys);
-  const eqNum = (x: number, y: number) => Math.abs(x - y) <= o.numberTolerance;
+  // M-2: a number the parser could not hold exactly equals only the same written value; tolerance
+  // applies only inside the safe integer range, where a JS number is exact.
+  const eqNum = (x: number | ExactNumber, y: number | ExactNumber) => {
+    if (x instanceof ExactNumber || y instanceof ExactNumber) return String(x) === String(y) && x instanceof ExactNumber && y instanceof ExactNumber;
+    if (Math.abs(x) > Number.MAX_SAFE_INTEGER || Math.abs(y) > Number.MAX_SAFE_INTEGER) return x === y;
+    return Math.abs(x - y) <= o.numberTolerance;
+  };
 
   const equal = (x: unknown, y: unknown): boolean => {
-    if (typeof x === 'number' && typeof y === 'number') return eqNum(x, y);
+    if (typeOf(x) === 'number' && typeOf(y) === 'number') return eqNum(x as number | ExactNumber, y as number | ExactNumber);
     if (typeOf(x) !== typeOf(y)) return false;
     if (Array.isArray(x)) return stableIgnoring(x) === stableIgnoring(y);
     if (isObj(x)) return stableIgnoring(x) === stableIgnoring(y);
@@ -80,6 +106,7 @@ function diffJsonUnchecked(a: unknown, b: unknown, o: JsonOptions): JsonDiff {
         const keys = Object.keys(v).filter((k) => !ignore.has(k));
         return `{${(sortKeys ? keys.sort() : keys).map((k) => `${JSON.stringify(k)}:${h(v[k])}`).join(',')}}`;
       }
+      if (v instanceof ExactNumber) return `#${v.text}`;
       return JSON.stringify(v) ?? 'undefined';
     };
     return h;
@@ -139,7 +166,7 @@ function diffJsonUnchecked(a: unknown, b: unknown, o: JsonOptions): JsonDiff {
       for (const [k, j] of iy) if (!ix.has(k)) changes.push({ kind: 'added', jsonPath: `${path}[?(@.${key}==${JSON.stringify((y[j] as Record<string, Json>)[key])})]`, after: y[j] });
       return;
     }
-    if (o.ignoreArrayOrder || x.every((v) => typeof v !== 'object' || v === null)) {
+    if (o.ignoreArrayOrder || x.every((v) => !isObj(v) && !Array.isArray(v))) {
       // Multiset match by value; scalars that only moved are moves (or nothing when order is ignored).
       const pool = new Map<string, number[]>();
       y.forEach((v, j) => { const h = canon(v); pool.set(h, [...(pool.get(h) ?? []), j]); });

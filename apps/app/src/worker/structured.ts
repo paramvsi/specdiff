@@ -40,7 +40,7 @@ export async function compareStructured(
   if ('error' in b) return fail('after', b.error, req.after.content);
   onProgress({ step: 'parse', state: 'done', detail: 'both files, positions kept' });
   onProgress({ step: 'compare', state: 'running' });
-  const diff = diffJson(a.value, b.value, config.json);
+  const diff = diffJson(a.value, b.value, config.json, { before: a.exactNumbers, after: b.exactNumbers });
   const changes = toChanges(
     diff,
     a,

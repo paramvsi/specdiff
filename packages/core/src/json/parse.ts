@@ -1,5 +1,6 @@
 // JSON/YAML parsing with source positions and duplicate-key reporting (JS-04).
 import { isMap, isScalar, isSeq, LineCounter, parseDocument, type Node } from 'yaml';
+import { inexactNumber } from './numbers';
 
 export interface Pos { line: number; column: number }
 export interface Parsed {
@@ -7,6 +8,8 @@ export interface Parsed {
   /** JSONPath → position of the value's node. */
   positions: Map<string, Pos>;
   duplicates: Array<{ path: string; key: string; line: number; column: number }>;
+  /** M-2: JSONPath → canonical source text of each number a JS number cannot hold exactly. Absent when there are none. */
+  exactNumbers?: Map<string, string>;
 }
 export interface ParseError { line: number; column: number; message: string; hint: string }
 
@@ -56,6 +59,7 @@ export function parseWithPositions(content: string): Parsed | { error: ParseErro
   }
   const positions = new Map<string, Pos>();
   const duplicates: Parsed['duplicates'] = [];
+  const exactNumbers = new Map<string, string>();
   const at = (n: Node | null | undefined): Pos | undefined => {
     const off = n?.range?.[0];
     if (off === undefined) return undefined;
@@ -79,11 +83,14 @@ export function parseWithPositions(content: string): Parsed | { error: ParseErro
       }
     } else if (isSeq(n)) {
       n.items.forEach((it, i) => walk(it, jsonPathKey(path, i)));
+    } else if (isScalar(n) && typeof n.value === 'number' && n.range) {
+      const exact = inexactNumber(content.slice(n.range[0], n.range[1]), n.value);
+      if (exact) exactNumbers.set(path, exact);
     }
   };
   walk(doc.contents, '$');
   try {
-    return { value: doc.toJS({ maxAliasCount: 1000 }), positions, duplicates };
+    return { value: doc.toJS({ maxAliasCount: 1000 }), positions, duplicates, ...(exactNumbers.size ? { exactNumbers } : {}) };
   } catch (e) {
     // yaml refuses alias bombs ("Excessive alias count"): report it like any other parse error.
     return { error: { line: 1, column: 1, message: e instanceof Error ? e.message : String(e), hint: 'The YAML aliases expand to far more data than the file holds. Remove the repeated aliases.' } };
