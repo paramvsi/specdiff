@@ -6,6 +6,7 @@ import inc from 'semver/functions/inc.js';
 import lt from 'semver/functions/lt.js';
 import major from 'semver/functions/major.js';
 import minor from 'semver/functions/minor.js';
+import prerelease from 'semver/functions/prerelease.js';
 import type { VersionCheck } from '../schemas';
 
 export interface SeverityCounts {
@@ -48,6 +49,11 @@ export function versionCheck(from: string | undefined, to: string | undefined, c
   if (lt(vt, vf)) {
     out.verdict = 'decreased';
     out.message = `info.version went down from ${from} to ${to}. Suggested: ${suggested}.`;
+    return out;
+  }
+  // Semver §9: pre-releases of one version (2.0.0-beta.1 → beta.2) make no compatibility promise to each other.
+  if (counts.breaking > 0 && from && to && prerelease(from.trim()) && prerelease(to.trim()) && vf === vt) {
+    out.message = `info.version goes from ${from} to ${to}, pre-releases of ${vt}, which promise no compatibility with each other.`;
     return out;
   }
   if (counts.breaking > 0) {

@@ -88,6 +88,11 @@ describe('OA-08 version check (B-8)', () => {
     const graces = r.changes.filter((c) => c.ruleId === 'sunset-inside-grace-period');
     expect(graces.map((c) => c.before)).toEqual(['1 day']);
   });
+  it('a breaking change into a pre-release (2.0.0-beta.1 → 2.0.0-beta.2) needs no major bump (semver §9)', () => {
+    expect(versionCheck('2.0.0-beta.1', '2.0.0-beta.2', n(1)).verdict).toBe('ok');
+    expect(versionCheck('1.4.0', '1.5.0-rc.1', n(1)).verdict).toBe('missing-major'); // a 1.x pre-release still promises 1.x
+    expect(versionCheck('1.5.0', '1.6.0', n(1)).verdict).toBe('missing-major');
+  });
   it('treats a date version (2024-06-20, as Stripe and GitHub use) as not semver, not as 2024.0.0', () => {
     const v = versionCheck('2024-01-15', '2024-06-20', n(1));
     expect(v.verdict).toBe('unparseable');
