@@ -15,7 +15,9 @@ export interface SeverityCounts {
   docs: number;
 }
 
-const clean = (v: string | undefined): string | undefined => (v === undefined ? undefined : (coerce(v)?.version ?? undefined));
+// A date version (2024-06-20) is not semver: coerce would read it as 2024.0.0 and call every release equal.
+const DATE = /^\d{4}-\d{2}-\d{2}/;
+const clean = (v: string | undefined): string | undefined => (v === undefined || DATE.test(v.trim()) ? undefined : (coerce(v)?.version ?? undefined));
 
 export type Bump = VersionCheck['bump'];
 

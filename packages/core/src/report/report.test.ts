@@ -72,6 +72,11 @@ describe('OA-08 version check (B-8)', () => {
     expect(versionCheck('1.5.0', 'latest', n(0)).verdict).toBe('unparseable');
     expect(versionCheck('0.4.0', '0.5.0', n(1)).verdict).toBe('ok');
   });
+  it('treats a date version (2024-06-20, as Stripe and GitHub use) as not semver, not as 2024.0.0', () => {
+    const v = versionCheck('2024-01-15', '2024-06-20', n(1));
+    expect(v.verdict).toBe('unparseable');
+    expect(v.message).not.toMatch(/2025\.0\.0/);
+  });
 });
 
 describe('OA-21 decisions', () => {
