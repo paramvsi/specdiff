@@ -53,3 +53,7 @@ describe('OUT-10 append to an existing feed', () => {
     expect(() => changelogFeed(report, { ...opts, existing: '<rss version="2.0"></rss>' })).toThrow(/Atom/);
   });
 });
+
+it('OUT-10 a version with a lone surrogate does not make the feed throw', () => {
+  expect(() => changelogFeed(report, { title: 'Payments API', feedUrl: 'https://example.com/changelog.xml', version: 'v\ud8002', date: '2026-11-15T00:00:00Z' })).not.toThrow();
+});

@@ -31,7 +31,9 @@ export function changelogFeed(report: Report, o: FeedOptions): string {
   const version = o.version ?? report.versionCheck?.suggested ?? report.inputs.after.infoVersion ?? 'next';
   const updated = new Date(o.date ?? Date.now()).toISOString();
   const md = buildChangelog(report, 'release-notes', { groupBySeverity: true, includeDocs: false, version, ...(o.date ? { date: o.date.slice(0, 10) } : {}) });
-  const id = esc(`${o.feedUrl.replace(/\.xml$/, '')}#${encodeURIComponent(version)}`);
+  // A lone surrogate (e.g. from a JSON `\ud800` escape) would make encodeURIComponent throw: write U+FFFD instead.
+  const wellFormed = version.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '\uFFFD');
+  const id = esc(`${o.feedUrl.replace(/\.xml$/, '')}#${encodeURIComponent(wellFormed)}`);
   const entry = `  <entry>
     <title>${esc(`${o.title} ${version}`)}</title>
     <id>${id}</id>
