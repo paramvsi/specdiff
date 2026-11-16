@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { writeFileSync } from 'node:fs';
-import { Command, Option } from 'commander';
+import { Command, InvalidArgumentError, Option } from 'commander';
 import pc from 'picocolors';
 import { reportJsonSchema } from '@specdiff/core';
 import { buildHistory } from './history';
@@ -10,6 +10,11 @@ import { serveLocal } from './serve';
 
 const io = { out: (s: string) => process.stdout.write(s), err: (s: string) => process.stderr.write(s.endsWith('\n') ? s : s + '\n') };
 const program = new Command();
+/** A whole-number option: a typo is an argument error, not a silent NaN. */
+const whole = (v: string) => {
+  if (!/^\d+$/.test(v)) throw new InvalidArgumentError('It must be a whole number.');
+  return Number(v);
+};
 
 program
   // Options after a subcommand name belong to it (`specdiff changelog … --format atom`).
@@ -26,7 +31,7 @@ program
   .option('--allow-external-refs', 'fetch remote $ref URLs (off in --ci mode by default)')
   .option('--out <file>', 'write the report to a file')
   .option('--no-open', 'with the local UI: print the URL instead of opening a browser')
-  .option('--port <port>', 'with the local UI: port to listen on', (v) => Number(v))
+  .option('--port <port>', 'with the local UI: port to listen on', whole)
   .action(async (beforeArg: string, afterArg: string | undefined, o: { ci?: boolean; format: 'md' | 'json' | 'html'; failOn?: 'breaking'; config?: string; allowExternalRefs?: boolean; out?: string; open: boolean; port?: number }) => {
     const pair = afterArg ? [beforeArg, afterArg] : [`HEAD:${beforeArg}`, beforeArg];
     try {
@@ -49,7 +54,7 @@ program
   .command('history <file>')
   .description('write a Viewer version set from git tags (or commits) of a spec file')
   .option('--out <file>', 'output file', 'versions.json')
-  .option('--max <n>', 'most versions to keep', (v) => Number(v), 20)
+  .option('--max <n>', 'most versions to keep', whole, 20)
   .action((file: string, o: { out: string; max: number }) => {
     try {
       const set = buildHistory(file, o.max);

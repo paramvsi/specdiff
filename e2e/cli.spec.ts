@@ -69,3 +69,12 @@ test('git diff driver prints the semantic changelog', () => {
   expect(r.status).toBe(0);
   expect(r.stdout).toMatch(/! 4 breaking/);
 });
+
+test('PK-01 a non-number --port or --max is an argument error, not silently ignored', () => {
+  test.skip(test.info().project.name !== 'desktop');
+  for (const args of [['a.json', 'b.json', '--port', 'abc'], ['history', 'x.yaml', '--max', 'many']]) {
+    const r = run(process.cwd(), ...args);
+    expect(r.status, args.join(' ')).not.toBe(0);
+    expect(r.stderr, args.join(' ')).toMatch(/must be a whole number/);
+  }
+});
