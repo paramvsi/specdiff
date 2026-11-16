@@ -112,7 +112,7 @@ const keys: Array<[string, string]> = [['J', 'next'], ['K', 'prev'], ['A', 'acce
         </article>
         <article class="tile tile-wide tile-short">
           <div class="tile-head"><h3>Hands stay on the keyboard</h3><p>Step through changes, decide, search and share without reaching for the mouse.</p></div>
-          <ul class="keys">{keys.map(([k, label], i) => <li><kbd style={`--d:${i * 0.5}s`}>{k}</kbd><span>{label}</span></li>)}</ul>
+          <ul class="keys">{keys.map(([k, label], i) => <li><kbd style={`--d:${i * 0.5}s`}>{k.startsWith('⌘') ? <><span aria-hidden="true">⌘</span><span class="sr-only">Command </span>{k.slice(1)}</> : k}</kbd><span>{label}</span></li>)}</ul>
         </article>
       </div>
     </section>

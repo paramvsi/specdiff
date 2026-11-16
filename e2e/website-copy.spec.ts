@@ -12,3 +12,11 @@ test('copy button keeps its name after a double click and announces the copy', a
   await page.waitForTimeout(2000);
   await expect(page.getByRole('button', { name: 'Copy command' })).toBeVisible();
 });
+
+test('WEB-01 home key list names ⌘ for screen readers (Command K), not by its symbol', async ({ page }) => {
+  await page.goto('http://localhost:4321/');
+  const kbd = page.locator('ul.keys kbd').last();
+  // Text a screen reader gets: everything not aria-hidden.
+  const spoken = await kbd.evaluate((k) => [...k.childNodes].filter((n) => !(n instanceof HTMLElement && n.getAttribute('aria-hidden') === 'true')).map((n) => n.textContent).join(''));
+  expect(spoken).toBe('Command K');
+});
