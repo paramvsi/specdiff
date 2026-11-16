@@ -14,13 +14,13 @@ export function detectMode(name: string, content: string): Detected {
   // "client.ts (new)" or "README.md (PR)": ignore a trailing note in brackets.
   const ext = name.toLowerCase().replace(/\s*\([^)]*\)$/, '').split('.').pop() ?? '';
   const head = content.slice(0, 4096);
+  // Markdown and code files are what their extension says, even when they quote a spec (a README's yaml block).
+  if (ext === 'md' || ext === 'markdown' || ext === 'mdx') return { mode: 'markdown' };
+  if (CODE[ext]) return { mode: 'code', language: CODE[ext] };
   const oa = /^[\s{]*["']?(openapi|swagger)["']?\s*:\s*["']?(\d+\.\d+(?:\.\d+)?)/m.exec(head);
   if (oa) return { mode: 'openapi', specVersion: oa[2]! };
-  if (ext === 'md' || ext === 'markdown' || ext === 'mdx') return { mode: 'markdown' };
   if (ext === 'json') return { mode: 'json' };
   if (ext === 'yaml' || ext === 'yml') return { mode: 'yaml' };
-  const lang = CODE[ext];
-  if (lang) return { mode: 'code', language: lang };
   const t = head.trimStart();
   if (/^[{[]/.test(t)) { try { JSON.parse(content); return { mode: 'json' }; } catch { /* not json */ } }
   if (/^#{1,6} \S/m.test(head) && /(\n\s*[-*] |\[.+\]\(.+\)|```)/.test(head)) return { mode: 'markdown' };
