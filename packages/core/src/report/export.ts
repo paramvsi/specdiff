@@ -3,6 +3,7 @@
 // by colour alone.
 import type { Change, Report, Severity } from '../schemas';
 import { SEVERITY_LABEL, SEVERITY_SYMBOL } from './changelog';
+import { mdCode as code, mdText, mdTextWithCode } from './escape';
 import { bumpLabel } from './version';
 
 const ORDER: Severity[] = ['breaking', 'possibly', 'safe', 'docs'];
@@ -12,14 +13,6 @@ const where = (c: Change) => {
   const p = c.location.after ?? c.location.before;
   return p ? `${p.file}:${p.line}:${p.column}` : '';
 };
-
-/** Inline code that survives backticks in the value. */
-function code(s: string): string {
-  const longest = Math.max(0, ...[...s.matchAll(/`+/g)].map((m) => m[0].length));
-  const fence = '`'.repeat(longest + 1);
-  return longest ? `${fence} ${s} ${fence}` : `${fence}${s}${fence}`;
-}
-const mdText = (s: string) => s.replace(/[&<>]/g, (ch) => (ch === '&' ? '&amp;' : ch === '<' ? '&lt;' : '&gt;'));
 
 export function reportToMarkdown(report: Report): string {
   const s = report.summary;
@@ -32,7 +25,7 @@ export function reportToMarkdown(report: Report): string {
     '',
   ];
   const vc = report.versionCheck;
-  if (vc) out.push(`**Suggested version:** ${mdText(vc.suggested)} (${bumpLabel(vc.bump)}). ${mdText(vc.message)}`, '');
+  if (vc) out.push(`**Suggested version:** ${code(vc.suggested)} (${bumpLabel(vc.bump)}). ${mdTextWithCode(vc.message, [vc.from, vc.to, vc.suggested])}`, '');
   if (report.warnings?.length) out.push('**Warnings:**', '', ...report.warnings.map((w) => `- ⚠ ${mdText(w)}`), '');
   if (report.decisions) out.push(`**Review:** ${report.decisions.accepted} accepted, ${report.decisions.rejected} rejected, ${report.decisions.open} open.`, '');
   for (const level of ORDER) {

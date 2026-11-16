@@ -1,6 +1,7 @@
 // Exports for JSON/YAML mode (JS-08). Patches are generated from the documents, so they always apply.
 import type { JsonDiff } from './diff';
 import { detectMatchKey, humanPath, stable } from './diff';
+import { mdCode, mdText } from '../report/escape';
 
 export type PatchOp =
   | { op: 'add'; path: string; value: unknown }
@@ -138,16 +139,17 @@ export function jsonPathList(d: JsonDiff): string {
 }
 
 const SYM: Record<string, string> = { added: '+', removed: '−', changed: '~', moved: '↕', typeChanged: '~', renamed: '~' };
-const show = (v: unknown) => '`' + (JSON.stringify(v) ?? 'undefined').slice(0, 120) + '`';
+const show = (v: unknown) => mdCode((JSON.stringify(v) ?? 'undefined').slice(0, 120));
 export function jsonMarkdown(d: JsonDiff, names: { before: string; after: string }): string {
   const s = d.stats;
-  const lines = [`# ${names.before} → ${names.after}`, '', `${d.changes.length} change${d.changes.length === 1 ? '' : 's'}: ${s.added} added, ${s.removed} removed, ${s.changed} changed, ${s.typeChanged} type changed, ${s.moved} moved.`, ''];
+  const lines = [`# ${mdText(names.before)} → ${mdText(names.after)}`, '', `${d.changes.length} change${d.changes.length === 1 ? '' : 's'}: ${s.added} added, ${s.removed} removed, ${s.changed} changed, ${s.typeChanged} type changed, ${s.moved} moved.`, ''];
   // A07-JsonExport: "A table of every change". Pipes in cells are escaped so a value can't add a column.
   const cell = (t: string) => t.replace(/\|/g, '\\|').replace(/\r?\n/g, ' ');
   if (d.changes.length) lines.push('| | Path | Change |', '| --- | --- | --- |');
   for (const c of d.changes) {
-    const detail = c.kind === 'changed' || c.kind === 'typeChanged' ? `${show(c.before)} → ${show(c.after)}` : c.kind === 'added' ? `added ${show(c.after)}` : c.kind === 'removed' ? `removed ${show(c.before)}` : `moved from ${c.from}`;
-    lines.push(`| ${SYM[c.kind]} | ${cell(humanPath(c.jsonPath))} | ${cell(detail)}${c.kind === 'typeChanged' ? ' (type changed)' : ''} |`);
+        // M-13: paths and values are spec data, so they go in code spans.
+    const detail = c.kind === 'changed' || c.kind === 'typeChanged' ? `${show(c.before)} → ${show(c.after)}` : c.kind === 'added' ? `added ${show(c.after)}` : c.kind === 'removed' ? `removed ${show(c.before)}` : `moved from ${mdCode(String(c.from))}`;
+    lines.push(`| ${SYM[c.kind]} | ${cell(mdCode(humanPath(c.jsonPath)))} | ${cell(detail)}${c.kind === 'typeChanged' ? ' (type changed)' : ''} |`);
   }
   return lines.join('\n') + '\n';
 }

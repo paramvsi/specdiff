@@ -24,3 +24,9 @@ it('A-10 release notes use the designed heading names, version and date, with no
   expect(headingTone('### Worth checking')).toBe('possibly');
   expect(headingTone('- item')).toBe(null);
 });
+
+it('M-13: a version that is not a plain version string goes in a code span in the A-10 heading', () => {
+  const t = designChangelog(report, 'release-notes', { version: '@team [x](https://e.example)' });
+  expect(t.split('\n')[0]).toBe('## `v@team [x](https://e.example)`');
+  expect(designChangelog(report, 'release-notes', { version: 'v2.0.0' }).split('\n')[0]).toBe('## v2.0.0');
+});

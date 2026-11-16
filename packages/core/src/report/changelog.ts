@@ -1,6 +1,7 @@
 // OUT-01/OUT-02 changelog templates. Lines come from each change's `changelogLine`; the user can
 // edit the result in the app.
 import type { Change, Report, Severity } from '../schemas';
+import { mdCode, mdText, mdTextWithCode, mdVersion, slackText } from './escape';
 import { bumpLabel } from './version';
 
 export type ChangelogTemplate = 'release-notes' | 'keep-a-changelog' | 'slack' | 'pr-comment';
@@ -64,7 +65,7 @@ export function buildChangelog(report: Report, template: ChangelogTemplate, opts
   const out: string[] = [];
 
   if (template === 'release-notes') {
-    out.push(`## ${version ? `${version}` : title}`, '');
+    out.push(`## ${version ? mdVersion(version) : mdText(title)}`, '');
     if (changes.length === 0) out.push('No changes to the API.', '');
     else if (group) {
       for (const [s, list] of bySeverity(changes)) {
@@ -73,7 +74,7 @@ export function buildChangelog(report: Report, template: ChangelogTemplate, opts
       }
     } else out.push(...changes.map((c) => `- ${prefixed(c, (x) => `**${x}**`)}`), '');
   } else if (template === 'keep-a-changelog') {
-    out.push(`## [${version}]${opts.date ? ` - ${opts.date}` : ''}`, '');
+    out.push(`## [${mdVersion(version)}]${opts.date ? ` - ${mdText(opts.date)}` : ''}`, '');
     const cats = ['Added', 'Changed', 'Deprecated', 'Removed', 'Security'];
     const m = new Map(cats.map((k) => [k, [] as Change[]]));
     for (const c of changes) m.get(kacCategory(c))?.push(c);
@@ -85,7 +86,7 @@ export function buildChangelog(report: Report, template: ChangelogTemplate, opts
     }
     if (changes.length === 0) out.push('No changes to the API.', '');
   } else if (template === 'slack') {
-    out.push(`*${slackSafe(title)}${version ? ` (${slackSafe(version)})` : ''}*: ${counts(report, includeDocs)}`);
+    out.push(`*${slackText(title)}${version ? ` (${slackText(version)})` : ''}*: ${counts(report, includeDocs)}`);
     if (group) {
       for (const [s, list] of bySeverity(changes)) {
         if (!list.length) continue;
@@ -96,7 +97,7 @@ export function buildChangelog(report: Report, template: ChangelogTemplate, opts
   } else {
     out.push(`### Specdiff: ${counts(report, includeDocs)}`, '');
     const vc = report.versionCheck;
-    if (vc) out.push(`Suggested version: **${vc.suggested}** (${bumpLabel(vc.bump)}). ${vc.message}`, '');
+    if (vc) out.push(`Suggested version: **${mdCode(vc.suggested)}** (${bumpLabel(vc.bump)}). ${mdTextWithCode(vc.message, [vc.from, vc.to, vc.suggested])}`, '');
     if (changes.length) {
       const cell = (s: string) => s.replace(/\|/g, '\\|').replace(/\n/g, ' ');
       const rows = group ? [...bySeverity(changes).values()].flat() : changes;

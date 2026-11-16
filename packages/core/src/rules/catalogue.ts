@@ -7,6 +7,7 @@
 //   {before}  the old value, {after} the new value (short form)
 //   {where}   `target` in `op`, or just `op` when they are the same
 import type { Direction, Kind, Severity } from '../schemas';
+import { mdCode } from '../report/escape';
 
 export type RuleArea =
   | 'Endpoints'
@@ -594,15 +595,10 @@ export function getRule(id: string): RuleMeta {
   return r;
 }
 
+export { mdCode };
+
 export function fillTemplate(template: string, vars: Record<string, string>): string {
   return template.replace(/\{(\w+)\}/g, (m, k: string) => vars[k] ?? m);
-}
-
-/** Inline code that survives backticks in the value (CommonMark: fence longer than any run inside). */
-export function mdCode(s: string): string {
-  const longest = Math.max(0, ...[...s.matchAll(/`+/g)].map((m) => m[0].length));
-  const fence = '`'.repeat(longest + 1);
-  return longest || s.startsWith(' ') || s.endsWith(' ') ? `${fence} ${s} ${fence}` : `${fence}${s}${fence}`;
 }
 
 /**

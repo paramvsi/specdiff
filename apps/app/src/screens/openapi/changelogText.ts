@@ -1,6 +1,7 @@
 // A-10 changelog text as designed: "## v2.0.0, 15 Nov 2026", "### Worth checking", "### Added", and
 // schema-level lines said once ("Payment `status` can now be `disputed`.").
 import { buildChangelog, type ChangelogOptions, type ChangelogTemplate, type Report } from '@specdiff/core';
+import { mdVersion } from '@specdiff/core/escape';
 import { fixChangelogLine } from './titles';
 
 export const HEADING_NAMES: Record<string, string> = { 'Possibly breaking': 'Worth checking', 'New and improved': 'Added' };
@@ -14,7 +15,7 @@ export function designChangelog(report: Report, template: ChangelogTemplate, opt
     text = text.replace(/^(### .*)\n\n(?=- )/gm, '$1\n');
     if (opts.version) {
       const when = opts.date ? `, ${new Date(`${opts.date}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })}` : '';
-      text = text.replace(/^## .*$/m, `## v${opts.version.replace(/^v/, '')}${when}`);
+      text = text.replace(/^## .*$/m, () => `## ${mdVersion(`v${opts.version!.replace(/^v/, '')}`)}${when}`);
     }
   }
   return text;

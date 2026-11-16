@@ -1,4 +1,5 @@
 // Markdown summary of a Markdown comparison (export). Plain text only: tags are stripped from core's HTML.
+import { mdCode, mdText } from '@specdiff/core/escape';
 import type { MdBlock, MdDiff } from '@specdiff/core/markdown';
 
 const ENT: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', '#39': "'", '#x27': "'" };
@@ -27,7 +28,7 @@ export function mdSummary(d: MdDiff, names: { before: string; after: string }): 
   const s = d.stats;
   const sec = sectionsOf(d);
   const lines = [
-    `# ${names.before} → ${names.after}`,
+    `# ${mdText(names.before)} → ${mdText(names.after)}`,
     '',
     ...(sec ? [`Sections: ${sec.added} added, ${sec.removed} removed, ${sec.edited} edited.`] : []),
     `Blocks: ${s.added} added, ${s.removed} removed, ${s.edited} edited.`,
@@ -38,20 +39,20 @@ export function mdSummary(d: MdDiff, names: { before: string; after: string }): 
     lines.push('## Changed blocks', '');
     for (const b of changed) {
       const line = b.lines.after?.[0] ?? b.lines.before?.[0];
-      lines.push(`- ${SYM[b.status]} ${WORD[b.status]} ${b.type}${line ? ` (line ${line})` : ''}: ${blockLabel(b)}`);
+      lines.push(`- ${SYM[b.status]} ${WORD[b.status]} ${b.type}${line ? ` (line ${line})` : ''}: ${mdText(blockLabel(b))}`);
     }
     lines.push('');
   }
   const links = d.blocks.flatMap((b) => b.links ?? []);
   if (links.length) {
     lines.push('## Links changed', '');
-    for (const l of links) lines.push(`- ${l.text || '(no text)'}: ${l.before || '(none)'} → ${l.after}`);
+    for (const l of links) lines.push(`- ${l.text ? mdText(l.text) : '(no text)'}: ${l.before ? mdText(l.before) : '(none)'} → ${mdText(l.after)}`);
     lines.push('');
   }
   if (d.brokenAnchors.length) {
     lines.push('## Broken anchors', '');
     for (const a of d.brokenAnchors)
-      lines.push(`- #${a.anchor} (line ${a.line})${a.renamedTo ? `: heading renamed to #${a.renamedTo}` : ''}`);
+      lines.push(`- ${mdCode(`#${a.anchor}`)} (line ${a.line})${a.renamedTo ? `: heading renamed to ${mdCode(`#${a.renamedTo}`)}` : ''}`);
     lines.push('');
   }
   return lines.join('\n');

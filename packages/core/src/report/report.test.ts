@@ -204,3 +204,38 @@ describe('OUT-01 hostile spec text in Markdown outputs', () => {
     expect(reportToMarkdown(r)).toContain(`- ${line}`);
   });
 });
+
+describe('M-13 one escaper for spec text in Markdown, PR-comment and Slack exports', () => {
+  const HOSTILE = '@acme/admins #123 [x](https://evil.example) www.evil.example <!here> @channel *bold*';
+  const spec = (version: string, required: boolean) => ({ name: '@team #9.yaml', content: stringify({ openapi: '3.1.0', info: { title: 'T', version }, paths: {
+    '/a': { get: { parameters: [{ name: 'q', in: 'query', required, description: HOSTILE, schema: { type: 'string' } }], responses: { '200': { description: 'ok' } } } },
+  } }) });
+  const r = compareOpenApi(spec('1.0.0', false), spec(HOSTILE, true));
+  const outsideCode = (md: string) => md.replace(/(`+)([\s\S]*?[^`])\1(?!`)/g, '');
+  const outputs: Record<string, string> = { report: reportToMarkdown(r), ...Object.fromEntries((['release-notes', 'keep-a-changelog', 'pr-comment'] as const).map((t) => [t, buildChangelog(r, t, { includeDocs: true })])) };
+  it('no raw mention, issue reference, link or autolink outside code spans', () => {
+    for (const [name, md] of Object.entries(outputs)) {
+      const t = outsideCode(md);
+      expect(t, name).not.toMatch(/@[\p{L}\p{N}_]/u);
+      expect(t, name).not.toMatch(/#[\p{N}]/u);
+      expect(t, name).not.toMatch(/https?:\/\/|\bwww\.|\]\(/);
+      expect(t, name).not.toMatch(/<[!a-z]/i);
+    }
+  });
+  it('the version check puts versions in code spans', () => {
+    expect(outputs['pr-comment']).toContain(`\`${HOSTILE}\``);
+    expect(outputs.report).toContain(`\`${HOSTILE}\``);
+  });
+  it('Slack escapes < > & and neutralises @here, @channel and @everyone', () => {
+    const s = buildChangelog(r, 'slack', { includeDocs: true, version: '<!here> @here @channel @everyone' });
+    expect(s).not.toMatch(/<[^\n]*>/);
+    expect(s).not.toMatch(/@(here|channel|everyone)/);
+    expect(s).not.toMatch(/https?:\/\/|\bwww\./);
+  });
+  it('mdText and slackText keep the text readable', async () => {
+    const { mdText, slackText } = await import('./escape');
+    expect(mdText('a_b *c* [d] 1 < 2 & 3').replace(/‍/g, '')).toBe('a\\_b \\*c\\* \\[d\\] 1 &lt; 2 &amp; 3');
+    expect(mdText('ask @team about #4 at https://x.example').replace(/‍/g, '')).toBe('ask @team about #4 at https://x.example');
+    expect(slackText('<!here> & @everyone').replace(/‍/g, '')).toBe('&lt;!here&gt; &amp; @everyone');
+  });
+});

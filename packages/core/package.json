@@ -14,7 +14,8 @@
     "./json": "./src/json/index.ts",
     "./markdown": "./src/markdown/diff.ts",
     "./har": "./src/har/har.ts",
-    "./code": "./src/code/diff.ts"
+    "./code": "./src/code/diff.ts",
+    "./escape": "./src/report/escape.ts"
   },
   "files": [
     "dist"
@@ -56,6 +57,10 @@
       "./code": {
         "types": "./dist/code.d.ts",
         "import": "./dist/code.js"
+      },
+      "./escape": {
+        "types": "./dist/escape.d.ts",
+        "import": "./dist/escape.js"
       }
     }
   },

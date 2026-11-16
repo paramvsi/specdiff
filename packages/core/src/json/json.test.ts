@@ -157,15 +157,20 @@ describe('exports', () => {
     const md = jsonMarkdown(d, { before: 'a.json', after: 'b.json' });
     // A07-JsonExport: "A table of every change".
     expect(md).toContain('| | Path | Change |\n| --- | --- | --- |\n');
-    expect(md).toContain('| ~ | a | `1` → `2` |');
+    expect(md).toContain('| ~ | `a` | `1` → `2` |');
     expect(md.split('\n').filter((l) => l.startsWith('| ') && !l.startsWith('| |') && !l.startsWith('| ---'))).toHaveLength(3);
+  });
+  it('M-13 Markdown keeps spec keys and values in code spans and file names defused', () => {
+    const md = jsonMarkdown(diffJson({ '@team': 'x' }, { '@team': 'a`b <img src=x> @here' }, o()), { before: '@ops #1.json', after: 'b.json' });
+    expect(md).toMatch(/\| ~ \| `[^`|]*@team[^`|]*` \| `"x"` → `` "a`b <img src=x> @here" `` \|/);
+    expect(md.split('\n')[0]).toBe('# @\u200Dops #\u200D1.json → b.json');
   });
   it('Markdown summary says "1 change", not "1 changes"', () => {
     expect(jsonMarkdown(diffJson({ a: 1 }, { a: 2 }, o()), { before: 'a.json', after: 'b.json' })).toContain('\n1 change: ');
   });
   it('Markdown table cells escape pipes', () => {
     const d = diffJson({ a: 'x|y' }, { a: 'z' }, o());
-    expect(jsonMarkdown(d, { before: 'a.json', after: 'b.json' })).toContain('| ~ | a | `"x\\|y"` → `"z"` |');
+    expect(jsonMarkdown(d, { before: 'a.json', after: 'b.json' })).toContain('| ~ | `a` | `"x\\|y"` → `"z"` |');
   });
 });
 
