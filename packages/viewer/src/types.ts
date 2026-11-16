@@ -16,6 +16,8 @@ export interface ViewerVersion {
   date?: string;
   /** Parsed OpenAPI document. Missing when it failed to load (see `error`). */
   spec?: object;
+  /** The file as written. When set, comparisons read it under `source`, so reports match the app's (M-21). */
+  text?: string;
   error?: LoadError;
 }
 

@@ -22,13 +22,9 @@ type Core = typeof import('@specdiff/core');
 let corePromise: Promise<Core> | undefined;
 const loadCore = () => (corePromise ??= import('@specdiff/core'));
 
-export function parseWith(core: Pick<Core, 'parseDocument'> & Partial<Pick<Core, 'upgradeSpec'>>, text: string, name: string): object {
-  const doc = core.parseDocument(text, name);
-  if (doc.errors.length || !doc.value || typeof doc.value !== 'object') {
-    const e = doc.errors[0];
-    throw new Error(e ? `${name}:${e.line}:${e.column} ${e.message}` : `${name} does not contain an object.`);
-  }
-  const value = keepWrittenVersion(doc.value, text) as { swagger?: unknown };
+export function parseWith(core: Pick<Core, 'readSpec'> & Partial<Pick<Core, 'upgradeSpec'>>, text: string, name: string): object {
+  // M-21: core's reader, the same one the app and the embed use.
+  const value = keepWrittenVersion(core.readSpec(text, name), text) as { swagger?: unknown };
   // The Viewer renders OpenAPI 3; Swagger 2.0 is upgraded with core's converter.
   return typeof value.swagger === 'string' && value.swagger.startsWith('2') && core.upgradeSpec ? core.upgradeSpec(value) : value;
 }
@@ -40,7 +36,7 @@ const hostOf = (url: string) => {
   try { return new URL(url, typeof location !== 'undefined' ? location.href : 'http://x/').host; } catch { return url; }
 };
 
-export async function fetchVersion(url: string, core: Pick<Core, 'parseDocument'> & Partial<Pick<Core, 'upgradeSpec'>>, fetchImpl: typeof fetch = fetch): Promise<ViewerVersion> {
+export async function fetchVersion(url: string, core: Pick<Core, 'readSpec'> & Partial<Pick<Core, 'upgradeSpec'>>, fetchImpl: typeof fetch = fetch): Promise<ViewerVersion> {
   const source = fileName(url);
   let res: Response;
   try {
@@ -50,9 +46,10 @@ export async function fetchVersion(url: string, core: Pick<Core, 'parseDocument'
   }
   if (!res.ok) return { label: source, source, error: { kind: 'http', message: `${hostOf(url)} answered ${res.status} for ${source}.`, host: hostOf(url) } };
   try {
-    const spec = parseWith(core, await res.text(), source) as { info?: { version?: unknown } };
+    const text = await res.text();
+    const spec = parseWith(core, text, source) as { info?: { version?: unknown } };
     const v = spec.info?.version;
-    return { label: typeof v === 'string' || typeof v === 'number' ? String(v) : source, source, spec };
+    return { label: typeof v === 'string' || typeof v === 'number' ? String(v) : source, source, spec, text };
   } catch (e) {
     return { label: source, source, error: { kind: 'parse', message: e instanceof Error ? e.message : String(e) } };
   }

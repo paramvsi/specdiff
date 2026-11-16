@@ -77,7 +77,7 @@ function ViewerInner(props: Omit<ViewerProps, 'theme'> & { theme: 'light' | 'dar
   const curVersion = versions.find((x) => x.label === pair.current) ?? versions[versions.length - 1];
   const cur = loaded.find((l) => l.label === curVersion?.label);
   const prev = pair.compareWith && pair.compareWith !== cur?.label ? loaded.find((l) => l.label === pair.compareWith) : undefined;
-  const store = useMemo(() => new ReportStore(compare, (label) => loaded.find((l) => l.label === label)?.spec), [compare, loaded]);
+  const store = useMemo(() => new ReportStore(compare, (label) => loaded.find((l) => l.label === label)?.version), [compare, loaded]);
   const report = useReport(store, prev?.label, cur?.label);
   const ready = report?.status === 'ready' ? report.report : undefined;
   const index = useMemo(() => (cur ? indexChanges(ready, cur.model, prev?.model) : undefined), [ready, cur, prev]);
@@ -128,10 +128,11 @@ function ViewerInner(props: Omit<ViewerProps, 'theme'> & { theme: 'light' | 'dar
   const fileRef = useRef<HTMLInputElement>(null);
   const addFile = async (file: File) => {
     try {
-      const spec = parseFile(await file.text(), file.name, parseSpec) as Json;
+      const text = await file.text();
+      const spec = parseFile(text, file.name, parseSpec) as Json;
       let label = String(spec?.info?.version ?? file.name);
       while (versions.some((x) => x.label === label)) label = `${label}′`;
-      setAdded((a) => [...a, { label, source: file.name, spec }]);
+      setAdded((a) => [...a, { label, source: file.name, spec, text }]);
       notify(`Added ${label}`);
     } catch (e) {
       notify('Could not read the file', e instanceof Error ? e.message : String(e));
@@ -139,9 +140,10 @@ function ViewerInner(props: Omit<ViewerProps, 'theme'> & { theme: 'light' | 'dar
   };
   const replaceFile = useCallback(async (label: string, file: File) => {
     try {
-      const spec = parseFile(await file.text(), file.name, parseSpec);
+      const text = await file.text();
+      const spec = parseFile(text, file.name, parseSpec);
       const base = set.versions.find((x) => x.label === label);
-      setOverrides((o) => ({ ...o, [label]: { label, source: file.name, ...(base?.date ? { date: base.date } : {}), spec } }));
+      setOverrides((o) => ({ ...o, [label]: { label, source: file.name, ...(base?.date ? { date: base.date } : {}), spec, text } }));
     } catch (e) {
       notify('Could not read the file', e instanceof Error ? e.message : String(e));
     }

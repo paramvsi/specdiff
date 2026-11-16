@@ -15,7 +15,8 @@
     "./markdown": "./src/markdown/diff.ts",
     "./har": "./src/har/har.ts",
     "./code": "./src/code/diff.ts",
-    "./escape": "./src/report/escape.ts"
+    "./escape": "./src/report/escape.ts",
+    "./parse": "./src/openapi/read.ts"
   },
   "files": [
     "dist"
@@ -61,6 +62,10 @@
       "./escape": {
         "types": "./dist/escape.d.ts",
         "import": "./dist/escape.js"
+      },
+      "./parse": {
+        "types": "./dist/parse.d.ts",
+        "import": "./dist/parse.js"
       }
     }
   },

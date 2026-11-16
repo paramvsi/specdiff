@@ -1,6 +1,7 @@
 export * from './schemas';
 export { compareOpenApi, type CompareOptions, type CompareStep } from './report/build';
 export { parseDocument, type ParsedDocument, type ParseError } from './openapi/parse';
+export { readSpec } from './openapi/read';
 export { detectOpenApi } from './openapi/detect';
 export { OpenApiParseError, type Input } from './openapi/load';
 export { rules, type RuleMeta, type RuleArea } from './rules/catalogue';

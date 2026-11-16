@@ -1,7 +1,7 @@
 // Hash routing (VW-12 deep links), media queries, theme and the report cache.
 import type { Report } from '@specdiff/core';
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
-import type { CompareFn, ThemeSetting } from './types';
+import type { CompareFn, CompareInput, ThemeSetting, ViewerVersion } from './types';
 
 export type Route =
   | { page: 'overview' }
@@ -89,22 +89,26 @@ export function useTheme(setting: ThemeSetting): ['light' | 'dark', (t: 'light' 
 export type ReportState = { status: 'loading' } | { status: 'ready'; report: Report } | { status: 'error'; message: string };
 
 /** Caches one Report per (before, after) pair; components subscribe with `useReport`. */
+/** What a comparison reads for a version: the file as written when the host kept it (M-21), else the parsed spec as JSON. */
+export const compareInput = (v: ViewerVersion): CompareInput =>
+  v.text !== undefined ? { name: v.source, content: v.text } : { name: `${v.label}.json`, content: JSON.stringify(v.spec) };
+
 export class ReportStore {
   private map = new Map<string, ReportState>();
   private listeners = new Set<() => void>();
   private tick = 0;
   constructor(
     private readonly compare: CompareFn | undefined,
-    private readonly specOf: (label: string) => object | undefined,
+    private readonly versionOf: (label: string) => ViewerVersion | undefined,
   ) {}
   subscribe = (l: () => void) => { this.listeners.add(l); return () => { this.listeners.delete(l); }; };
   snapshot = () => this.tick;
   private emit() { this.tick++; for (const l of this.listeners) l(); }
   get(before: string, after: string): ReportState | undefined {
     if (!this.compare) return undefined;
-    const a = this.specOf(before);
-    const b = this.specOf(after);
-    if (!a || !b) return undefined;
+    const a = this.versionOf(before);
+    const b = this.versionOf(after);
+    if (!a?.spec || !b?.spec) return undefined;
     const key = `${before}\u0000${after}`;
     const hit = this.map.get(key);
     if (hit) return hit;
@@ -113,7 +117,7 @@ export class ReportStore {
     const compare = this.compare;
     queueMicrotask(() => {
       Promise.resolve()
-        .then(() => compare({ name: `${before}.json`, content: JSON.stringify(a) }, { name: `${after}.json`, content: JSON.stringify(b) }))
+        .then(() => compare(compareInput(a), compareInput(b)))
         .then((report) => this.map.set(key, { status: 'ready', report }), (e: unknown) => this.map.set(key, { status: 'error', message: e instanceof Error ? e.message : String(e) }))
         .finally(() => this.emit());
     });
