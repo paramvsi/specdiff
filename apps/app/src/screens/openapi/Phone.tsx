@@ -8,7 +8,7 @@ import { openPalette } from '../../shell/commands';
 import { changeLink } from '../../shell/nav';
 import { useApp } from '../../state/store';
 import { Md, Title } from './Title';
-import { copy, groupKey, lineWindow, methodOf, SEV_LABEL } from './util';
+import { copy, groupKey, lineWindow, methodOf, safeRowLabel, SEV_LABEL } from './util';
 import css from './Phone.module.css';
 
 type View = { kind: 'summary' } | { kind: 'list' } | { kind: 'change'; id: string };
@@ -32,7 +32,7 @@ export function PhoneOpenApi() {
     const docs = filter === 'all' ? shown.filter((c) => c.severity === 'docs') : [];
     // M-02 under All: the changes that need attention one by one; safe and docs-only ones as one row each.
     const safe = filter === 'all' ? shown.filter((c) => c.severity === 'safe') : [];
-    const collapsed = (n: number, label: string, detail: string, sev: 'safe' | 'docs', f: Severity) => (
+    const collapsed = (label: string, detail: string, sev: 'safe' | 'docs', f: Severity) => (
       <section aria-label={label}>
         <p className={css.group}>{label}</p>
         <ul className={css.list}>
@@ -78,8 +78,8 @@ export function PhoneOpenApi() {
             </section>
           ))}
           {/* M-02: safe and docs-only changes collapse into one row each; the row opens that filter. */}
-          {safe.length > 0 && collapsed(safe.length, `${safe.length} safe changes`, 'Additions and relaxed rules', 'safe', 'safe')}
-          {docs.length > 0 && collapsed(docs.length, `${docs.length} operation${docs.length === 1 ? '' : 's'}`, 'Descriptions updated', 'docs', 'docs')}
+          {safe.length > 0 && collapsed(safeRowLabel(safe.length), 'Additions and relaxed rules', 'safe', 'safe')}
+          {docs.length > 0 && collapsed(`${docs.length} operation${docs.length === 1 ? '' : 's'}`, 'Descriptions updated', 'docs', 'docs')}
         </div>
       </div>
     );

@@ -71,3 +71,11 @@ it('Summary and Settings count rules the same way', () => {
   expect(rulesOn(cfg)).toEqual({ on: 71, total: 72 });
   expect(rulesOn(Config.parse({}))).toEqual({ on: 72, total: 72 });
 });
+
+describe('M-02 phone list: the collapsed safe row', () => {
+  it('says "1 safe change", not "1 safe changes"', async () => {
+    const { safeRowLabel } = await import('./util');
+    expect(safeRowLabel(1)).toBe('1 safe change');
+    expect(safeRowLabel(14)).toBe('14 safe changes');
+  });
+});

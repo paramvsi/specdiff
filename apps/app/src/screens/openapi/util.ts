@@ -239,3 +239,6 @@ export function schemaLocation(spec: unknown, usage: string, schema: string): st
   }
   return '';
 }
+
+/** M-02 phone list: the one row that stands for every safe change. */
+export const safeRowLabel = (n: number) => `${n} safe change${n === 1 ? '' : 's'}`;
