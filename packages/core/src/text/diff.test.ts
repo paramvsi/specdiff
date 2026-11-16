@@ -141,3 +141,14 @@ describe('TX-02 a missing final newline', () => {
     expect(diffText('a\nb\n', 'a\nb\n', strict).identical).toBe(true);
   });
 });
+
+describe('TX-03 highlights never split a character as people see it (grapheme clusters)', () => {
+  const marked = (a: string, b: string, precision: 'word' | 'char') => {
+    const r = diffText(a + '\n', b + '\n', { ...Config.parse({}).text, precision }).rows.find((x) => x.type === 'change')!;
+    return [...r.left!.segs, ...r.right!.segs].filter((s) => s.kind !== 'same').map((s) => s.text);
+  };
+  it.each(['word', 'char'] as const)('%s: a changed family emoji is marked whole, and so is an accented letter', (p) => {
+    expect(marked('hi 👨‍👩‍👧 there', 'hi 👨‍👩‍👦 there', p)).toEqual(['👨‍👩‍👧', '👨‍👩‍👦']);
+    expect(marked('café ok', 'cafè ok', p)).toEqual(['é', 'è']);
+  });
+});

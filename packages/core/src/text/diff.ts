@@ -117,7 +117,28 @@ function inline(a: string, b: string, precision: TextOptions['precision'], ignor
     else if (p.removed) left.push({ text: p.value, kind: 'del' });
     else { left.push({ text: p.value, kind: 'same' }); right.push({ text: p.value, kind: 'same' }); }
   }
-  return [left, right];
+  return [snapToGraphemes(left), snapToGraphemes(right)];
+}
+
+const graphemes = typeof Intl !== 'undefined' && 'Segmenter' in Intl ? new Intl.Segmenter(undefined, { granularity: 'grapheme' }) : undefined;
+
+/**
+ * Move segment edges to character edges as people see them, so a highlight never splits 👨‍👩‍👧 or an
+ * e + combining accent (the diff works on code units). A character takes the changed kind if any of it changed.
+ */
+function snapToGraphemes(segs: Seg[]): Seg[] {
+  if (!graphemes || segs.length < 2) return segs;
+  const kinds: SegKind[] = [];
+  for (const sg of segs) for (let i = 0; i < sg.text.length; i++) kinds.push(sg.kind);
+  const out: Seg[] = [];
+  for (const { segment, index } of graphemes.segment(segs.map((sg) => sg.text).join(''))) {
+    let kind: SegKind = 'same';
+    for (let i = index; i < index + segment.length; i++) if (kinds[i] !== 'same') kind = kinds[i]!;
+    const last = out.at(-1);
+    if (last && last.kind === kind) last.text += segment;
+    else out.push({ text: segment, kind });
+  }
+  return out;
 }
 
 export interface DiffExtras {
