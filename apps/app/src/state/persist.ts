@@ -1,6 +1,6 @@
 // IndexedDB storage (OUT-07, IN-11, settings). Payloads are stored separately so history rows stay small.
 import type { HistoryEntry, SavedSource, Summary } from '@specdiff/core';
-import { createStore, del, entries, get, set } from 'idb-keyval';
+import { clear, createStore, del, entries, get, set } from 'idb-keyval';
 import type { Source } from '../lib/input';
 import type { CompareResult } from '../worker/protocol';
 import type { Settings } from './store';
@@ -86,8 +86,8 @@ export async function deleteEntry(id: string) {
   await del(id, payloads);
 }
 export async function clearHistory() {
-  for (const [k] of await entries(history)) await del(k, history);
-  for (const [k] of await entries(payloads)) await del(k, payloads);
+  await clear(history);
+  await clear(payloads);
 }
 
 export const loadSettings = () => get<Settings>('settings', prefs);
