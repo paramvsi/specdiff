@@ -127,3 +127,12 @@ describe('VW-01 OpenAPI 3.2 querystring parameters and content-typed parameters'
     expect(opMarkdown(spec, buildModel(spec), op, [])).toMatch(/Query parameters[\s\S]*`filter` \(object, required\)/);
   });
 });
+
+describe('VW-11 request checks read well at 1', () => {
+  it('says "at most 1 character"', async () => {
+    const { requestIssues } = await import('./request');
+    const spec = { openapi: '3.1.0', info: { title: 'T', version: '1' }, paths: { '/a': { get: { parameters: [{ name: 'c', in: 'query', schema: { type: 'string', maxLength: 1 } }], responses: { '200': { description: 'OK' } } } } } };
+    const op = buildModel(spec).ops[0]!;
+    expect(requestIssues(spec, op, { server: '', path: {}, query: { c: 'ab' }, headers: {} })[0]?.message).toBe('c must be at most 1 character');
+  });
+});

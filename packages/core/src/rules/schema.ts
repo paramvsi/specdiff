@@ -193,7 +193,7 @@ export function compareSunset(e: Engine, ctx: Ctx, b: SNode, a: SNode): void {
   if (as && (!bs || as.getTime() !== bs.getTime())) {
     const grace = e.opts.openapi.sunsetGracePeriodDays;
     const days = (as.getTime() - e.opts.today.getTime()) / 86_400_000;
-    if (days < grace) e.emit(ctx, 'sunset-inside-grace-period', { bLoc, aLoc, before: `${grace} days`, after: isoDate(as) });
+    if (days < grace) e.emit(ctx, 'sunset-inside-grace-period', { bLoc, aLoc, before: `${grace} ${grace === 1 ? 'day' : 'days'}`, after: isoDate(as) });
   }
 }
 

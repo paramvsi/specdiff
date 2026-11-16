@@ -72,6 +72,13 @@ describe('OA-08 version check (B-8)', () => {
     expect(versionCheck('1.5.0', 'latest', n(0)).verdict).toBe('unparseable');
     expect(versionCheck('0.4.0', '0.5.0', n(1)).verdict).toBe('ok');
   });
+  it('a 1-day sunset grace period reads "1 day", not "1 days"', () => {
+    const dir = 'fixtures/rules/sunset-inside-grace-period';
+    const read = (f: string) => readFileSync(join(__dirname, '../../../..', dir, f), 'utf8');
+    const r = compareOpenApi({ name: 'b.yaml', content: read('before.yaml') }, { name: 'a.yaml', content: read('after.yaml') }, { openapi: { sunsetGracePeriodDays: 1 } }, { today: '2026-12-01' });
+    const graces = r.changes.filter((c) => c.ruleId === 'sunset-inside-grace-period');
+    expect(graces.map((c) => c.before)).toEqual(['1 day']);
+  });
   it('treats a date version (2024-06-20, as Stripe and GitHub use) as not semver, not as 2024.0.0', () => {
     const v = versionCheck('2024-01-15', '2024-06-20', n(1));
     expect(v.verdict).toBe('unparseable');

@@ -54,7 +54,7 @@ program
     try {
       const set = buildHistory(file, o.max);
       writeFileSync(o.out, JSON.stringify(set, null, 2) + '\n');
-      io.err(`Wrote ${set.versions.length} versions of ${file} to ${o.out} (current ${set.current}).`);
+      io.err(`Wrote ${set.versions.length} ${set.versions.length === 1 ? 'version' : 'versions'} of ${file} to ${o.out} (current ${set.current}).`);
     } catch (e) { io.err(pc.red((e as Error).message)); process.exitCode = 2; }
   });
 

@@ -39,7 +39,7 @@ function valueProblem(spec: Json, schemaNode: Json, value: unknown, name: string
     return { message: `${name} must be one of ${s.enum.map(show).join(', ')}`, fix: { label: `Use ${show(s.enum[0])}`, value: show(s.enum[0]) } };
   }
   if (typeof value === 'string') {
-    if (typeof s.maxLength === 'number' && value.length > s.maxLength) return { message: `${name} must be at most ${s.maxLength} characters`, fix: { label: `Shorten ${name}`, value: value.slice(0, s.maxLength) } };
+    if (typeof s.maxLength === 'number' && value.length > s.maxLength) return { message: `${name} must be at most ${s.maxLength} ${s.maxLength === 1 ? 'character' : 'characters'}`, fix: { label: `Shorten ${name}`, value: value.slice(0, s.maxLength) } };
     if (typeof s.pattern === 'string') {
       try { if (!new RegExp(s.pattern, 'u').test(value)) return { message: `${name} must match ${s.pattern}` }; } catch { /* unsupported pattern: skip */ }
     }
