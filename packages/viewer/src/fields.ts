@@ -59,6 +59,9 @@ export const PARAM_SECTIONS = [
   ['cookie', 'Cookies'],
 ] as const;
 
+/** OpenAPI 3.2 `in: querystring` is listed with the query parameters. */
+export const inSection = (pin: string, where: string) => pin === where || (where === 'query' && pin === 'querystring');
+
 // ---- Copy for LLM (VW-14) ---------------------------------------------------------------------
 
 const line = (f: { name: string; required: boolean; description?: string | undefined }, type: string) =>
@@ -79,7 +82,7 @@ export function opMarkdown(spec: Json, m: Model, op: Op, changes: Change[]): str
   if (op.description) out.push(op.description, '');
   if (op.deprecated) out.push(`Deprecated${op.sunset ? `; stops working on ${op.sunset}` : ''}.`, '');
   for (const [where, title] of PARAM_SECTIONS) {
-    const ps = op.params.filter((p) => p.in === where);
+    const ps = op.params.filter((p) => inSection(p.in, where));
     if (ps.length) out.push(`## ${title}`, '', ...ps.map((p) => line(p, typeLabel(spec, p.schema))), '');
   }
   const body = op.requestBody && mediaOf(op.requestBody.content);

@@ -112,3 +112,18 @@ describe('VW-05 response check', () => {
     expect(checkSchema({}, schema, JSON.parse('{"constructor": "x", "__proto__": 1}'))).toEqual([]);
   });
 });
+
+describe('VW-01 OpenAPI 3.2 querystring parameters and content-typed parameters', () => {
+  const spec = { openapi: '3.2.0', info: { title: 'T', version: '1' }, paths: { '/search': { get: { parameters: [
+    { name: 'filter', in: 'querystring', required: true, content: { 'application/x-www-form-urlencoded': { schema: { type: 'object', properties: { q: { type: 'string' } } } } } },
+    { name: 'sort', in: 'query', content: { 'application/json': { schema: { type: 'string' } } } },
+  ], responses: { '200': { description: 'OK' } } } } } };
+  it('reads the schema from content, and Try it raises no false issue for the query string', async () => {
+    const { requestIssues } = await import('./request');
+    const op = buildModel(spec).ops[0]!;
+    expect(op.params.map((p) => [p.in, p.name, (p.schema as { type?: string }).type])).toEqual([['querystring', 'filter', 'object'], ['query', 'sort', 'string']]);
+    expect(requestIssues(spec, op, { server: '', path: {}, query: {}, headers: {} })).toEqual([]);
+    const { opMarkdown } = await import('./fields');
+    expect(opMarkdown(spec, buildModel(spec), op, [])).toMatch(/Query parameters[\s\S]*`filter` \(object, required\)/);
+  });
+});

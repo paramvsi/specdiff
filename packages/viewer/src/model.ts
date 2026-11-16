@@ -4,7 +4,7 @@ export type Json = any;
 
 export const METHODS = ['get', 'put', 'post', 'delete', 'options', 'head', 'patch', 'trace', 'query'] as const;
 
-export interface Param { name: string; in: 'path' | 'query' | 'header' | 'cookie'; required: boolean; deprecated: boolean; description?: string; schema: Json }
+export interface Param { name: string; in: 'path' | 'query' | 'querystring' | 'header' | 'cookie'; required: boolean; deprecated: boolean; description?: string; schema: Json }
 export interface Op {
   key: string; // "POST /v1/payments"
   slug: string; // "post-v1-payments" (route)
@@ -67,7 +67,7 @@ export function buildModel(spec: Json): Model {
       const params = new Map<string, Param>();
       for (const p of [...shared, ...(op.parameters ?? [])].map((x) => deref(spec, x))) {
         if (!p?.name) continue;
-        params.set(`${p.in}:${p.name}`, { name: p.name, in: p.in, required: p.in === 'path' || !!p.required, deprecated: !!p.deprecated, ...(p.description ? { description: p.description } : {}), schema: p.schema ?? {} });
+        params.set(`${p.in}:${p.name}`, { name: p.name, in: p.in, required: p.in === 'path' || !!p.required, deprecated: !!p.deprecated, ...(p.description ? { description: p.description } : {}), schema: p.schema ?? (Object.values<Json>(p.content ?? {})[0]?.schema as Json | undefined) ?? {} });
       }
       const body = op.requestBody ? deref(spec, op.requestBody) : undefined;
       const key = `${method.toUpperCase()} ${path}`;

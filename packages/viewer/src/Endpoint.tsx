@@ -5,7 +5,7 @@ import { ChevronRight, Clock } from 'lucide-react';
 import { useMemo } from 'react';
 import { bySeverity, changeLine, fieldNames, opKeysOf, shortTitle } from './change-index';
 import { useViewer, type Loaded } from './context';
-import { PARAM_SECTIONS, fieldsOf, mediaOf } from './fields';
+import { PARAM_SECTIONS, fieldsOf, inSection, mediaOf } from './fields';
 import { useReports } from './hooks';
 import { deref, refName, type Op } from './model';
 import { FieldRow, InlineText, Method, cx, statusClass } from './parts';
@@ -76,7 +76,7 @@ export function Endpoint({ op, tab }: { op: Op; tab: 'docs' | 'history' }) {
         </section>
       ) : null}
       {PARAM_SECTIONS.map(([where, title]) => {
-        const ps = op.params.filter((p) => p.in === where);
+        const ps = op.params.filter((p) => inSection(p.in, where));
         if (!ps.length) return null;
         return (
           <section key={where} aria-labelledby={`sd-p-${where}`}>

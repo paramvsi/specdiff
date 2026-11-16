@@ -59,7 +59,8 @@ export function requestIssues(spec: Json, op: Op, draft: Draft): Issue[] {
   const issues: Issue[] = [];
   const bag = (where: Issue['where']) => (where === 'path' ? draft.path : where === 'query' ? draft.query : draft.headers);
   for (const p of op.params) {
-    if (p.in === 'cookie') continue;
+    // Cookies, and an OpenAPI 3.2 `querystring` (the whole query string, one value): Try it does not send them.
+    if (p.in === 'cookie' || p.in === 'querystring') continue;
     const raw = bag(p.in)[p.name] ?? '';
     if (raw === '') {
       if (p.required) issues.push({ where: p.in, name: p.name, message: `${p.name} is required`, fix: { label: `Add ${p.name}`, value: show(exampleFor(spec, p.schema) ?? '') } });
