@@ -610,8 +610,12 @@ export function mdCode(s: string): string {
  * must not close its code span early, and text outside code spans must not carry raw HTML into a
  * PR comment or release notes: `{x}` placeholders get a safe fence, bare ones escape & < >.
  */
+const PLAIN = /^[\p{L}\p{N} .,+-]*$/u;
+
 export function fillChangelog(template: string, vars: Record<string, string>): string {
   return template
     .replace(/`\{(\w+)\}`/g, (m, k: string) => (vars[k] === undefined ? m : mdCode(vars[k])))
-    .replace(/\{(\w+)\}/g, (m, k: string) => (vars[k] === undefined ? m : vars[k].replace(/[&<>]/g, (c) => (c === '&' ? '&amp;' : c === '<' ? '&lt;' : '&gt;'))));
+    // A bare value stays bare only when it is plain text (50, card, v2.1); anything else is spec data that could
+    // mention (@team), link or format in a PR comment or release notes, so it goes in a code span.
+    .replace(/\{(\w+)\}/g, (m, k: string) => (vars[k] === undefined ? m : PLAIN.test(vars[k]) ? vars[k] : mdCode(vars[k])));
 }

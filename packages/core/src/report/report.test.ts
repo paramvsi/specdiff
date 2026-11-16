@@ -163,6 +163,17 @@ describe('OUT-03 exports', () => {
   });
 });
 
+describe('OUT-01 spec values outside code spans', () => {
+  const doc = (d: string) => stringify({ openapi: '3.1.0', info: { title: 'T', version: '1.0.0' }, paths: { '/a': { get: { parameters: [{ name: 'q', in: 'query', schema: { type: 'string', default: d } }], responses: { '200': { description: 'OK' } } } } } });
+  const lineFor = (from: string, to: string) => compareOpenApi({ name: 'a.yaml', content: doc(from) }, { name: 'b.yaml', content: doc(to) }).changes.find((c) => c.ruleId === 'request-param-default-changed')!.changelogLine;
+  it('cannot mention, link or format in a PR comment: anything but plain words goes in code', () => {
+    expect(lineFor('x', '@acme/admins [link](https://evil) *b*')).toBe('The default for `q` on `GET /a` is now `@acme/admins [link](https://evil) *b*` (was x).');
+  });
+  it('keeps plain values bare, as the design shows ("maxes out at 50")', () => {
+    expect(lineFor('20', '50')).toBe('The default for `q` on `GET /a` is now 50 (was 20).');
+  });
+});
+
 describe('OUT-01 hostile spec text in Markdown outputs', () => {
   const X = '<img src=x onerror=alert(1)>';
   const spec = (after: boolean) => ({ name: 'a.yaml', content: stringify({ openapi: '3.1.0', info: { title: 'T', version: '1' }, paths: {
