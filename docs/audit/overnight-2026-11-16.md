@@ -19,7 +19,7 @@ Owner asleep. Claude runs self-paced loops: audit → fix → commit, then enhan
 - **Review a visual change:** `60f14c1` updated 2 visual baselines (text result at 390 px: the stats line now wraps). Revert = one CSS line plus the two PNGs.
 - **Watch at push:** the 20,000-line text-diff timing test can exceed its 4 s budget on a loaded machine (row 41).
 
-**Morning decisions:** M-1 … M-11 below. Each has a suggested answer.
+**Morning decisions:** M-1 … M-12 below. Each has a suggested answer.
 
 ## Morning decisions
 - **M-1 (row 12):** with `--allow-external-refs`, should the CLI also follow *relative* `$ref`s found inside a fetched remote file (resolved against that file's URL)? Today they stay unresolved. Default kept: no (smaller network reach).
@@ -33,6 +33,7 @@ Owner asleep. Claude runs self-paced loops: audit → fix → commit, then enhan
 - **M-9 (row 56):** two security changes have no rule. (a) `security-removed-from-operation`: an operation that required auth now requires none. Not breaking for clients, but a reviewer must see it; suggest severity **safe** with an explanation that calls out the dropped auth, so it shows in the review list. (b) `security-scope-removed-from-scheme`: a scope deleted from a scheme's flow; clients that still request it are refused by the auth server; suggest **possibly**. Both need fixtures and a docs/06 row.
 - **M-10 (row 80):** webhooks and callbacks are both requests the API sends to the client, but an optional payload field removed is **B** for a webhook (`webhook-payload-property-removed`, no required/optional split) and **D** for a callback (response rules). Suggest splitting the webhook rule like responses: required removed → B, optional removed → D (`webhook-payload-optional-property-removed`). Severity change, so not done.
 - **M-11 (row 102):** the website has two shells. Home uses the v2 floating nav (`HomeNav`, menu button on phones, as docs/03 "Website shell (v2)" says); Docs, Rules, Changelog and 404 use `SiteHeader`, which on a phone wraps the links over two rows plus a button row, exactly as their own approved frames (W02/W03/W04/W08-390) show. Should the inner pages move to the v2 shell? Layout change, so not done. Suggested: yes, for one consistent header, once you confirm the v2 shell applies site-wide.
+- **M-12 (row 103, blocked by the permission check):** a run of every unit test file at checkpoint 5 was blocked as the full suite. Checkpoints 1–4 (rows 34, 47, 63, 83) ran all files that way, against your global rule. Tonight's later work is covered by scoped runs only. Suggested: run `pnpm verify` yourself before pushing (pre-push does it anyway), or say "run the full suite" and I will.
 
 ## Log
 
