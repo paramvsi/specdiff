@@ -76,7 +76,7 @@ export function runTextDiff(before: string, after: string): TextDiff['rows'] {
 function describe(mode: Mode, specVersion: string | undefined, name: string): string {
   const fmt = /\.json$/i.test(name) ? 'JSON' : 'YAML';
   if (mode === 'openapi')
-    return `${specVersion?.startsWith('2') ? 'Swagger' : 'OpenAPI'} ${specVersion?.split('.').slice(0, 2).join('.') ?? ''} · ${fmt}`;
+    return `${[specVersion?.startsWith('2') ? 'Swagger' : 'OpenAPI', specVersion?.split('.').slice(0, 2).join('.')].filter(Boolean).join(' ')} · ${fmt}`;
   return { json: 'JSON', yaml: 'YAML', markdown: 'Markdown', code: 'Code', text: 'Plain text' }[
     mode
   ];
