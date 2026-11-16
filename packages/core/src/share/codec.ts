@@ -36,7 +36,8 @@ function inflateLimited(data: Uint8Array, limit: number): Uint8Array {
 }
 
 async function key(passphrase: string, salt: Uint8Array<ArrayBuffer>): Promise<CryptoKey> {
-  const base = await crypto.subtle.importKey('raw', strToU8(passphrase), 'PBKDF2', false, ['deriveKey']);
+  // M-5: NFC first, so é typed composed or as e + U+0301 is the same key. No trimming: spaces count.
+  const base = await crypto.subtle.importKey('raw', strToU8(passphrase.normalize('NFC')), 'PBKDF2', false, ['deriveKey']);
   return crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: PBKDF2_ITERATIONS, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
 }
 

@@ -54,3 +54,9 @@ describe('decompression limit', () => {
     expect(r.left.content.length).toBe(1024 * 1024);
   });
 });
+
+it('M-5: a passphrase typed composed or decomposed (é vs e + U+0301) opens the same link; spaces still count', async () => {
+  const link = await encodeShare(payload, 'café crème');
+  expect(await decodeShare(link, 'café crème')).toEqual(payload);
+  await expect(decodeShare(link, 'café crème ')).rejects.toMatchObject({ code: 'wrong-passphrase' });
+}, 20_000);
