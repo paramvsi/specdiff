@@ -33,15 +33,14 @@ function hintFor(code: string, message: string): string {
  */
 function withoutJsonComments(text: string): string {
   if (!/^\s*[{[]/.test(text) || !/\/[/*]/.test(text)) return text;
-  let out = '', i = 0, inString = false;
-  while (i < text.length) {
-    const c = text[i]!;
-    if (inString) { out += c; if (c === '\\') { out += text[i + 1] ?? ''; i += 2; continue; } if (c === '"') inString = false; i++; continue; }
-    if (c === '"') { inString = true; out += c; i++; continue; }
-    if (c === '/' && text[i + 1] === '/') { while (i < text.length && text[i] !== '\n') { out += text[i] === '\r' ? '\r' : ' '; i++; } continue; }
-    if (c === '/' && text[i + 1] === '*') { const end = text.indexOf('*/', i + 2); const stop = end < 0 ? text.length : end + 2; for (; i < stop; i++) out += text[i] === '\n' || text[i] === '\r' ? text[i] : ' '; continue; }
-    out += c; i++;
-  }
+  let found = false;
+  // One native pass: strings are kept whole (so `//` in a URL is not a comment); comments become spaces, newlines kept.
+  const out = text.replace(/"(?:[^"\\\n]|\\.)*"|\/\/[^\n]*|\/\*[\s\S]*?(?:\*\/|$)/g, (m) => {
+    if (m[0] === '"') return m;
+    found = true;
+    return m.replace(/[^\r\n]/g, ' ');
+  });
+  if (!found) return text; // `//` only inside strings (URLs): nothing to strip, skip the check parse
   try { JSON.parse(out.replace(/,(\s*[}\]])/g, '$1')); return out; } catch { return text; }
 }
 

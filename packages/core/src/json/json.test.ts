@@ -96,6 +96,8 @@ describe('parse', () => {
     const r = parse('{\n  // the base URL\n  "url": "https://x.example/v1", /* inline */ "n": 1,\n}');
     expect(r.value).toEqual({ url: 'https://x.example/v1', n: 1 });
     expect(r.positions.get('$.url')).toEqual({ line: 3, column: 3 });
+    // `//` and escaped quotes inside strings are not comments.
+    expect(parse('{\n  "a": "x \\" // not a comment",\n  // real\n  "b": "c:\\\\// d"\n}').value).toEqual({ a: 'x " // not a comment', b: 'c:\\// d' });
   });
   it('leaves YAML whose flow mapping holds an unquoted URL alone', () => {
     expect(parse('{a: http://x.example}').value).toEqual({ a: 'http://x.example' });
