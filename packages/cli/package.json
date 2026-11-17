@@ -29,7 +29,7 @@
   },
   "description": "See what changed between two OpenAPI specs: breaking changes, explanations, version check. Runs locally; nothing is uploaded.",
   "author": "Paramveer Singh",
-  "homepage": "https://specdiff.netlify.app/docs/cli/",
+  "homepage": "https://spec-diff.netlify.app/docs/cli/",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/paramvsi/specdiff.git",

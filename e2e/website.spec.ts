@@ -200,8 +200,8 @@ test('changelog RSS feed is valid RSS with the real releases (M-19)', async ({ r
 test('SEO: title, description, canonical, Open Graph and theme-color', async ({ page }) => {
   await page.goto(WEB + '/docs/cli/');
   await expect(page).toHaveTitle(/CLI · Specdiff docs/);
-  await expect(page.locator('link[rel=canonical]')).toHaveAttribute('href', 'https://specdiff.netlify.app/docs/cli/');
-  await expect(page.locator('meta[property="og:image"]')).toHaveAttribute('content', 'https://specdiff.netlify.app/og.png');
+  await expect(page.locator('link[rel=canonical]')).toHaveAttribute('href', 'https://spec-diff.netlify.app/docs/cli/');
+  await expect(page.locator('meta[property="og:image"]')).toHaveAttribute('content', 'https://spec-diff.netlify.app/og.png');
   await expect(page.locator('meta[name=theme-color]')).toHaveCount(2);
   await expect(page.locator('meta[name=description]')).toHaveAttribute('content', /.{40,}/);
 });

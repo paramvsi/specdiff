@@ -17,7 +17,7 @@ interface Props {
   noindex?: boolean;
 }
 const { title, description, ogType = 'website', noindex = false } = Astro.props;
-const site = Astro.site ?? new URL('https://specdiff.netlify.app');
+const site = Astro.site ?? new URL('https://spec-diff.netlify.app');
 // Canonical URLs always end with a slash (build.format: 'directory'); 404 has none.
 const path = Astro.url.pathname.endsWith('/') || Astro.url.pathname.endsWith('.html') ? Astro.url.pathname : `${Astro.url.pathname}/`;
 const canonical = new URL(path.replace(/index\.html$/, ''), site).href;

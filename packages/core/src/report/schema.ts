@@ -3,5 +3,5 @@ import { z } from 'zod';
 import { Report } from '../schemas';
 
 export function reportJsonSchema(): object {
-  return { $id: 'https://specdiff.netlify.app/schema/report-v1.json', title: 'Specdiff report', ...z.toJSONSchema(Report, { target: 'draft-2020-12', unrepresentable: 'any' }) };
+  return { $id: 'https://spec-diff.netlify.app/schema/report-v1.json', title: 'Specdiff report', ...z.toJSONSchema(Report, { target: 'draft-2020-12', unrepresentable: 'any' }) };
 }

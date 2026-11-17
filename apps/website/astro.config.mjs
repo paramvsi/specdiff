@@ -32,7 +32,7 @@ const titledCode = {
 
 // Site URL stays on the Netlify subdomain until the domain is decided (D-5).
 export default defineConfig({
-  site: 'https://specdiff.netlify.app',
+  site: 'https://spec-diff.netlify.app',
   trailingSlash: 'ignore',
   build: { inlineStylesheets: 'never', format: 'directory' },
   vite: { build: { assetsInlineLimit: 0 } },

@@ -934,7 +934,7 @@ test('OUT-11 the built CLI prints the published JSON Schema, and its own JSON re
   const s = cli(dir, 'schema');
   expect(s.status, s.stderr).toBe(0);
   const schema = JSON.parse(s.stdout) as Schema & { $id: string; $schema: string };
-  expect(schema.$id).toBe('https://specdiff.netlify.app/schema/report-v1.json');
+  expect(schema.$id).toBe('https://spec-diff.netlify.app/schema/report-v1.json');
   expect(schema.$schema).toBe('https://json-schema.org/draft/2020-12/schema');
   for (const [a, b] of [[V1, V2], [V1, V1]]) {
     const r = cli(dir, a!, b!, '--ci', '--format', 'json', '--fail-on', 'none');

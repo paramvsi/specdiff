@@ -43,7 +43,7 @@
     "fastify": "5.12.7"
   },
   "author": "Paramveer Singh",
-  "homepage": "https://specdiff.netlify.app/docs/express-fastify/",
+  "homepage": "https://spec-diff.netlify.app/docs/express-fastify/",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/paramvsi/specdiff.git",

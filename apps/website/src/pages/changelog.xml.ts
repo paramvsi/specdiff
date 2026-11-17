@@ -6,7 +6,7 @@ import { hasDate, releases } from '../lib/changelog';
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 export const GET: APIRoute = ({ site }) => {
-  const base = (site ?? new URL('https://specdiff.netlify.app')).href.replace(/\/$/, '');
+  const base = (site ?? new URL('https://spec-diff.netlify.app')).href.replace(/\/$/, '');
   const items = releases
     .map((r) => {
       const html = r.sections.map((s) => `<h3>${esc(s.title)}</h3><ul>${s.items.map((i) => `<li>${esc(i)}</li>`).join('')}</ul>`).join('');

@@ -41,7 +41,7 @@
     "react-dom": "19.3.1"
   },
   "author": "Paramveer Singh",
-  "homepage": "https://specdiff.netlify.app/docs/packages/",
+  "homepage": "https://spec-diff.netlify.app/docs/packages/",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/paramvsi/specdiff.git",

@@ -183,15 +183,15 @@ test('WEB-06 the changelog page lists releases and links its RSS feed', async ({
 
 test('WEB-07 SEO: sitemap, canonical URLs, Open Graph image and tags, light/dark theme colours', async ({ page, request }) => {
   const index = await (await request.get(WEB + '/sitemap-index.xml')).text();
-  const sub = /<loc>https:\/\/specdiff\.netlify\.app(\/sitemap-\d+\.xml)<\/loc>/.exec(index)?.[1];
+  const sub = /<loc>https:\/\/spec-diff\.netlify\.app(\/sitemap-\d+\.xml)<\/loc>/.exec(index)?.[1];
   expect(sub).toBeTruthy();
   const locs = [...(await (await request.get(WEB + sub!)).text()).matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]!);
-  for (const p of ['/', '/docs/', '/docs/cli/', '/rules/', '/rules/endpoint-removed/', '/changelog/']) expect(locs, p).toContain(`https://specdiff.netlify.app${p}`);
+  for (const p of ['/', '/docs/', '/docs/cli/', '/rules/', '/rules/endpoint-removed/', '/changelog/']) expect(locs, p).toContain(`https://spec-diff.netlify.app${p}`);
   expect(locs.some((l) => l.includes('404'))).toBe(false);
   for (const path of ['/', '/rules/endpoint-removed/', '/changelog/']) {
     await page.goto(WEB + path);
-    await expect(page.locator('link[rel=canonical]'), path).toHaveAttribute('href', `https://specdiff.netlify.app${path}`);
-    await expect(page.locator('meta[property="og:url"]'), path).toHaveAttribute('content', `https://specdiff.netlify.app${path}`);
+    await expect(page.locator('link[rel=canonical]'), path).toHaveAttribute('href', `https://spec-diff.netlify.app${path}`);
+    await expect(page.locator('meta[property="og:url"]'), path).toHaveAttribute('content', `https://spec-diff.netlify.app${path}`);
     const title = await page.title();
     expect(title.length, path).toBeGreaterThan(10);
     await expect(page.locator('meta[property="og:title"]'), path).toHaveAttribute('content', /\S/);

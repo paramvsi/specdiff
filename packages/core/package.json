@@ -103,7 +103,7 @@
     "tree-sitter-typescript": "0.23.2"
   },
   "author": "Paramveer Singh",
-  "homepage": "https://specdiff.netlify.app/docs/packages/",
+  "homepage": "https://spec-diff.netlify.app/docs/packages/",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/paramvsi/specdiff.git",
